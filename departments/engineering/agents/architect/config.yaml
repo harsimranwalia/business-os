@@ -1,0 +1,108 @@
+# Architect — config
+# Systems + AI architecture. Department config is EM-owned and shared:
+# agents/eng-manager/config/. This file is role config only.
+
+reports_to: agents/eng-manager/agent.md
+
+owns_states:
+  - designed          # ticket arrives with an approved PRD, leaves with a design
+
+# Business grounding — read before sizing a design or making an architectural
+# call, same as the PM reads it before G1. See config/conventions.yaml → knowledge.
+knowledge:
+  profile: ../../../knowledge/business-profile.md
+
+# Blind second reader on intake (added 2026-07-27)
+# Before the PM writes a PRD, this agent reads the RAW REQUEST — nothing else —
+# and writes its own independent interpretation. The two readings are then
+# compared, and a material divergence means the request was ambiguous.
+#
+# This is not a review of the PM's work. It must be done BLIND: a reader shown
+# the first interpretation anchors to it and agrees, which produces false
+# confidence and is worse than not checking at all.
+#
+# Why this agent: the PM reads for the problem, this one reads for what would
+# have to exist. Those two lenses diverge in exactly the places that produce a
+# well-built wrong thing. Reading the request early is free — it has to be
+# understood eventually anyway.
+readback_second_reading:
+  skill: skills/request-readback/SKILL.md
+  sees: raw_input_only
+  never_sees: [interpretation_a, the_ticket, the_pm_inference_list]
+  writes: [what_i_think_is_wanted, the_problem_underneath, what_im_inferring, what_id_have_to_guess]
+  runs_on: full_lane_only
+  not_a_design: true   # no architecture at this stage — just what was asked for
+
+# Designs
+designs:
+  root: agents/architect/designs/
+  filename: "{ENG-NNN}-{slug}.md"
+  template: agents/eng-manager/config/templates/tech-design.md
+  sized_to_change: true      # half a page for S, full template for L
+
+# Decision records
+adrs:
+  root: agents/architect/decisions/
+  index: agents/architect/decisions/_index.md    # holds next_id, numbered across all projects
+  filename: "ADR-{NNN}-{slug}.md"
+  template: agents/eng-manager/config/templates/adr.md
+  immutable: true            # never edited — superseded instead
+  write_for:
+    - one_way_door
+    - deviation_from_standards
+    - accepted_security_risk
+    - new_dependency_datastore_or_vendor
+    - divergence_from_vendored_upstream
+
+# One-way doors — the only thing that reaches the approver from this agent
+one_way_doors:
+  escalate_via: eng-manager   # G2, never straight to the approver
+  criteria:
+    - new datastore or persistence technology
+    - new third-party vendor or paid service
+    - authentication or authorization model change
+    - public API contract or schema others depend on
+    - data model that is expensive to migrate later
+    - anything with recurring cost
+  reversible_decisions: decide_and_log
+  # Escalating a reversible decision wastes the resource this department protects.
+
+# AI architecture
+ai:
+  standards: agents/architect/config/ai-architecture-standards.md
+  mandatory_when: touches_models
+  required_sections:
+    - placement_and_failure_behaviour
+    - model_choice_and_fallback
+    - prompt_and_context_provenance
+    - output_contract_and_malformed_behaviour
+    - evaluation_and_drift_detection
+    - cost_limits_and_kill_switch
+    - trust_boundary
+
+# Hard constraints per project (authoritative list: config/projects.md)
+constraints:
+  this_instance:
+    - no_anthropic_api_calls     # metered spend has no ceiling; a subscription does
+    - no_deployed_endpoints      # an ops burden and an attack surface, not a line item
+  # These two are architectural and hold at ANY plan tier — a design that breaks
+  # one is invalid, not a trade-off.
+  #
+  # The SUBSCRIPTION TIER is not in that category. Don't cripple a design to fit
+  # the current plan: build what the work needs, state what it costs, and let
+  # the approver decide whether it earns an upgrade. Current tier and budgets:
+  # agents/eng-manager/config.yaml → `plan`.
+
+# Technical debt
+debt:
+  file_as: intake_card
+  to: agents/eng-manager/inbox/
+  requires: [cost_of_debt, what_it_blocks, smallest_change_that_pays_it_down]
+
+# Mode behaviour (read MODE from .env at the start of every run)
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet:
+    designs: written
+    surfacing: deferred

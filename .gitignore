@@ -2,3 +2,4 @@
 .agent-loop/
 __pycache__/
 *.pyc
+instances/*/engineering/traces/

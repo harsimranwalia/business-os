@@ -1,0 +1,91 @@
+# Database Expert — config
+# Department config is EM-owned and shared: agents/eng-manager/config/.
+
+reports_to: agents/eng-manager/agent.md
+
+owns_states:
+  - building     # when the sub-ticket is a schema/migration change
+
+owns_gate:
+  name: migration
+  blocking: true
+  applies_when: touches_data
+  # Application bugs are fixed with a deploy. Data bugs are fixed with a restore.
+  # That asymmetry is why this gate is separate and why it is not hurried.
+
+# Migration plans (the plan lives here; the migration file lives in the project)
+migrations:
+  plans_root: agents/database/migrations/
+  plan_filename: "{ENG-NNN}-{slug}.md"
+  project_migration_dirs:
+    <project>: supabase/migrations/
+    # Other projects: the repo's own convention — read it, don't invent one.
+  forward_only: true
+  rollback: { written: true, tested: true }    # tested, not asserted
+
+# The gate fails on any of these
+gate_failures:
+  - destructive_change_without_verified_backup
+  - irreversible_change_without_approved_adr
+  - missing_or_untested_rollback
+  - new_query_pattern_without_index_on_table_over_rows: 10000
+  - blocking_lock_on_hot_table_without_online_strategy
+  - backfill_without_runtime_estimate_or_batching
+  - schema_and_code_cannot_coexist        # expand/contract violated
+
+# Expand/contract — schema and code deploy separately, so they must overlap
+expand_contract:
+  sequence: [add_new, backfill, dual_write, switch_reads, drop_old]
+  as: separate_migrations                 # often separate tickets
+  # A rename in one step is an outage.
+
+# Numbers required before a schema design is accepted
+required_inputs:
+  - current_row_count
+  - growth_per_month
+  - query_frequency
+  - read_write_ratio
+  - cardinality_of_indexed_columns
+  # A design without these is a guess. Ask; don't guess politely.
+
+# Constraints live in the database, not only in the application
+integrity:
+  enforce_in_db: [not_null, foreign_keys, unique, checks]
+  no_orphans: true
+  no_ambiguous_nullable: true
+
+# Performance
+performance:
+  n_plus_one: forbidden
+  review_queries_inside_loops: true
+  index_every_new_access_pattern_above_rows: 10000
+  remove_unused_indexes: true             # each one costs write throughput
+  read_the_query_plan: true
+
+# Test data
+test_data:
+  synthetic_only: true                    # never a production dump
+  realistic_volume: true                  # a migration that ran on an empty table proves nothing
+
+# Backups
+backups:
+  restore_verification_interval_days: 90
+  report_last_verified_in: weekly_report
+  # A backup that has never been restored is a hope.
+
+# Lifecycle
+lifecycle:
+  retention_policy_required_for: unbounded_growth_tables
+  deletion_actually_deletes: true         # including the backup policy, where privacy requires it
+
+# Mode behaviour (read MODE from .env at the start of every run)
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet:
+    plans: written
+    production_migrations: suppressed
+
+# Release freeze — separate from MODE. See config/conventions.yaml → release_freeze.
+release_freeze:
+  production_migrations: suppressed

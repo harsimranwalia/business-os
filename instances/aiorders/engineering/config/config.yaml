@@ -1,0 +1,32 @@
+# Instance overrides for aiorders. The template supplies every default;
+# this file only records what is true for this business.
+
+business: aiorders
+instantiated_from: 1.0.0
+
+# The single human with gate authority. Owns G1 scope, G2 one-way-door and
+# G3 release. The five machine gates stay machine-owned and blocking.
+approver:
+  name: Harry
+  notify: telegram
+
+# Humans who may file a request but hold no gate authority. Their requests land
+# in inbox/requests/ with `source: filer` and are shaped by the PM like any
+# other intake. A filer never receives a gate.
+filers: []
+
+# Delivery caps. Raising these is the approver's call.
+wip:
+  machine_limit: 6      # states ready..ready-to-ship
+  approver_limit: 2    # items awaiting the approver at once
+  approval_cap: 3       # gates queued across the whole board
+
+# Business knowledge the PM and architect read before any scope conversation.
+# See config/conventions.yaml → knowledge.
+knowledge:
+  source: ../../../knowledge/
+  profile: business-profile.md      # AIOrders — restaurant tech, commission-free direct ordering
+
+# Cost ceiling. Nothing here bills the Anthropic API; this is the subscription
+# tier the department's model routing sizes itself against.
+plan_ref: departments/engineering/agents/eng-manager/config.yaml   # → plan.tier

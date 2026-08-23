@@ -1,0 +1,161 @@
+# Engineering department — template contract
+#
+# This file is the seam between the shared department and a business that runs
+# it. The template is read-only at runtime; an instance is the only thing ever
+# written to. Every agent, skill and script in this department resolves its
+# paths through the two roots below and never hardcodes a repository path.
+#
+# Ported from life-os 2026-08-22. See docs/engineering-team.md for the pipeline
+# and gates, which are unchanged by the port.
+
+template:
+  version: 1.0.0
+  layout: agent-dir        # agents/{name}/agent.md + config.yaml (not .claude/agents/*.md)
+  origin: life-os@2026-08-22
+
+# ---------------------------------------------------------------------------
+# The two roots. Everything else is relative to one of them.
+# ---------------------------------------------------------------------------
+roots:
+  dept:
+    env: ENG_DEPT
+    is: departments/engineering
+    writable: false        # a pass that writes here is a bug — fix the template deliberately, via git
+  instance:
+    env: ENG_INSTANCE
+    is: instances/{business}/engineering
+    writable: true         # all board state, artifacts, traces and memory
+
+# ---------------------------------------------------------------------------
+# Instance layout — what the department writes, always instance-relative.
+#
+# Deliberately mirrors the life-os agent-directory shape rather than inventing
+# a tidier one. lib/eng-gate-check.sh hardcodes its receipt paths
+# (agents/principal-engineer/reviews/%ID%.md and siblings), and per ADR-002 the
+# scripts are the only enforceable surface this department has. A prettier
+# layout would mean editing the enforcement to match the decoration. So an
+# instance root IS a life-os-shaped root: point ENG_ROOT at it and gate-check
+# runs unmodified.
+# ---------------------------------------------------------------------------
+instance_layout:
+  inbox:     inbox/                # gate items awaiting the approver (was input/inbox/)
+  requests:  inbox/requests/       # filed by a filer, drained by the PM at intake
+  traces:    traces/               # run logs, loop lock, trigger queue (was traces/eng/)
+  reports:
+    root:  reports/                # the weekly report — terminal for now, the approver reads it or doesn't
+    costs: reports/costs/          # per-release cost notices (was agents/cfo/inbox/) — rewires to a finance department if one exists
+    proof: reports/proof/          # optional proof-of-work entries (was input/proof/problem-solution-result/) — rewires to a marketing department if one exists
+  agents:
+    eng-manager:
+      board:  agents/eng-manager/board/          # tickets, _index.md, _index-archive.md
+      config: agents/eng-manager/config/         # projects.md, gate-waivers.md, exceptions.md, decision-journal.md
+      inbox:  agents/eng-manager/inbox/
+      notebook: agents/eng-manager/notebook/
+      observations: agents/eng-manager/observations.md
+      proposals:    agents/eng-manager/proposals.md
+    product-manager:    { specs: agents/product-manager/specs/,   inbox: agents/product-manager/inbox/ }
+    architect:          { designs: agents/architect/designs/,     decisions: agents/architect/decisions/ }
+    principal-engineer: { reviews: agents/principal-engineer/reviews/ }
+    qa:                 { test_plans: agents/qa/test-plans/,      bugs: agents/qa/bugs/ }
+    security:           { reviews: agents/security/reviews/ }
+    devops:             { releases: agents/devops/releases/,      incidents: agents/devops/incidents/ }
+    database:           { migrations: agents/database/migrations/ }
+  notebooks: agents/{agent}/notebook/   # per-agent memory. NEVER shared across instances.
+  config:
+    overrides:         config/config.yaml          # approver, filers, tier, WIP caps, cadence
+    instantiated_from: config/instantiated-from    # template VERSION this instance was built at
+
+# ---------------------------------------------------------------------------
+# Roles. The template names roles; the instance binds people to them in
+# config/config.yaml. No agent, skill or script may name a person.
+# ---------------------------------------------------------------------------
+roles:
+  approver:
+    is: the single human with gate authority
+    owns: [g1_scope, g2_one_way_door, g3_release]
+    note: >
+      Exactly one per instance. The five machine gates (code review, migration,
+      quality, release readiness, security) remain machine-owned and blocking;
+      only the approver overrides one, explicitly, logged as an ADR.
+  filer:
+    is: a human who may submit a request, with no gate authority
+    owns: []
+    note: >
+      Requests land in inbox/requests/ carrying `source: filer` and the filer's
+      name. The PM shapes them like any other intake. A filer never receives a
+      gate and never appears in the approval path.
+
+# ---------------------------------------------------------------------------
+# Business knowledge seam.
+#
+# life-os's PM read clone/identity/aims.md and values.md to answer "is this
+# worth building". Those are one person's files and were cut during the port,
+# correctly — but nothing replaced them, which left the PM shaping scope against
+# nothing. A business grounds the same judgement in its own facts.
+# ---------------------------------------------------------------------------
+knowledge:
+  source: ../../../knowledge/       # business-os/knowledge/, relative to an instance root
+  files:
+    profile: business-profile.md    # what the business is, who it serves, what it sells
+  read_by: [product-manager, architect]
+  rule: >
+    Read fresh at the start of any scope conversation — request shaping, G1
+    framing, and PRD writing. A PM that cannot say what the business does cannot
+    say whether a request is worth building, and will approve anything that
+    sounds reasonable.
+
+# ---------------------------------------------------------------------------
+# Pause switch. business-os convention, honoured by every existing component.
+# Replaces life-os's clone/context/modes.md.
+# ---------------------------------------------------------------------------
+mode:
+  source: .env
+  key: MODE
+  halt_values: [sabbath, retreat, quiet]
+  rule: >
+    Checked inside every component at start of run, never by the scheduler.
+    Cron keeps firing; the component exits immediately and silently. An empty
+    or unset MODE means normal operation.
+
+# ---------------------------------------------------------------------------
+# Release freeze — distinct from a halt, and the reason it exists separately.
+#
+# life-os expressed this as `travel` and `sick` modes: the approver is reachable
+# enough that work continues, but not available to respond if a production
+# release goes wrong. That is not a halt (nothing stops) and it is not normal
+# operation (nothing ships). It needed its own slot rather than being folded
+# into MODE, which is why both the agent and docs batches flagged `travel` as
+# undefined against this file.
+# ---------------------------------------------------------------------------
+release_freeze:
+  source: .env
+  key: ENG_RELEASE_FREEZE
+  set_when: any non-empty value
+  rule: >
+    Blocks production releases only. The build loop keeps running, tickets keep
+    advancing, and everything up to `ready-to-ship` proceeds normally. G3 is
+    simply not offered while this is set. P0 hotfixes are the documented
+    exception, same as under life-os.
+
+# ---------------------------------------------------------------------------
+# Notification seam. The instance chooses the channel; the department only
+# calls the command. Replaces life-os's brief-composer + slack-reply-router.
+# ---------------------------------------------------------------------------
+notify:
+  command: lib/eng-notify.sh
+  channels: [telegram, slack, none]
+  default: telegram
+  rule: >
+    The department never formats for a specific channel. It hands eng-notify.sh
+    a mode and an item path; the instance's config decides where that goes and
+    how a reply comes back.
+
+# ---------------------------------------------------------------------------
+# Naming. Was life-os config/settings.yaml.
+# ---------------------------------------------------------------------------
+naming:
+  ticket:         "ENG-{NNN}-{slug}.md"
+  adr:            "ADR-{NNN}-{slug}.md"
+  design:         "{TICKET}-{slug}.md"
+  release_record: "{YYYY-MM-DD}-{project}-{TICKET}.md"
+  trace:          "eng-loop-{YYYY-MM-DD}.log"

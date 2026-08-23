@@ -1,0 +1,606 @@
+# Engineering Manager — config
+# Head of the engineering department. Department-wide config lives in
+# agents/eng-manager/config/ (projects, standards, definition-of-done,
+# security-baseline, templates) and is read by all ten agents.
+# The pipeline map is docs/engineering-team.md.
+
+department:
+  agents:
+    - eng-manager        # this agent — the board, sequencing, delivery, releases
+    - product-manager    # the department's front door — business need → PRD (2026-07-27)
+    - architect
+    - principal-engineer
+    - backend
+    - frontend
+    - database
+    - qa
+    - devops
+    - security
+  shared_config:
+    projects: agents/eng-manager/config/projects.md
+    standards: agents/eng-manager/config/engineering-standards.md
+    definition_of_done: agents/eng-manager/config/definition-of-done.md
+    security_baseline: agents/eng-manager/config/security-baseline.md
+    templates: agents/eng-manager/config/templates/
+
+# Intake — the split
+# The PRODUCT MANAGER is the department's front door. Business needs — the
+# approver's requests, filed requests, Delivery's client work — land with the
+# PM, who owns translating a need into a problem, a PRD, and the G1
+# conversation. The EM picks the ticket up once it has an approved PRD and
+# owns everything after: architecture routing, sequencing, WIP, gates,
+# release, the board.
+#
+# Technical work that originates INSIDE the department — a QA bug, a security
+# finding, a devops incident, an architect's debt observation — comes straight
+# here. It is delivery work, not a business need, and routing it through the PM
+# would be a bureaucratic hop that helps nobody.
+intake:
+  business_needs:
+    front_door: agents/product-manager/   # approver, filer, delivery — see that agent's config
+  delivery_intake:
+    sources:
+      - product-manager  # an approved PRD, ready to sequence — becomes a ticket
+      - agent            # qa bug, security finding, devops incident, architect
+                         # debt — becomes a PROPOSAL, not a ticket. See below.
+    inbox_dir: agents/eng-manager/inbox/
+    processed_dir: agents/eng-manager/inbox/_processed/
+
+  # The department may not create its own tickets.
+  #
+  # An agent-originated finding lands in agents/eng-manager/proposals.md as one
+  # line. No id, no board row, nothing sequenced, nothing built. The list is
+  # surfaced as ONE batched G1 in the weekly report; only an approved proposal
+  # becomes a ticket.
+  #
+  # This used to shape straight onto the board, on the reasoning that agent
+  # findings are delivery work rather than business needs. True for a department
+  # building someone else's product; false for one that can file tickets about
+  # itself. At one point eleven of fifteen tickets on the board were this
+  # department's own machinery, two real product tickets were held behind it,
+  # and the two tickets diagnosing the department's own token burn had been
+  # deprioritised behind its gate tooling. Every one of those tickets was
+  # individually defensible, which is why the cap is on the ABILITY to
+  # self-generate rather than on any judgement call inside a pass.
+  agent_originated:
+    becomes: proposal
+    file: agents/eng-manager/proposals.md
+    approved_by: approver       # batched G1 in the weekly report
+    expires_after_days: 30       # then dropped with one line. An unbounded
+                                 # proposal list is the same backlog renamed.
+    # Delivery: one inbox/ item per week when the list is non-empty,
+    # type: eng-decision, gate: g1-proposals, ticket: PROP-{YYYY-WXX}, rows
+    # numbered P1..Pn. Answered via a channel reply through lib/eng-notify.sh;
+    # build_loop step 4 turns approved rows into tickets.
+    gate_id_prefix: PROP
+    counts_against_approval_cap: false
+    nudge: false
+    # Both exceptions on purpose. The cap exists to stop FINISHED work piling up
+    # on the approver; a proposal is not finished work and nothing is blocked
+    # behind it, and a weekly menu eating one of three approval slots would
+    # starve the gates that hold shipped code. Nothing to chase, so nothing
+    # chases.
+    # The one carve-out. A P0 on a registered project that is NOT in the
+    # internal lane — production down, or an actively exploitable
+    # vulnerability in code with real users — becomes a ticket immediately,
+    # no proposal and no G1. A live security hole must not wait a week.
+    #
+    # Internal-lane projects are excluded BY CONFIG and not by judgement, and
+    # that is the property that makes the carve-out safe rather than a
+    # loophole: they have no production and no users, so they cannot
+    # legitimately raise a P0, so the carve-out can never become a route back
+    # to self-generated tickets.
+    p0_bypass:
+      allowed: true
+      excluded_projects: instance_configured   # lib/eng-gate-check.sh → INTERNAL_PROJECTS
+
+# The board
+board:
+  root: agents/eng-manager/board/
+  index: agents/eng-manager/board/_index.md    # holds next_id and the live view
+  ticket_pattern: "{ENG-NNN}-{slug}.md"
+  id_prefix: ENG
+  # States, sizes, and severities are defined in config/definition-of-done.md.
+  # That file is authoritative — do not duplicate the state list here.
+
+  # Priority — the approver's ordering lever.
+  # NOT severity. Severity is the agent's read of how bad a problem is; priority
+  # is the approver's instruction about what to work first, and before this
+  # field the only way for them to change the order was to argue with an
+  # agent's severity. They disagree legitimately: a P3 they want today
+  # outranks a P1 they are content to leave until next week.
+  priority:
+    values: [now, next, hold]     # plus empty, the default = the EM orders it
+    settable_by: approver_only
+    # No agent writes this field. Not the EM, not on inference. An agent that
+    # thinks something should move sooner argues it through `severity` or the
+    # proposal batch — that is what those are for. Writing here is how the one
+    # lever the approver has over the queue stops being theirs.
+    surfaces:                     # how they set it WITHOUT opening a file
+      - board                     # a control on each ticket
+      - channel_reply             # "prioritise ENG-016" / "hold ENG-015",
+                                  # via lib/eng-notify.sh
+    enforced:
+      unknown_value: parse_error  # fail-closed: a priority silently ignored is
+                                  # an instruction from the approver that never
+                                  # arrived
+      hold_in_working_state: violation
+      # ready | building | in-review | in-qa | in-security | ready-to-ship.
+      # `now` and `next` are ordering hints with no filesystem fact behind them,
+      # so they are INSTRUCTED only. Do not document them as enforced.
+
+# Work in progress — two limits, because they protect different things
+wip:
+  approver_limit: 2
+  # Tickets whose path still runs through the approver — anything that will
+  # raise a gate or a merge request. THIS is the anti-burnout limit: a queue
+  # of finished-but-unapproved work landing on them is the failure this
+  # department exists to prevent. Raising it is the approver's call, not the
+  # EM's.
+
+  machine_limit: 6           # ← from plan.budgets[plan.tier].machine_wip
+  # Tickets moving entirely between agents — building, review, QA, security,
+  # release readiness. These cost the approver nothing, so throttling them
+  # bought nothing but latency. The old single limit of 2 capped both kinds
+  # together and was the second-biggest source of slowness after the
+  # approver's own response time.
+  #
+  # Bounded rather than unlimited, and NOT purely a cost decision — twenty
+  # tickets in flight means twenty shallow contexts, more rework, and worse
+  # reviews. This ceiling should rise with the plan tier but never to
+  # "unlimited": past a point, parallelism buys confusion, not throughput.
+  #
+  # approver_limit does NOT move with the tier. The approver's attention is
+  # the one thing no subscription buys more of.
+
+  limit: 2               # deprecated alias — read approver_limit
+  awaiting_approver_cap: 3
+  # Counts EVERY ticket whose next action belongs to a human, not just items
+  # sitting in inbox/:
+  #   - open G1 / G2 / G3 items
+  #   - tickets `blocked` with blocked_on: approver (an L1 PR waiting to be
+  #     merged, a risk acceptance, a question only the approver can answer)
+  # `blocked` used to sit outside both caps, so an L1 PR awaiting the
+  # approver's merge freed a WIP slot and the department could start another
+  # ticket — accumulating exactly the unbounded pile of finished-but-unapproved
+  # work these caps exist to prevent. A ticket parked on a human counts
+  # against the approver's capacity whatever state it is in.
+  # At the cap: stop advancing anything into a gate state, and stop starting
+  # new tickets. More approvals waiting is not more throughput.
+  blocked_escalation_days: 5      # blocked_on: agent — escalates to the weekly report
+  blocked_on_approver_reminder_days: 3   # a human-blocked ticket resurfaces sooner
+
+# The approver's gates (the only three)
+gates:
+  g1_scope:
+    owner: product-manager
+    skip_when:
+      size: [XS]
+      type: [bug, chore, security]
+  g2_one_way_door:
+    owner: architect
+    # Only entered when the design contains an escalated one-way door.
+    # Reversible decisions never reach the approver — architect decides, logs an ADR.
+  g3_release:
+    owner: devops
+    auto_when_autonomy: [L3]
+    raised_when_autonomy: [L2]
+    # L1 never raises G3 — it opens a PR and raises a MERGE item instead
+    # (see merge_requests below). L0 never reaches a release at all.
+  merge_request:
+    applies_to_autonomy: [L1]
+    owner: devops
+    raised_when: pr_opened
+    # The ticket goes `blocked` with blocked_on: approver AND an inbox item
+    # is written the moment the PR opens — carrying the PR link, what it does,
+    # and the gates it passed. Before this fix an L1 PR sat in a silent
+    # uncapped `blocked` pile with nothing watching it.
+    detect_merged_by: git_ancestry
+    # On each build-loop pass: fetch, then check whether the branch head is an
+    # ancestor of the project's default branch. Local, free, no API call.
+    # Merged → the ticket advances to `shipped`. Not merged → it stays counted
+    # against awaiting_approver_cap and resurfaces after 3 days.
+  inbox_dir: inbox/
+  # Never infer approval from silence. Explicit confirmation only.
+
+  # Notification. Writing an item to inbox/ and hoping the approver opens it
+  # unprompted is not a mechanism — it's a dead end with extra steps. Every
+  # gate item gets pushed through the configured notify channel.
+  notify:
+    script: lib/eng-notify.sh
+    channel: instance_configured   # config/conventions.yaml → notify; default telegram
+    on_raise: immediate
+    nudge_after_hours: 24     # exactly one follow-up, then silence
+    stall_alert: true         # fires once when the approval cap is reached
+    max_pings_per_item: 2
+    # Hard ceiling on purpose. This system is a counterweight to the
+    # approver's overwork pattern, not an amplifier: two pings is
+    # information, hourly reminders would be manufactured urgency. After the
+    # nudge, an unanswered item rides the daily brief and the weekly report
+    # and nothing else.
+    state_written_to: item_frontmatter   # notified: / nudged: timestamps
+    reply_to_decide: true
+    # The approver can answer through the notify channel — "approve ENG-004"
+    # / "reject ENG-004" — routed back by lib/eng-notify.sh. Friction is why
+    # things sit; answering from their phone removes it.
+
+# Machine gates — blocking, not advisory, never overridable by another agent
+machine_gates:
+  override: approver_only     # logged as an ADR with the risk accepted in writing
+
+  # Which gates apply is a property of the LANE. An `internal` lane exists for
+  # a project with no deploy target, no second committer, and no user whose
+  # data is in it — this department's own operating instance is the usual
+  # example. The `internal` lane runs code review and stops: no quality gate,
+  # no security gate, no release readiness, no G3.
+  #
+  # Why an internal lane at all. Every gate here was designed for software
+  # that ships to someone — a deploy target, a second committer, a user whose
+  # data is in it. An internal instance has none of those: no endpoint, no
+  # production, one human, and a "release" is a commit to main. Running five
+  # gates over markdown and a handful of local shell scripts does not buy
+  # safety there — it buys a backlog about itself, with the department's own
+  # gate tooling as the largest single consumer of the department's time.
+  #
+  # What is NOT waived, and this is the line that keeps the lane honest: code
+  # review still runs, and its receipt is still enforced by lib/eng-gate-check.sh
+  # exactly as before. `lib/*.sh` is real code that runs unattended in
+  # production; the gate that reads it stays.
+  #
+  # ENFORCED, not instructed. The lane's eligibility guard is in
+  # lib/eng-gate-check.sh (INTERNAL_PROJECTS, instance-configured and empty by
+  # default) and it keys off `project:`, so a product ticket cannot reach it
+  # by relabelling. Widening it is an edit to that line, deliberately, never a
+  # change made here.
+  lane_exemptions:
+    internal:
+      applies_to_projects: instance_configured   # lib/eng-gate-check.sh → INTERNAL_PROJECTS
+      runs: [code_review]
+      waives: [quality, security, release_readiness, migration]
+      approver_gates_waived: [g3_release]
+      # G1 still applies to anything new — see intake.delivery_intake. G2 still
+      # applies if a design genuinely contains a one-way door, which on an
+      # internal-lane project is rare and should stay possible.
+
+  gates:
+    - { gate: code_review,       owner: principal-engineer }
+    - { gate: migration,         owner: database, applies_when: touches_data }
+    - { gate: quality,           owner: qa }
+    - { gate: release_readiness, owner: devops }
+    - { gate: security,          owner: security, veto: true }
+  # Combined hop (added 2026-07-27; corrected same day after review).
+  # code_review and quality read the same diff and don't depend on each other,
+  # so ONE pass does both before handing on — a single session, a single lock
+  # cycle, one hop instead of two.
+  #
+  # It was originally written as "concurrent" and sold as parallel wall-clock
+  # savings. That was wrong and self-contradictory: the event loop holds a
+  # single-flight lock precisely so two passes never run at once, so two
+  # genuinely parallel sessions are impossible by design. The saving is real
+  # but smaller — one session spin-up and one hop, not two.
+  combined_hop:
+    - [code_review, quality]
+  # Review verdict wins: if review fails, QA's result from the same hop is
+  # discarded, because the code is about to change.
+  # Security stays strictly after quality: it checks whether the negative authz
+  # cases are actually tested, so it needs QA's finished test plan. Running it
+  # early would mean checking a test plan that doesn't exist yet and calling
+  # that a pass — the exact kind of hollow gate this department must not have.
+  sequential_after_quality: [security, release_readiness]
+
+  # Receipts — a gate that ran leaves a file, and the file is the proof
+  # (added 2026-08-11, ENG-007, under the ENG-004 parent and ADR-002)
+  #
+  # ENG-001 reached `main` recorded as shipped while owing all three gates, and
+  # every check the loop ran stayed green: they all asked whether the ticket
+  # MOVED, never whether it arrived by a legal route. `shipped` was a word a
+  # model wrote into a markdown file and nothing on disk disagreed.
+  #
+  # A receipt is the disagreement. Each gate writes a per-ticket file on a `pass`
+  # verdict, and a ticket may not sit at a terminal state without the files its
+  # lane's gates produce. The check reads the FILESYSTEM, never the frontmatter —
+  # that distinction is the whole difference between a check and a formality. A
+  # pass cannot satisfy it by writing `test_plan: done`.
+  receipts:
+    authoritative: lib/eng-gate-check.sh
+    # THE TABLE LIVES IN THAT SCRIPT AND IS NOT REPRODUCED HERE. Deliberate, and
+    # decided twice (ENG-006 work-breakdown, ENG-007) so it is not re-litigated:
+    # two copies would give the department's one enforceable invariant two
+    # sources of truth, and parsing a nested YAML table in zsh — inside the only
+    # enforceable surface there is — is a brittle way to buy nothing. Which lane
+    # owes which receipt is a row in that script. Read it there.
+    #
+    # This entry records that the gate exists, where it is implemented, and who
+    # writes each receipt. Nothing more, on purpose.
+    written_by:
+      code_review:       principal-engineer   # skills/code-review-gate/SKILL.md
+      quality:           qa                   # skills/test-authoring/SKILL.md, filled
+                                              # in by skills/test-suite-run/SKILL.md
+      security:          security             # skills/security-gate/SKILL.md
+    pass_verdict_only: [code_review, security]
+    # A receipt is written when a gate is CLEARED, never when it is merely
+    # reached. The check tests that the file exists and is non-empty; it does not
+    # and cannot read the verdict inside it. So a gate that wrote its receipt on
+    # the way through regardless of outcome would satisfy the exact check it is
+    # meant to prove, and a ticket could reach `shipped` holding three receipts
+    # that all say "failed" — ENG-004's own bug, reintroduced through the fix for
+    # it. On a fail the verdict goes in the ticket log and the reviewer's
+    # notebook, which is where it already goes.
+    #
+    # THIS IS A LIST, NOT A FLAG, AND `quality` IS DELIBERATELY MISSING. It read
+    # `true` — over all three producers — for one day, and was false for two of
+    # them; ENG-007's review round 1 caught it. `security-gate` was then fixed to
+    # match `code-review-gate`, so both of those honour the rule in the output
+    # row itself, which is the only place a gate agent reads. A key that claims
+    # an invariant nothing enforces is worse than an absent one, so the claim is
+    # now scoped to the two gates where it holds.
+    #
+    # The QA gap, stated rather than hidden: `agents/qa/test-plans/{ID}.md` is
+    # both the working document AND the receipt. The coverage table has to exist
+    # while QA works, so pass-only semantics require splitting those two roles —
+    # a separate receipt path, or a copy-on-pass. That changes what a receipt IS,
+    # which is the architect's call on ENG-004's design, not a gate skill's.
+    # Owner: architect, on ENG-004. Recorded in that ticket's log so it has a
+    # path forward rather than living only in this comment.
+    #
+    # Live consequence while it stands: a ticket that FAILED its quality gate
+    # still satisfies the quality receipt. Code review's verdict wins on the
+    # combined hop and sends the ticket back to `building`, so it cannot reach
+    # `shipped` on that route — but that is a property of the combined hop, not
+    # of this check, and it is the reason the gap is a design question rather
+    # than a live hole.
+    waivers: agents/eng-manager/config/gate-waivers.md
+    # The only exemption. Granting one is an override of a machine gate, so
+    # `override: approver_only` above already settles who may do it — no
+    # agent grants a waiver, including the EM.
+    status: enforced          # ENG-008 wired it; ENG-009 made it run on both hosts (2026-08-12)
+    # ENFORCED vs INSTRUCTED, per ADR-002, stated honestly rather than
+    # aspirationally. `lib/eng-gate-check.sh` exits non-zero on a violation, and
+    # `lib/eng-trigger.sh` calls it pre-pass and post-pass (ENG-008). Since
+    # ENG-009 it is POSIX sh and the trigger resolves the host's own shell, so
+    # both the Mac and the VPS container run it and both get a real verdict.
+    #
+    # This comment previously said the check "is called by nothing yet" and told
+    # a future agent to "flip this to `enforced` in the same change that lands
+    # the call sites". Both call sites landed with ENG-008 and the value was
+    # flipped by ENG-009 — but the rationale beside it was left describing the
+    # old world, so this block asserted `enforced` and `not wired` at once.
+    # Caught at ENG-009 review round 2. The lesson is worth more than the fix:
+    # step 6b enumerates the files that mention an artifact, and **a list of
+    # files is not a list of claims** — the two diverge exactly where a config
+    # value carries its rationale inline.
+    #
+    # Even then, `enforced` here means a violation cannot survive one pass
+    # unnoticed — NOT that the bad write is prevented. Nothing intercepts a model
+    # writing a markdown file, and no artifact in this department may claim
+    # otherwise (ADR-002).
+
+# Plan and budget (set at the approver's instruction: "don't design so that
+# we hold back on the $20 pro plan, I can upgrade to $100 if these agents are
+# better than a real team")
+#
+# The subscription tier is a SETTING, not an architectural constraint. It was
+# being treated as the latter, and that quietly shaped real decisions — hop
+# ceilings, parallelism, how thorough a review could afford to be. Those are now
+# derived from the tier below rather than from an assumption.
+#
+# What has NOT changed, and is genuinely architectural:
+#   - no Anthropic API billing — metered spend has no ceiling and no natural
+#     stopping point; a subscription does
+#   - no deployed endpoints — that's an ops burden and an attack surface, not a
+#     line item
+# Those two stay whatever the tier is. Overruling them is the approver's call
+# and should be a deliberate one, not a side effect of upgrading a plan.
+plan:
+  tier: pro                  # pro ($20) | max_5x ($100) | max_20x ($200)
+  # Change this ONE value and the budgets below move with it. Every agent reads
+  # from here; nothing hardcodes a ceiling.
+  budgets:
+    pro:
+      hops_per_day: 40
+      hops_per_ticket: 8
+      machine_wip: 6
+      review_depth: standard
+    max_5x:
+      hops_per_day: 200
+      hops_per_ticket: 20
+      machine_wip: 12
+      review_depth: thorough   # second-pass review on L-size diffs, full eval runs
+    max_20x:
+      hops_per_day: 600
+      hops_per_ticket: 40
+      machine_wip: 20
+      review_depth: thorough
+  # These are guard rails against a runaway loop, not a spending target. The
+  # department should use what the work needs and no more — a pass that adds
+  # nothing is waste at any tier.
+
+# Build loop — the engine
+build_loop:
+  days: [mon, tue, wed, thu, fri]
+  times: ["09:30", "15:30"]
+  # The department is EVENT-driven. The times above are a safety net, not the
+  # engine — they catch what no local event can see (a PR merged on github.com,
+  # a machine that was asleep, an event pass that died mid-run).
+  #
+  # A real team does not check a board twice a day: someone pushes, the reviewer
+  # is notified. This is that.
+  events:
+    enabled: true
+    script: lib/eng-trigger.sh
+    triggers:                           # NOT `on:` — bare `on` parses as the
+                                        # boolean true in YAML 1.1
+      intake:   inbox_requests            # a build request arrived (inbox/requests/)
+      decision: eng-notify                # the approver answered a gate, via lib/eng-notify.sh
+      finding:  agent                     # QA/security/devops/architect filed something
+      continue: self                      # a pass ended mid-flow — the chain
+      watch:    launchd                   # an inbox file changed outside the UI
+    watcher: connections/eng-event-loop.md   # reverse-DNS launchd label, WatchPaths
+    # `continue` is the one that matters most. A pass stops after `building`
+    # because a single session that designs, builds, reviews, tests AND
+    # security-reviews runs out of context and does all of it badly. So each
+    # heavy step gets a fresh session — chained by events, the way a push
+    # triggers CI. Before this, an engineer who finished at 10:00 sat until
+    # 15:30 with the work done and nobody looking at it.
+    single_flight: true
+    # A fire during a running pass is QUEUED and drained in-process. An earlier
+    # version skipped it outright, which silently lost events — the exact
+    # dead-end this system forbids.
+    #
+    # This comment read "QUEUED, not dropped" and that has been false since
+    # ENG-005: an event CAN be dropped — after two failed attempts, on an
+    # unparseable queue line, or when its ticket is out of hops — and every
+    # drop raises an inbox item and one notify ping. Every fire also drains the
+    # OLDEST queued event before its own, which is what makes the retry, and
+    # therefore the drop, happen at all when no pass is succeeding. The full rule
+    # lives in schedules/eng_build_loop.md → Chaining; this is a pointer, not a
+    # second copy.
+    stale_lock_seconds: 1800
+    max_hops_per_day: 40       # ← from plan.budgets[plan.tier].hops_per_day
+    max_hops_per_ticket: 8     # ← from plan.budgets[plan.tier].hops_per_ticket
+    # Runaway guard, sized to the plan. A self-triggering loop with a bug would
+    # otherwise spawn sessions until the subscription's usage window is gone.
+    # At the limit the loop halts and writes a notice to inbox/, so a stuck
+    # loop shows up as an inbox item — and a notify ping — rather than as a
+    # suspiciously quiet day.
+    #
+    # These exist to catch BUGS, not to ration healthy work. If the department
+    # is legitimately hitting them, raise the tier rather than working around
+    # them. A guard that fires on normal days teaches everyone to ignore it.
+    # Override at runtime with ENG_MAX_HOPS_PER_DAY / ENG_MAX_HOPS_PER_TICKET.
+    never_chain_when:
+      - "waiting on the approver — any gate, or blocked_on: approver"
+      - blocked on anything else
+      - terminal state (verified, advised, dropped)
+      - held by the WIP or approval cap — that wait is the design
+  # Advance rule: a ticket runs through CONSECUTIVE machine-owned states in a
+  # single pass, stopping at the first state that needs a human or new
+  # implementation work.
+  advance: until_human_or_new_work
+  stop_at:
+    - approver_owned_state # awaiting-scope / awaiting-decision / awaiting-release
+    - building              # an engineer writing code is the pass's real unit of work
+    - failed_gate           # it goes back to `building` and stops there
+  max_transitions_per_ticket_per_pass: 4   # runaway guard
+  # The old rule was one state per pass, which made a review→qa→security run
+  # take a day and a half of pure waiting. The calm this department is designed
+  # for is about THE PRINCIPAL's attention, not about machine latency —
+  # machine gates cost them nothing, so making them wait on them buys nothing.
+  # What stays slow is deliberate: two passes a day, WIP of 2, and every human
+  # stop is a real stop.
+
+# Fast lane — small work does not deserve the full ceremony
+# Without this, a one-line fix produces five documents and nine transitions,
+# the approver routes around the department, and it only ever gets used on
+# the big tickets where its slowness costs most.
+fast_lane:
+  eligible_when:
+    size: [XS]
+    type: [bug, chore]
+    touches_none_of: [auth, payments, data_deletion, schema, dependencies,
+                      model_calls, public_contracts, pii]
+  skips:
+    - separate PRD file      # three lines in the ticket instead
+    - architect and the design doc
+    - separate test plan     # the regression test still ships, always
+    - separate security review state
+  states: [intake, building, in-review, shipped, verified]
+  combined_gate:
+    owner: principal-engineer
+    covers: [code_review, suite_run, owasp_check_on_the_touched_surface]
+    # QA's suite still runs — green is green, and running it is cheap.
+  exit_rule: one_way
+  # A ticket can DROP OUT of the fast lane into the full pipeline at any point —
+  # it turns out to touch a sensitive surface, review fails twice, or the suite
+  # goes red beyond the change. It can never enter the fast lane late.
+
+# L0 projects — the advisory pipeline
+# An L0 ticket must never reach `ready`. Work-breakdown would assign it to
+# engineers who are forbidden to write code on that repo, which is a dead end
+# in the state machine — and it can land on a live client engagement, not a
+# hypothetical.
+l0_pipeline:
+  states: [intake, shaped, designed, advised]
+  terminal_state: advised
+  # `advised` = the design and its findings are packaged for the approver,
+  # who carries them into the client's own process. Nothing is built,
+  # branched, or scanned.
+  package_to: inbox/
+  package_contains: [problem, design, findings, what_the_approver_would_have_to_do]
+  never_enters: [ready, building, in-review, in-qa, in-security, ready-to-ship, shipped]
+
+# Release windows
+releases:
+  block_after: { day: friday, time: "15:00" }
+  block_weekends: true
+  block_modes: [sabbath, retreat]
+  release_freeze: true         # also blocks while ENG_RELEASE_FREEZE is set — config/conventions.yaml → release_freeze
+  p0_hotfix_exempt: true       # still passes the security gate
+
+# Speed — measured, so the next answer to "why is this slow" is a number.
+# Cycle time is not a target to hit; it's a diagnostic. The split between
+# waiting-on-the-approver and waiting-on-machine is the whole point: they
+# have completely different fixes and conflating them wastes effort.
+speed:
+  track:
+    - cycle_time_by_state          # where tickets actually sit
+    - wait_on_approver_hours      # summed across G1/G2/G3 + merge requests
+    - wait_on_machine_hours        # everything else
+    - first_pass_gate_rate         # % of gates passed without a rework round
+    - rework_rounds_per_ticket
+  report_in: weekly_report
+  first_pass_target: 0.7
+  # Below 70%, the problem is the brief, not the engineers: they're being sent
+  # to write code without knowing what the gate will ask. The fix is upstream —
+  # see shift_left below — never "review more leniently."
+
+# Shift left — the cheapest speed there is: don't fail the gate in the first place
+shift_left:
+  engineers_receive_before_writing:
+    - agents/eng-manager/config/engineering-standards.md   # the automatic-failure list especially
+    - agents/eng-manager/config/security-baseline.md       # the OWASP rows the change can touch
+    - the acceptance criteria QA will write tests against
+  # A rework round costs a full gate cycle. Preventing one is worth more than
+  # any amount of loop tuning, and it's free.
+
+# Reporting
+weekly_report:
+  day: sunday
+  time: "18:30"
+  output_dir: reports/
+  filename: engineering-{YYYY-WXX}.md
+  # Shipped, in flight, blocked, bugs open by severity, what needs the approver.
+  # Folds into the existing Sunday reporting cadence. Folded into the
+  # instance's daily brief through its existing aggregation, if one exists.
+  # No separate daily channel exists, and none should — one weekly file is
+  # the department's entire reporting surface.
+  # Terminal for now: the approver reads it or doesn't. Rewires if the
+  # instance grows an aggregator that consumes it.
+  silence_is_valid: true       # a quiet engineering week needs no announcing
+
+# Interrupts — P0 only
+interrupts:
+  allowed_severities: [P0]
+  definition_ref: agents/eng-manager/config/definition-of-done.md
+
+# Proof
+proof:
+  path: reports/proof/{slug}.md
+  write_when: non_trivial_and_interesting
+  optional: true                # nothing requires it — write one if the work is worth surfacing later
+  # Terminal for now: rewires to a marketing department's intake if/when
+  # business-os grows one that consumes proof material.
+
+# Mode behaviour (read MODE from .env at the start of every run)
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet:
+    board: advances
+    approver_surfacing: deferred
+
+# Release freeze — separate from MODE. See config/conventions.yaml → release_freeze.
+release_freeze:
+  releases: suppressed
+  board: advances
+  p0_hotfix: exempt

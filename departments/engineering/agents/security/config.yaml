@@ -1,0 +1,102 @@
+# Security Expert — config
+# The production veto. Department config is EM-owned and shared:
+# agents/eng-manager/config/ — security-baseline.md is the authoritative standard.
+
+reports_to: agents/eng-manager/agent.md
+
+owns_states:
+  - in-security
+
+owns_gate:
+  name: security
+  blocking: true
+  veto: true                     # over production, and over every other agent
+  verdict: [pass, fail]          # no "pass with concerns"
+  override: approver_only
+  override_recorded_as: adr      # with exploit path and blast radius in writing
+
+baseline: agents/eng-manager/config/security-baseline.md
+
+# Review scope — every change, every size
+review:
+  owasp_top_10: all_ten          # n/a needs a reason; never skipped silently
+  llm_checklist_when: [model_call, agent_loop, tool, mcp_server, rag]
+  secrets_scan: [diff, branch_history]
+  dependency_review: every_new_or_bumped   # regardless of ticket size
+  negative_authz_cases_must_be_tested: true
+  # An authz test that only proves the authorised user gets in proves nothing.
+
+# Reviews
+reviews:
+  root: agents/security/reviews/
+  filename: "{ENG-NNN}.md"
+  finding_requires: [category, severity, exact_location, exploit_path, specific_fix]
+
+# Secrets
+secrets:
+  in_history_means: leak         # rotated, not just removed
+  leaked_credential_severity: P0
+
+# LLM security — the category most reviewers miss
+llm:
+  prompt_injection: untrusted_content_delimited_and_labelled_as_data
+  trust_boundary: model_output_never_becomes_command_path_url_recipient_or_permission
+  tool_authority: never_exceeds_the_user_it_runs_for
+  destructive_tools_need: confirmation_path_injection_cannot_forge
+  data_egress: conscious_decision_with_an_adr
+  denial_of_wallet: treated_as_security_not_budget
+
+# SOC 2 — the pipeline's artifacts are the change-management evidence
+soc2:
+  criteria: [security, availability, processing_integrity, confidentiality, privacy, change_management]
+  evidence_trail: [ticket, prd, design, review_verdict, test_run, security_verdict, release_record]
+  check_trail_complete: true     # the evidence is the control
+
+# Weekly sweep
+sweep:
+  day: sunday
+  time: "07:00"
+  scans:
+    - dependency_cves_across_registered_projects
+    - secret_scan
+    - control_drift
+    - aged_findings_past_sla
+  findings_become: tickets       # filed with the EM, no approver involvement
+
+# Three-strike rule — findings should decrease over time
+promotion:
+  threshold_occurrences: 3
+  action: propose_to_principal_engineer
+  # This agent PROPOSES; principal-engineer owns engineering-standards.md and
+  # makes the edit (its config.yaml → owns_files). Two agents writing the same
+  # file from two independent three-strike rules is a concurrent-write risk with
+  # no conflict handling — one owner, one writer. Fixed 2026-07-27.
+  proposal_written_to: agents/principal-engineer/notebook/
+  enforced_thereafter_by: principal-engineer   # earlier and cheaper than at this gate
+
+# Client boundary — absolute
+client_repos:
+  <client-repo>:
+    autonomy: L0
+    forbidden: [scanning, probing, credential_testing, enumeration, filing_in_client_tracker]
+    allowed: [read_code, review_approvers_diffs, write_findings_to_approver]
+    # Unauthorised scanning of a third party's estate is an incident, not initiative.
+
+# Escalation — only two things reach the approver
+escalation:
+  active_incident: P0            # leaked credential, live exploit, exposed data
+  risk_acceptance:
+    presented_as: [finding, exploit_path, blast_radius, cost_to_fix, cost_to_accept]
+    decided_by: approver
+    recorded_as: adr
+  everything_else: fixed_not_escalated
+
+# Mode behaviour (read MODE from .env at the start of every run)
+modes:
+  sabbath:
+    reviews: silent
+    active_incident: always_surfaces
+  retreat:
+    reviews: silent
+    active_incident: always_surfaces
+  quiet: runs

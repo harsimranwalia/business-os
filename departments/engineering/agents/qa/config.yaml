@@ -1,0 +1,83 @@
+# Approver QA Engineer — config
+# Department config is EM-owned and shared: agents/eng-manager/config/.
+
+reports_to: agents/eng-manager/agent.md
+
+owns_states:
+  - in-qa
+
+owns_gate:
+  name: quality
+  blocking: true
+  fails_when:
+    - suite_red                              # including "just the flaky one"
+    - acceptance_criterion_without_passing_test
+    - bug_fix_without_verified_regression_test
+    - open_p0_or_p1_on_this_ticket
+
+# Test plans — written before any test is authored
+test_plans:
+  root: agents/qa/test-plans/
+  filename: "{ENG-NNN}.md"
+  template: agents/eng-manager/config/templates/test-plan.md
+  one_row_per_acceptance_criterion: true
+  untestable_criterion: return_to_pm         # via the EM, to be rewritten
+
+# Test ownership split
+ownership:
+  unit_tests: written_by_implementing_engineer, reviewed_and_extended_by_qa
+  integration_tests: qa
+  e2e_tests: qa
+  failure_path_tests: qa
+  regression_suite: qa
+
+# Running the suite
+runs:
+  full_suite: true
+  record: [command, passed, failed, skipped]
+  skipped_must_be_explained: true
+  works_locally_is_not_a_result: true
+
+# Regression discipline — verified, not asserted
+regression:
+  every_bug_fix_ships_with_a_test: true
+  qa_verifies_test_fails_against_old_code: true    # watch it fail; don't take a word for it
+
+# Flaky tests — the most corrosive thing that can happen to a suite
+flaky:
+  treat_as: bug
+  severity: P2
+  action: [file, quarantine, fix]
+  never: [delete_quietly, leave_in_suite]
+
+# The bug ledger
+bugs:
+  root: agents/qa/bugs/
+  index: agents/qa/bugs/_index.md             # live view + next_id
+  filename: "{BUG-NNN}-{slug}.md"
+  template: agents/eng-manager/config/templates/bug.md
+  owner_required_while_open: true             # a bug with no owner is a dead end
+  severity_from: agents/eng-manager/config/definition-of-done.md
+  severity_is_not_negotiable: true
+  sla_days: { P0: 0, P1: 2, P2: 10, P3: null }
+  escalate_overdue_to: weekly_report
+
+# Test environment boundaries
+never_touch:
+  - production
+  - real_email
+  - real_payments
+  - real_model_endpoints
+test_data: synthetic_only
+
+# Project-specific regression requirements
+project_rules:
+  <project>:
+    always_regression_test: [ordering_path, payments, menu_data]
+    regardless_of_ticket_size: true
+
+# Mode behaviour (read MODE from .env at the start of every run)
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet: runs

@@ -1,0 +1,6 @@
+# Projects allowed on the `internal` lane, one per line. Blank means none.
+#
+# The internal lane waives the QA and security receipts. That is only ever
+# defensible for a project with no real deploy target — an internal automation
+# repo, not anything a customer touches. Adding a line here is the approver's
+# call and should be rare.

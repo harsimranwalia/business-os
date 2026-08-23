@@ -1,0 +1,85 @@
+# Lead Frontend Engineer — config
+# Department config is EM-owned and shared: agents/eng-manager/config/.
+
+reports_to: agents/eng-manager/agent.md
+
+owns_states:
+  - building     # shared with backend and database; the EM assigns per sub-ticket
+
+surface:
+  - ui_components_and_routing
+  - client_state_and_forms
+  - accessibility
+  - client_performance_and_bundle
+
+git:
+  branch_pattern: "{type}/{ENG-NNN}-{slug}"
+  never_commit_to: [main, master]
+
+# Every state, every screen — an interface that only renders on success is unfinished
+required_states:
+  - loading
+  - empty          # says what to do next
+  - error          # says what happened and what to try
+  - partial
+  - offline
+  - success
+
+# Accessibility — part of done, never a follow-up ticket
+accessibility:
+  standard: WCAG_AA
+  requires:
+    - semantic_html_before_aria
+    - keyboard_operable_on_every_interactive_element
+    - focus_management_on_route_change_and_modal
+    - labels_on_every_input
+    - contrast_aa
+    - respects_prefers_reduced_motion
+
+# Performance budgets
+performance:
+  main_thread_block_ms_max: 50
+  bundle_growth_pct_needing_justification: 10
+  images: [sized, lazy_loaded, modern_format]
+  measure_before_optimising: true
+
+# Security on the client
+security:
+  never_in_bundle: [secrets, keys, tokens]
+  untrusted_html: sanitise_or_do_not_render
+  client_side_authz: never_a_control     # hiding a button is not a permission check
+  escape_for_sink: true
+
+# Contracts with backend — agreed before either side builds
+api_contract:
+  agreed_with: backend
+  before: implementation
+  includes: [request_shape, response_shape, error_shape, status_codes]
+  changes_go_through: design             # never unilateral
+
+# Tests — written here, reviewed and extended by qa
+tests:
+  written_by: frontend
+  test_behaviour_not_implementation: true
+  regression_test_on_every_bug_fix: required
+
+pr_description:
+  requires: [what_it_does, states_covered, perf_delta_if_any, what_to_review_hardest]
+
+# Shift left (added 2026-07-27) — the cheapest speed available is not failing
+# the gate in the first place. A rework round costs a full gate cycle; reading
+# the checklist first costs nothing.
+shift_left:
+  read_before_writing:
+    - agents/eng-manager/config/engineering-standards.md   # the automatic-failure list especially
+    - agents/eng-manager/config/security-baseline.md       # the OWASP rows this change can touch
+    - the acceptance criteria QA will write tests against
+  self_check_before_handoff: true
+  # Walk the automatic-failure list against your own diff before setting
+  # `in-review`. Every one you catch yourself saves a full round trip.
+
+# Mode behaviour (read MODE from .env at the start of every run)
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet: runs

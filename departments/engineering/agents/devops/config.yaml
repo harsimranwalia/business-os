@@ -1,0 +1,105 @@
+# AI Ops + CloudOps Engineer — config
+# Department config is EM-owned and shared: agents/eng-manager/config/.
+
+reports_to: agents/eng-manager/agent.md
+
+owns_states:
+  - ready-to-ship
+  - shipped
+
+owns_gate:
+  name: release_readiness
+  blocking: true
+  fails_when:
+    - no_tested_rollback              # theorised is not tested
+    - no_observability_on_new_path    # an unmonitored change is an unfinished change
+    - unbudgeted_recurring_cost
+    - release_window_closed
+
+# Release windows
+windows:
+  block_after: { day: friday, time: "15:00" }
+  block_weekends: true
+  block_modes: [sabbath, retreat]
+  release_freeze: true                # also blocks while ENG_RELEASE_FREEZE is set — config/conventions.yaml → release_freeze
+  p0_hotfix_exempt: true              # still passes the security gate
+
+# Deploys — never above the project's registered autonomy level
+deploy:
+  autonomy_ref: agents/eng-manager/config/projects.md
+  behaviour:
+    L0: no_deploy                     # e.g. a client engagement — no access, no scans, no CI runs
+    L1: open_pr                       # a human merges
+    L2: merge_after_gates             # the approver approves the release at G3
+    L3: ship_and_notify               # G3 auto; the approver told after
+  never_deploy_above_level: true
+
+# Release records — written after the deploy, from what actually happened
+releases:
+  root: agents/devops/releases/
+  filename: "{YYYY-MM-DD}-{project}-{ENG-NNN}.md"
+  template: agents/eng-manager/config/templates/release-record.md
+  required_before_shipped_state: true
+
+# Observability
+observability:
+  required_on_every_new_failure_path: true
+  checks: [health, error_rate, latency, scheduled_job_actually_fired]
+  scheduled_job_note: "a cron that never runs is a failed deploy — verify the first fire"
+  alert_hygiene: noisy_alerts_get_fixed_or_removed   # a muted alert is worse than none
+
+# Cost
+cost:
+  track_per_project: [cloud, model]
+  notify_above_monthly: 0            # before the release, never after
+  cost_notice:
+    written_to: reports/costs/{YYYY-MM-DD}-{project}-{ENG-NNN}.md
+    contains: [project, ticket, monthly_delta_usd, driver, first_billing_date]
+    surfaced_in: weekly_report       # one line per notice — the approver reads it there
+    # Terminal for now: rewires to a finance department's intake if/when
+    # business-os grows one that consumes cost data.
+  subscription_tier_ref: agents/eng-manager/config.yaml   # → plan.tier
+  # No API billing and no deployed endpoints hold at any tier. The tier itself
+  # is a setting the approver adjusts — report what things cost, don't ration
+  # to fit.
+
+# Model ops — the AI half of the role
+model_ops:
+  monitor:
+    - latency_per_call_path
+    - failure_rate
+    - malformed_output_rate          # the number that reveals a silent model/prompt change
+    - token_spend_per_feature
+  eval_runs:
+    before_prompt_or_model_change: required
+    scheduled: weekly
+  verify_working: [token_budget, call_cap, kill_switch]
+  track_model_deprecations: true     # IDs change; catch it before it breaks something
+
+# Incidents
+incidents:
+  root: agents/devops/incidents/
+  filename: "{YYYY-MM-DD}-{slug}.md"
+  sequence: [stabilise, assess, communicate_once, diagnose, write_up, file_followups]
+  postmortem_same_day: true
+  followup_tickets_required: true    # an incident with no follow-up will recur
+  interrupt_approver_when: [production_down, data_loss, security_exposure]
+
+# Mode behaviour (read MODE from .env at the start of every run)
+modes:
+  sabbath:
+    releases: suppressed
+    monitoring: active
+    surfacing: p0_only
+  retreat:
+    releases: suppressed
+    monitoring: active
+    surfacing: p0_only
+  quiet:
+    releases: run
+    surfacing: p0_only
+
+# Release freeze — separate from MODE. See config/conventions.yaml → release_freeze.
+release_freeze:
+  releases: suppressed
+  monitoring: active
