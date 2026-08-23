@@ -30,7 +30,7 @@ business need arrives (agents/product-manager/inbox/, inbox/requests/ tagged `en
         │     │                          ticket, straight to `building`
         │     └── otherwise       → lane `full`
         ├── reads: board/{ENG-NNN}-{slug}.md
-        ├── reads: ../../../knowledge/business-profile.md (what the business
+        ├── reads: ../knowledge/business-profile.md (what the business
         │     is, who it serves, what it sells — whether this is worth building)
         ├── reads: agents/eng-manager/config/projects.md (constraints, autonomy)
         ├── reads: agents/product-manager/notebook/ (what the approver has

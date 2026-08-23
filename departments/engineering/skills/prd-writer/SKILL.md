@@ -24,7 +24,7 @@ approved PRD, then hands off to the EM for delivery.
 
 - The raw request: `agents/product-manager/inbox/`, a request filed to
   `inbox/requests/`, a Delivery handoff, or the approver in a session (required)
-- `../../../knowledge/business-profile.md` — what the business is, who it
+- `../knowledge/business-profile.md` — what the business is, who it
   serves, what it sells. Read this fresh, every run — it's what makes step 3's
   filter answerable instead of a guess.
 - `agents/eng-manager/board/{ENG-NNN}-{slug}.md` when the ticket already exists
@@ -101,7 +101,7 @@ confident invention.
 ### 3. Check it against the filter
 
 The filter below is unusable applied to a business you can't describe — if you
-haven't read `../../../knowledge/business-profile.md` yet this run, read it now.
+haven't read `../knowledge/business-profile.md` yet this run, read it now.
 
 Five questions, answered honestly in your own reasoning before you write:
 

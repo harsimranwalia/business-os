@@ -12,7 +12,7 @@
 ticket → `designed` (dispatched by eng-manager)
   └── tech-design
         ├── reads: agents/product-manager/specs/{ENG-NNN}-{slug}.md (acceptance criteria)
-        ├── reads: ../../../knowledge/business-profile.md (what the business
+        ├── reads: ../knowledge/business-profile.md (what the business
         │     is, who it serves, what it sells — sizes the design and the
         │     one-way-door call)
         ├── reads: agents/eng-manager/config/projects.md (hard constraints, autonomy)

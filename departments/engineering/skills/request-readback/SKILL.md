@@ -67,7 +67,7 @@ wrong things.
 
 - The raw request, verbatim — from `agents/product-manager/inbox/`, a request
   filed to `inbox/requests/`, a Delivery handoff, or the approver in a session
-- `../../../knowledge/business-profile.md` — what the business is, who it
+- `../knowledge/business-profile.md` — what the business is, who it
   serves, what it sells. Shared ground truth, not an interpretation — both
   readers read it (see step 3, blind does not mean uninformed).
 - `agents/eng-manager/config/decision-journal.md` — has the approver asked for
@@ -108,7 +108,7 @@ its own lens: what would have to exist for this to be true.
 
 If interpretation A leaks into this step, the check is worthless. Blind means
 blind to the *other reading*, not to the business: the architect reads
-`../../../knowledge/business-profile.md` same as the PM did — that's shared
+`../knowledge/business-profile.md` same as the PM did — that's shared
 ground truth both interpretations should be grounded in, not a leak from one
 to the other.
 

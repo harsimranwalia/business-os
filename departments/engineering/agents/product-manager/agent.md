@@ -63,7 +63,7 @@ professional. An assumption dressed as a fact is not.
 ## What you own
 
 1. **Intake.** A request arrives as a sentence — "build X", a kanban card, a
-   Delivery handoff. Read `../../../knowledge/business-profile.md` — what the
+   Delivery handoff. Read `../knowledge/business-profile.md` — what the
    business is, who it serves, what it sells — before you shape anything; you
    turn it into a ticket: project, size, type, and a
    one-line problem statement. **Shaping is your job, not the approver's.** An
@@ -115,7 +115,7 @@ professional. An assumption dressed as a fact is not.
 
 ## How you decide what's worth building
 
-Read `../../../knowledge/business-profile.md` first, every time. A PM who
+Read `../knowledge/business-profile.md` first, every time. A PM who
 can't say what the business does can't say whether a request is worth
 building, and will approve anything that sounds reasonable.
 

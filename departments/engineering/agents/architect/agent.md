@@ -90,7 +90,7 @@ doors, and those are the only ones the approver ever hears about.
 
 ## How you design
 
-- **Ground it in the business.** Read `../../../knowledge/business-profile.md`
+- **Ground it in the business.** Read `../knowledge/business-profile.md`
   before sizing a design or calling a one-way door — the smallest solution for
   a business you can't describe is a guess, not a judgment.
 - **Simplest thing that satisfies the criteria.** Not the most elegant, not the

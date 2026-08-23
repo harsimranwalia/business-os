@@ -94,7 +94,14 @@ roles:
 # nothing. A business grounds the same judgement in its own facts.
 # ---------------------------------------------------------------------------
 knowledge:
-  source: ../../../knowledge/       # business-os/knowledge/, relative to an instance root
+  source: ../knowledge/             # instances/{business}/knowledge/ — PER BUSINESS, not repo-root
+  # Scoped to the business deliberately. business-os's repo-root knowledge/ is a
+  # single-instance artifact from before this department existed: one profile
+  # describing one company. A second business reading it would shape scope
+  # against the wrong company's facts — the PM would approve anything that
+  # sounded reasonable. It sits beside `engineering/` rather than inside it
+  # because it describes the business, not the department: a marketing
+  # department instantiated later reads the same file.
   files:
     profile: business-profile.md    # what the business is, who it serves, what it sells
   read_by: [product-manager, architect]

@@ -29,6 +29,7 @@ done
 [ -n "$BUSINESS" ] || { echo "usage: ./install.sh <business> [--approver NAME] [--apply]" >&2; exit 2; }
 
 INST="$BUSINESS_OS/instances/$BUSINESS/engineering"
+KNOW="$BUSINESS_OS/instances/$BUSINESS/knowledge"
 [ "$APPLY" -eq 1 ] || echo "DRY RUN — nothing will be written. Re-run with --apply."
 echo "template : $DEPT (v$VERSION)"
 echo "instance : $INST"
@@ -52,6 +53,8 @@ agents/qa/test-plans agents/qa/bugs agents/qa/notebook
 agents/devops/releases agents/devops/incidents agents/devops/notebook
 agents/security/reviews agents/security/notebook
 config"
+
+if [ "$APPLY" -eq 1 ]; then mkdir -p "$KNOW"; else echo "  mkdir ../knowledge"; fi
 
 for d in $DIRS; do
   if [ "$APPLY" -eq 1 ]; then mkdir -p "$INST/$d"; touch "$INST/$d/.gitkeep"; else echo "  mkdir $d"; fi
@@ -140,6 +143,34 @@ emit config/internal-projects <<'EOF'
 # repo, not anything a customer touches. Adding a line here is the approver's
 # call and should be rare.
 EOF
+
+if [ "$APPLY" -eq 1 ]; then
+  if [ -f "$KNOW/business-profile.md" ]; then
+    echo "  ../knowledge/business-profile.md already exists — left alone"
+  else
+    cat > "$KNOW/business-profile.md" <<PROFILE
+# Business Profile — $BUSINESS
+
+**Fill this in before the first scope conversation.** The product manager and
+architect read this file at the start of request shaping, G1 framing, PRD
+writing and any architectural call. A PM that cannot say what the business does
+cannot say whether a request is worth building, and will approve anything that
+sounds reasonable.
+
+**Business:** <what it is, what it sells, who it serves>
+
+**Customers:** <who pays, and for what>
+
+**What good looks like:** <the outcome the business is actually optimising for>
+
+**Out of scope:** <what this business does not do — the boundary that lets the
+PM say no to a request that sounds plausible>
+PROFILE
+    echo "  wrote ../knowledge/business-profile.md (stub — fill it in)"
+  fi
+else
+  echo "  write ../knowledge/business-profile.md"
+fi
 
 emit agents/eng-manager/config/gate-waivers.md <<'EOF'
 # Gate waivers

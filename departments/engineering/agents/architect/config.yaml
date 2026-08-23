@@ -10,7 +10,7 @@ owns_states:
 # Business grounding — read before sizing a design or making an architectural
 # call, same as the PM reads it before G1. See config/conventions.yaml → knowledge.
 knowledge:
-  profile: ../../../knowledge/business-profile.md
+  profile: ../knowledge/business-profile.md
 
 # Blind second reader on intake (added 2026-07-27)
 # Before the PM writes a PRD, this agent reads the RAW REQUEST — nothing else —

@@ -37,7 +37,7 @@ intake:
 # to judge whether a request is worth building, and approves anything that
 # sounds reasonable. See config/conventions.yaml → knowledge.
 knowledge:
-  profile: ../../../knowledge/business-profile.md
+  profile: ../knowledge/business-profile.md
 
 # Readback — prove the request was understood before anything is built from it
 #
