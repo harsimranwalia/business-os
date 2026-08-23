@@ -17,8 +17,9 @@ No interpretation, no rounding up, no "green except".
 ## Inputs
 
 - `agents/qa/test-plans/{ENG-NNN}.md` — the plan and its `suite_command`
-- The project's test command — from the plan, or from
-  `agents/eng-manager/config/projects.md` if this is the first run
+- The project's test command — from the plan, or from the Test column of the
+  `## Commands` table in `agents/eng-manager/config/projects.md` if this is the
+  first run
 - `.env` → `MODE`
 
 ---
@@ -31,11 +32,21 @@ No interpretation, no rounding up, no "green except".
 
 ### 2. Run the full suite
 
-The exact command in the plan. Full suite, not the changed files — the point is
-catching what this change broke elsewhere. Capture stdout and stderr.
+If the Test column is empty — no `suite_command` in the plan and no Test cell
+in the `## Commands` table — there is no suite to run. That is not a pass.
+Skip to step 8 and report it honestly: no suite exists, and the quality gate
+cannot enforce this dimension until a harness ticket lands. Don't invent a
+command to satisfy the step.
 
-Also run the project's lint, typecheck, and build. A green suite on code that
-doesn't build is not a pass.
+Otherwise: the exact command in the plan. Full suite, not the changed files —
+the point is catching what this change broke elsewhere. Capture stdout and
+stderr.
+
+Also run the project's lint, typecheck, and build — whichever of those three
+columns is non-empty in the `## Commands` table. A green suite on code that
+doesn't build is not a pass, and a project with no Test command but a working
+lint, typecheck, or build still has something real for the gate to enforce —
+run and report those regardless of whether Test exists.
 
 **Haiku handles steps 2–4.** Escalate to sonnet only if something failed.
 
@@ -80,6 +91,9 @@ write.
 ### 8. Report
 
 Update the plan's result block: numbers, bugs filed, verdict `pass` or `fail`.
+If step 2 found no Test command, the verdict is neither — record `no suite`,
+plus whatever lint/typecheck/build results did run. Not a pass, and not a
+failure to file through `bug-triage` — there's no test to have failed.
 Return the verdict to the caller — the quality gate reads it directly.
 
 ---

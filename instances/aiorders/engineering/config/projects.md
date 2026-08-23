@@ -38,6 +38,32 @@ approver owns.
 `twenty-crm` and anything else under `~/Documents/projects/aiorders/`. They sit in
 the same parent directory but were never onboarded. The team does not touch them.
 
+## Commands
+
+How each project is verified. `skills/test-suite-run/SKILL.md` reads this when a
+test plan carries no `suite_command` of its own. Read from each repo's own
+`package.json` on 2026-08-23 — never guessed. An empty cell means the command
+does not exist.
+
+| Project | Test | Lint | Typecheck | Build |
+|---|---|---|---|---|
+| `aiorders-api` | — | — | — | — |
+| `aiorders-admin-hub` | — | `npm run lint` | — | `npm run build` |
+| `config-site-builder` | — | `npm run lint` | — | `npm run build` |
+| `restaurant-marketplace` | — | `npm run lint` | `npm run typecheck` | `npm run build` |
+| `restaurant-portal` | — | `npm run lint` | — | `npm run build` |
+
+`aiorders-api` is empty across the board because it has no `package.json` at
+all — it is Deno (Supabase edge functions), so whatever verification it gets
+will be `deno test` / `deno lint` / `deno check` against a `deno.json` that does
+not exist yet. That is a ticket, not a blank to fill in.
+
+Four of the five have a working `build` and `lint`, which is more than nothing:
+`skills/test-suite-run/SKILL.md` already treats lint, typecheck and build as
+part of a run ("a green suite on code that doesn't build is not a pass"), so
+those columns give the quality gate something real to enforce on day one even
+before any test exists.
+
 ## No test command exists on any registered project
 
 Verified 2026-08-23: none of the four `package.json` files defines a `test`

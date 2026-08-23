@@ -119,6 +119,23 @@ never higher.** Only the approver raises a level.
 |---|---|---|---|---|---|
 | _(none yet — register with `repo-onboarder`)_ | | | | | |
 
+## Commands
+
+How each project is verified. `skills/test-suite-run/SKILL.md` reads this when a
+test plan carries no `suite_command` of its own, and
+`skills/repo-onboarder/SKILL.md` fills it in at registration from the repo's own
+scripts and CI — `package.json`, `Makefile`, `pyproject.toml`, `deno.json`, the
+workflow file. **Never guessed.**
+
+An empty cell means the command does not exist. That is a finding, not a blank
+to fill in with something plausible: it changes what the quality gate can
+actually enforce, and a receipt written against a command that was invented
+proves nothing.
+
+| Project | Test | Lint | Typecheck | Build |
+|---|---|---|---|---|
+| _(none yet — `repo-onboarder` fills this in)_ | | | | |
+
 ## Working copies — the department never touches a human's directories
 
 Every project gets a dedicated working copy the department owns, created as a

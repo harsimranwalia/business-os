@@ -48,14 +48,17 @@ The four that matter, taken from the repo's own scripts and CI, never guessed:
 
 | Command | Where to look |
 |---|---|
-| Test | `package.json` scripts, `Makefile`, `pyproject.toml`, CI workflow |
+| Test | `package.json` scripts, `Makefile`, `pyproject.toml`, `deno.json`, CI workflow |
 | Lint | same |
 | Typecheck | same |
 | Build | same |
 
-A repo with no test command is a finding, not a blocker — record it, because it
-changes what the quality gate can enforce and it's usually the first ticket the
-team should file.
+Record all four in the `## Commands` table in `config/projects.md`, in the same
+pass that registers the project.
+
+A repo with no test command is a finding, not a blocker — record it as an empty
+cell in that table, not as absence. It changes what the quality gate can
+enforce and it's usually the first ticket the team should file.
 
 ### 5. Read the conventions
 
@@ -83,9 +86,11 @@ the card.
 
 ### 8. Draft the project card
 
-In the exact format of the `projects.md` table, plus a per-project rules
-subsection covering: who else reviews, what's high blast radius, and any hard
-constraint (cost ceiling, client boundary, vendored code).
+In the exact format of the `projects.md` table, plus its `## Commands` row from
+step 4 — the approver approves both in the same card, so what's approved is
+what gets registered — plus a per-project rules subsection covering: who else
+reviews, what's high blast radius, and any hard constraint (cost ceiling,
+client boundary, vendored code).
 
 ### 9. Propose an autonomy level — L1 by default
 
