@@ -32,9 +32,11 @@ Two things worth weighing during shaping, offered as constraints rather than
 answers:
 
 **Start with one repo, not five.** `restaurant-portal` has a clean working tree
-and already builds; `aiorders-admin-hub` has 64 uncommitted files in the human
-checkout and `restaurant-marketplace` has 18, which is merge friction the first
-harness should not also be fighting.
+and already builds. The merge friction originally noted here is largely gone —
+the human checkouts were committed on 2026-08-23, leaving `aiorders-admin-hub`
+with only six held-back migration deletions (see the migration-history request
+filed the same day) and `restaurant-marketplace` clean. Repo choice can now be
+made on technical grounds rather than on which tree was tidiest.
 
 **`aiorders-api` is the highest blast radius and the hardest case.** It is the
 shared backend for all four frontends, it is Deno rather than Node, and it has
