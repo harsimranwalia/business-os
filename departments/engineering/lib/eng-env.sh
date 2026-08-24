@@ -81,8 +81,19 @@ fi
 # under `set -e` would take as a failed source.
 if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then export SLACK_WEBHOOK_URL; fi
 
+# The pause switch is PER-INSTANCE, falling back to the business-os-wide MODE.
+# It was global only: one `sabbath` in business-os/.env silenced every business
+# at once, which is wrong the moment there is more than one — pausing AIOrders
+# because another business is mid-incident stops work nobody asked to stop.
+# An instance's own `mode:` wins; the global value remains the default so a
+# genuine all-stop is still one edit.
+ENG_MODE="$(sed -n 's/^mode:[[:space:]]*\([^[:space:]#]*\).*/\1/p' \
+            "$ENG_INSTANCE/config/config.yaml" 2>/dev/null | head -1)"
+[ -n "$ENG_MODE" ] || ENG_MODE="${MODE:-}"
+export ENG_MODE
+
 eng_mode_halts() {
-  case "${MODE:-}" in
+  case "${ENG_MODE:-}" in
     sabbath|retreat|quiet) return 0 ;;
     *) return 1 ;;
   esac

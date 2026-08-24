@@ -15,6 +15,13 @@ approver:
 # other intake. A filer never receives a gate.
 filers: []
 
+# Pause switch for THIS business only. sabbath | retreat | quiet halt every pass
+# for this instance; empty means normal operation. Falls back to MODE in
+# business-os/.env when empty, so the global switch still stops everything at
+# once — this only adds the ability to stop one business without stopping the
+# rest.
+mode:
+
 # Delivery caps. Raising these is the approver's call.
 wip:
   machine_limit: 6      # states ready..ready-to-ship

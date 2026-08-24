@@ -20,3 +20,4 @@ on anyone, and worth more in aggregate than any single one is alone.
 
 | Date | By | Project | Observation |
 |---|---|---|---|
+| 2026-08-24 | eng-manager | aiorders | `board/_index.md` carries no "next ID" counter, though `config/templates/ticket.md` says IDs are never reused and the next one lives there — worth adding before ENG-002 gets allocated. |

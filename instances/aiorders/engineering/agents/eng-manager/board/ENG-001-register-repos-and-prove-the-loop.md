@@ -53,3 +53,19 @@ are registered.
 
 Close this ticket once the first real ticket is on the board — not before, or the
 board is empty again.
+
+## Log
+
+Append-only. One line per state transition, newest last.
+
+- `2026-08-24` note (eng-manager) — gate-check-unavailable incident
+  (`inbox/2026-08-24-eng-gate-check-unavailable.md`, raised against this ticket
+  because it was in flight when the pre-pass check found `lib/eng-gate-check.sh`
+  absent/unreadable) resolved. Root cause fixed in business-os `9366b84` (nine
+  `$ROOT/lib/` call sites repointed to `$ENG_DEPT/lib/` after the carve-out).
+  Approver decision: **approved**, 2026-08-24T17:00:57Z. Independently re-ran
+  `lib/eng-gate-check.sh` against this instance this pass: exit 0, clean. **AC3
+  satisfied.** AC1/AC2/AC4 untouched by this pass.
+- `2026-08-24` chained: ENG-001 (eng-manager) — this pass was scoped to the
+  answered gate only; firing `continue` so the PM can pick up shaping at
+  `intake` with a fresh pass.

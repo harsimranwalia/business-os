@@ -1305,6 +1305,27 @@ run_gate_check() {
   return 0
 }
 
+# ── The pause switch ───────────────────────────────────────────────────────
+#
+# eng-env.sh has defined eng_mode_halts since the carve-out and NOTHING has ever
+# called it. The mode check existed only as a line in the prompt — "mode check
+# first (exit on sabbath/retreat)" — which meant a paused business still paid a
+# full claude launch and a hop to be told to stop, and stopped only if the agent
+# chose to obey. A pause switch that costs a pass to honour is not a pause
+# switch. Found 2026-08-24 while testing per-instance mode: setting `sabbath`
+# launched a real session anyway.
+#
+# QUEUE, never drop, and above the lock and the hop caps. Same reasoning as the
+# daily cap below: a paused business has not spent a life, and the pause will
+# lift. The arriving event waits on disk and the first fire after the pause
+# clears drains it. Dropping here would make `sabbath` silently destructive,
+# which is the opposite of what pausing means.
+if eng_mode_halts; then
+  log "MODE '$ENG_MODE' — paused, queueing '$EVENT' and exiting without launching"
+  queue_append "$EVENT" "$CONTEXT" 1
+  exit 0
+fi
+
 # ── The PRE-LOCK hop caps, and what they owe the event they refuse ─────────
 #
 # Round 3, BLOCKING 2: both of these used to `exit 0` here — above the lock and
