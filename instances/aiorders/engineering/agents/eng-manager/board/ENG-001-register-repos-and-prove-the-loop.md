@@ -5,7 +5,7 @@ project: aiorders
 type: chore
 size: S
 severity: P3
-priority:
+priority: now
 state: intake
 owner: product-manager
 lane: full
@@ -13,7 +13,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-23
-updated: 2026-08-23
+updated: 2026-08-24
 branch:
 depends_on: []
 blocks: []

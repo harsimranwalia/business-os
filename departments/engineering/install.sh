@@ -94,7 +94,13 @@ wip:
   approval_cap: 3       # gates queued across the whole board
 EOF
 
-emit config/projects.md <<'EOF'
+# agents/eng-manager/config/, NOT config/. This emitted config/projects.md while
+# every reader — lib/eng-gate-check.sh's PROJECTS, agents/eng-manager/config.yaml
+# -> paths.projects, and the devops/architect/PM configs — looks for it under
+# agents/eng-manager/config/, which is also what conventions.yaml declares. So
+# every instance shipped with a project registry the gate check could not read:
+# the autonomy level it enforces was unreadable, and nothing said so.
+emit agents/eng-manager/config/projects.md <<'EOF'
 # Project Registry
 
 Every repo this instance's engineering team is allowed to touch, and how far it
@@ -241,6 +247,90 @@ states — more approvals waiting is a backlog with the approver's name on it,
 not throughput.
 
 _(none)_
+EOF
+
+# Declared by config/conventions.yaml -> instance_layout, and never created by
+# this installer. schedules/eng_build_loop.md reads all three by name — step 3
+# moves agent findings into proposals.md, step 10 archives old pass entries into
+# _index-archive.md, and the observation rule appends to observations.md — so an
+# instance without them sends every pass looking for files that are not there.
+emit agents/eng-manager/observations.md <<'EOF'
+# Observations
+
+"While I was in there, I noticed..." — the thing a good engineer mentions on the
+way past. Not a bug, not a ticket, not a request. Cheap to file, no obligation
+on anyone, and worth more in aggregate than any single one is alone.
+
+## Rules
+
+- Any agent may append. No permission, no owner, no reply expected.
+- One line each, newest last, under the Ledger below.
+- An observation is not work. If it needs doing it is a bug or a proposal —
+  file it as one instead of writing it here and hoping.
+- Nothing reads this on a pass. It is read by the weekly report and by a human.
+
+## Format
+
+`| {date} | {agent} | {project} | {what you noticed} |`
+
+## Ledger
+
+| Date | By | Project | Observation |
+|---|---|---|---|
+EOF
+
+emit agents/eng-manager/proposals.md <<'EOF'
+# Proposals
+
+Things the department thinks are worth building and is **not allowed to build
+until the approver says so.** Agent-originated findings land here rather than
+shaping straight into tickets: no id, no board row, nothing sequenced.
+
+See `schedules/eng_build_loop.md` step 3.
+
+## How this works
+
+| | |
+|---|---|
+| **Who writes here** | Any agent — QA, security, devops, the architect, the EM |
+| **What becomes a ticket** | Only a proposal the approver has approved |
+| **How they see it** | One batched G1 in the weekly report — never a per-item ping |
+| **What happens to silence** | Nothing. It stays listed, is re-surfaced weekly, and expires after 30 days |
+| **The one bypass** | A **P0 on a registered project** — production down or actively exploitable, with real users — goes straight to a ticket |
+
+Silence is not approval, and an unapproved proposal is not a rejection. Expiry
+is the terminus, chosen deliberately over a queue that only grows.
+
+## Open
+
+| Filed | By | Project | What | Why it matters | Size |
+|---|---|---|---|---|---|
+
+## Approved
+
+Moved here with its ticket id when the approver approves it. The row leaves
+Open; it is never deleted.
+
+| Filed | Approved | Ticket | Project | What |
+|---|---|---|---|---|
+EOF
+
+emit agents/eng-manager/board/_index-archive.md <<'EOF'
+# Engineering Board — pass log archive
+
+Dated pass entries moved out of `_index.md` once the live board holds more than
+three, newest first. The live board keeps its table plus enough recent narrative
+to resume a ticket; everything older lives here.
+
+Nothing reads this file on a pass — it is the department's history, not its
+state. `lib/eng-gate-check.sh` globs `ENG-*.md` and never sees it.
+
+This exists because every pass reads `_index.md` in full, so an append-only log
+there is a tax on every future pass.
+
+---
+
+_(no archived entries yet)_
 EOF
 
 emit agents/eng-manager/board/ENG-001-register-repos-and-prove-the-loop.md <<EOF

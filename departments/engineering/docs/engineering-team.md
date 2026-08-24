@@ -377,8 +377,10 @@ states, stopping only at a human, at new implementation work, or at a failed
 gate. It stops after `building` because one session that designs, builds,
 reviews, tests and security-reviews runs out of context and does all of it badly
 — so the next hop gets a fresh session, chained by an event rather than a clock.
-Details and the runaway guard: `schedules/eng_build_loop.md` and
-`connections/eng-event-loop.md`.
+Details and the runaway guard: `schedules/eng_build_loop.md` and the event queue,
+hop accounting and single-flight lock in `lib/eng-trigger.sh`. (This pointed at
+`connections/eng-event-loop.md`, which came from life-os and was never ported —
+business-os has no `connections/`.)
 
 The first version advanced one state per scheduled pass, which made a
 review → QA → security run take a day and a half of pure waiting. That was a

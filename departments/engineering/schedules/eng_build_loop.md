@@ -14,7 +14,7 @@
 | `decision` | `lib/eng-notify.sh` | the approver answers a gate |
 | `finding` | another agent | QA, security, devops, or the architect files something |
 | `continue` | **the pass itself** | a pass ended with the ticket in an agent-owned state |
-| `watch` | the scheduler's file-watch | an inbox file changed outside the notify channel — see `connections/eng-event-loop.md` |
+| `watch` | the scheduler's file-watch | an inbox file changed outside the notify channel — see the watch-event handling in `lib/eng-trigger.sh`. **The host wiring that fires it is not ported**: `lib/eng-setup.sh` refuses to run (Phase 2), so on an instance this event only arrives when something calls the trigger directly |
 
 **Schedule (human):** weekdays at 09:30 and 15:30 — a **safety net, not the engine**
 
@@ -118,8 +118,8 @@ Each pass, in order:
      eng-manager` — the EM raises this digest regardless of which project each
      bundled row is about) → for **each
      approved** proposal only: allocate an id, write the ticket from
-     `config/templates/ticket.md` with `source: proposal` and G1 recorded as
-     already answered, and move the row from `proposals.md` → Open to
+     `agents/eng-manager/config/templates/ticket.md` with `source: proposal` and G1 recorded as
+     already answered, and move the row from `agents/eng-manager/proposals.md` → Open to
      → Approved with the ticket id. **Proposals the approver did not name
      stay Open and unchanged** — an answer naming three of seven approves
      three, and reading
@@ -155,7 +155,7 @@ Each pass, in order:
    implementation work, or fails a gate. Max 4 transitions per ticket per pass.
 
    **Order is `priority` first, then severity, then the EM's judgement**
-   (the approver's lever, added 2026-08-13 — see `config/definition-of-done.md`):
+   (the approver's lever, added 2026-08-13 — see `agents/eng-manager/config/definition-of-done.md`):
 
    - **`priority: now`** starts before anything not already in flight, ahead of a
      higher-severity ticket if there is one. That inversion is the entire point
@@ -219,7 +219,8 @@ Each pass, in order:
    **Why this is a build-hop step and not a review one.** A review that runs the
    grep can only report what it finds; a build hop that runs it fixes everything
    it finds in the round it is already paying for. ENG-007 cost two full review
-   rounds in one day on the same class of miss — round 1 found `config.yaml`
+   rounds in one day on the same class of miss — round 1 found
+   `agents/eng-manager/config.yaml`
    claiming a rule three producers did not honour, round 2 found the *required*
    standard behind the producer still contradicting the fix — and one grep over
    the receipt paths would have surfaced both. The third round ran the
@@ -289,7 +290,7 @@ Each pass, in order:
      routes real findings into the second file.** An observation asks for
      nothing — it is a note that something is so. A proposal asks for a ticket.
      If you would be disappointed that nobody acted on it, it is a proposal:
-     write it to `proposals.md` where the approver will actually see it
+     write it to `agents/eng-manager/proposals.md` where the approver will actually see it
      batched. Filing a proposal as an observation is how a real finding gets
      lost, and filing an observation as a proposal is how the batch becomes
      unreadable.
@@ -593,7 +594,7 @@ Measured against a full-lane ticket, the time goes, in order:
 3. **Rework rounds** — each failed gate costs a full cycle. The cheapest speed
    available is not failing: engineers get the standards and the security
    baseline *before* writing, and first-pass rate is tracked
-   (`config.yaml` → `speed`). Below 70%, the brief is the problem, not the
+   (`agents/eng-manager/config.yaml` → `speed`). Below 70%, the brief is the problem, not the
    engineers.
 4. **Serial gates** — now partly parallel (review ∥ quality).
 
