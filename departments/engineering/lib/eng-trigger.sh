@@ -1219,7 +1219,7 @@ gate_report() {
 # running it.
 #
 # The check is now POSIX sh, so the order is: whatever this host already decided
-# it runs ($LIFEOS_SHELL, from life-os-env.sh — two answers to that question is
+# it runs ($ENG_SHELL, from eng-env.sh — two answers to that question is
 # how the department got here), then sh, which is what the script is written
 # against, then bash, then zsh.
 #
@@ -1230,8 +1230,12 @@ gate_report() {
 # two residual holes.
 gate_interpreter() {
   local cand
-  if [ -n "${LIFEOS_SHELL:-}" ] && [ -x "${LIFEOS_SHELL:-}" ]; then
-    printf '%s\n' "$LIFEOS_SHELL"; return 0
+  # $ENG_SHELL, from eng-env.sh. It was $LIFEOS_SHELL, which nothing in
+  # business-os sets — the guard made that a silent fall-through to the probe
+  # below rather than a crash, so this one degraded quietly where the
+  # unguarded uses of the same name killed the pass outright.
+  if [ -n "${ENG_SHELL:-}" ] && [ -x "${ENG_SHELL:-}" ]; then
+    printf '%s\n' "$ENG_SHELL"; return 0
   fi
   for cand in sh bash zsh; do
     if command -v "$cand" >/dev/null 2>&1; then command -v "$cand"; return 0; fi
@@ -1269,7 +1273,7 @@ run_gate_check() {
     log "GATE CHECK CANNOT RUN: no interpreter resolved — continuing with the receipt rule UNENFORCED"
     gate_check_notice "no-interpreter" \
       "The receipt check cannot run on this host" \
-      "No executable shell could be resolved (\$LIFEOS_SHELL, sh, bash, zsh, /bin/sh all failed), so \`lib/eng-gate-check.sh\` did not run and this pass carried the receipt rule UNENFORCED. Since ENG-009 the check is POSIX sh and runs on both hosts, so this indicates a broken environment rather than the old zsh-only limitation."
+      "No executable shell could be resolved (\$ENG_SHELL, sh, bash, zsh, /bin/sh all failed), so \`lib/eng-gate-check.sh\` did not run and this pass carried the receipt rule UNENFORCED. Since ENG-009 the check is POSIX sh and runs on both hosts, so this indicates a broken environment rather than the old zsh-only limitation."
     return 0
   fi
 
@@ -1688,9 +1692,9 @@ cron-driven. When this pass ends, if the ticket you touched is sitting in a
 state owned by an AGENT (not the approver, not a closed release window), fire the next
 hop yourself before you finish:
 
-    $LIFEOS_SHELL lib/eng-trigger.sh continue {TICKET-ID}
+    $ENG_SHELL $SELF continue {TICKET-ID}
 
-Run it exactly like that, with the leading $LIFEOS_SHELL. Executing the script
+Run it exactly like that, with the leading $ENG_SHELL. Executing the script
 directly makes the next pass's claude process die with EPERM on macOS — see the
 comment above the timeout invocation in this file. (No backticks in this
 heredoc: the delimiter is unquoted, so backticks would be command-substituted
@@ -1739,7 +1743,12 @@ cd "$ROOT" || exit 1
 # silently, twice a day. The same guard is applied in the launchd plists and in
 # control-center/server.py's trigger calls — fixing only one level is not
 # enough, because any single repo-exec'd ancestor is sufficient to poison it.
-export LIFEOS_TIMEOUT_SECONDS="$PASS_TIMEOUT_SECONDS"
+# ENG_PASS_TIMEOUT is the name eng_run_claude actually reads (eng-env.sh:118).
+# This exported LIFEOS_TIMEOUT_SECONDS, which nothing in business-os consumes —
+# so PASS_TIMEOUT_SECONDS was computed, exported under the old name, and never
+# applied. "A hung session must not hold the lock forever" (line 144) was not
+# true here: a wedged pass would have held the lock indefinitely.
+export ENG_PASS_TIMEOUT="$PASS_TIMEOUT_SECONDS"
 eng_wait_for_git_sync
 MODEL="$(pass_model "$EVENT" "$TICKET_ID")"
 
@@ -1750,7 +1759,7 @@ MODEL="$(pass_model "$EVENT" "$TICKET_ID")"
 # it made every log read as though the department were broken, and it cost real
 # time during the 2026-08 outages by looking like the cause. Report the launcher
 # that will actually be used instead of probing a PATH nothing launches from.
-if [ "$LIFEOS_HOST" = "mac" ]; then
+if [ "$ENG_HOST" = "mac" ]; then
   _launcher="lib/run-claude.sh (absolute binary path)"
 else
   _launcher="$(command -v claude 2>/dev/null || echo 'NOT ON PATH')"
