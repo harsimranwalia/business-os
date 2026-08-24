@@ -75,6 +75,18 @@ LIFEOS_SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Mac. Before 2026-08-11 every VPS-fired event (an /api/eng/intake, an answered
 # gate) died on that hardcoded path and on the `#!/bin/zsh` shebang, silently.
 ROOT="$ENG_INSTANCE"      # state lives in the instance, never the template
+
+# The business this pass is acting for. Every inbox item raised below used to
+# hardcode `project: life-os` — correct while the department lived inside
+# life-os, and a falsehood on every instance since the carve-out: on 2026-08-24
+# a gate-check incident filed itself against `life-os` on the AIOrders board,
+# which is the one field a reader uses to know whose problem it is.
+# Read from the instance's own config; fall back to the directory name, which
+# is the instance id by construction (instances/{business}/engineering).
+BUSINESS="$(sed -n 's/^business:[[:space:]]*\([^[:space:]#]*\).*/\1/p' \
+            "$ENG_INSTANCE/config/config.yaml" 2>/dev/null | head -1)"
+[ -n "$BUSINESS" ] || BUSINESS="$(basename "$(dirname "$ENG_INSTANCE")")"
+
 STATE="$ROOT/traces"
 LOG="$STATE/eng-loop-$(date '+%Y-%m-%d').log"
 LOCK="$STATE/.loop.lock"
@@ -198,8 +210,8 @@ PASS_TIMEOUT_SECONDS=1800  # a hung session must not hold the lock forever
 # different model. That structural test (lib/tests/eng-hop-economics.test.sh,
 # "AC6 REGRESSION") is now dormant for the same reason — recorded there, not
 # hidden.
-HOP_MODEL_REASONING="$("$ROOT/lib/model-tier.sh" reasoning 2>/dev/null || echo sonnet)"
-HOP_MODEL_CLERICAL="$("$ROOT/lib/model-tier.sh" reasoning 2>/dev/null || echo sonnet)"
+HOP_MODEL_REASONING="$("$ENG_DEPT/lib/model-tier.sh" reasoning 2>/dev/null || echo sonnet)"
+HOP_MODEL_CLERICAL="$("$ENG_DEPT/lib/model-tier.sh" reasoning 2>/dev/null || echo sonnet)"
 
 # Read a ticket's `state:` off the board. Prints nothing and returns 1 when the
 # id names no file, names more than one, or the file carries no state — all of
@@ -915,7 +927,7 @@ that fires on normal days teaches everyone to ignore it."
 type: eng-decision
 agent: eng-manager
 gate: incident
-project: life-os
+project: $BUSINESS
 ticket: $tk
 recommendation: investigate before re-enabling
 raised: $(date '+%Y-%m-%d')
@@ -929,7 +941,7 @@ $diagnosis
 
 Scheduled passes are unaffected, and every other ticket keeps moving.
 INBOX
-  "$ROOT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
+  "$ENG_DEPT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
 }
 
 # ── A dropped event, and why this is NOT halt_notice (ENG-005 F2) ──────────
@@ -974,7 +986,7 @@ drop_notice() {
 type: eng-decision
 agent: eng-manager
 gate: incident
-project: life-os
+project: $BUSINESS
 ticket: ${ticket:-unknown}
 recommendation: find out why passes are failing before re-firing anything
 raised: $(date '+%Y-%m-%d')
@@ -997,7 +1009,7 @@ INBOX
 $detail
 INBOX
   if [ "$fresh" -eq 1 ]; then
-    "$ROOT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
+    "$ENG_DEPT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
   fi
   return 0
 }
@@ -1032,7 +1044,7 @@ stall_notice() {
 type: eng-decision
 agent: eng-manager
 gate: incident
-project: life-os
+project: $BUSINESS
 ticket: ${TICKET_ID:-unknown}
 recommendation: check whether a session can start on this host at all
 raised: $(date '+%Y-%m-%d')
@@ -1069,7 +1081,7 @@ INBOX
   # Every append pings — see the note above the function. There is no `fresh`
   # flag here on purpose: it would be assigned and never read, which is the
   # shape of a check someone later restores by accident.
-  "$ROOT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
+  "$ENG_DEPT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
   return 0
 }
 
@@ -1088,7 +1100,7 @@ INBOX
 #
 # The script is invoked as an ARGUMENT to the system shell, never exec'd as a
 # repo file, for the same TCC/EPERM reason documented above the claude launch.
-GATE_CHECK="$ROOT/lib/eng-gate-check.sh"
+GATE_CHECK="$ENG_DEPT/lib/eng-gate-check.sh"
 
 # Initialised HERE rather than only inside run_gate_check, and that is AC6 rather
 # than tidiness. AC6 says rollback is one commit deleting the two call sites. It
@@ -1128,7 +1140,7 @@ gate_check_notice() {
 type: eng-decision
 agent: eng-manager
 gate: incident
-project: life-os
+project: $BUSINESS
 ticket: ${TICKET_ID:-unknown}
 recommendation: investigate before the next release
 raised: $(date '+%Y-%m-%d')
@@ -1142,7 +1154,7 @@ Raised by the receipt check wired into \`lib/eng-trigger.sh\` (ENG-008). The
 check reads the filesystem, never the frontmatter — a ticket cannot satisfy it
 by writing \`test_plan: done\`.
 INBOX
-  "$ROOT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
+  "$ENG_DEPT/lib/eng-notify.sh" raise "$f" 2>/dev/null || true
 }
 
 # ── Reading the check's exit code ──────────────────────────────────────────
@@ -1267,12 +1279,19 @@ run_gate_check() {
   # execute looked identical to a clean one. Discarding the diagnostic channel
   # of the thing you are diagnosing is automatic review failure #2.
   #
-  # `env -u ENG_ROOT` because the check honours an ambient ENG_ROOT: an exported
-  # one left in a shell that later fires the trigger would silently point the
-  # department's only enforced surface at the wrong tree.
+  # ENG_ROOT is PINNED to the instance, not unset. The check honours an ambient
+  # ENG_ROOT and otherwise derives its root from its own location — so before the
+  # carve-out, when the script and the board lived in one tree, `env -u` was right:
+  # it stripped a stray value and let the script find the board next to itself.
+  # Now the script lives in the DEPARTMENT and the board lives in the INSTANCE, so
+  # unsetting it resolved BOARD to departments/engineering/agents/eng-manager/board,
+  # which does not exist — the enforced surface would have swept an absent board
+  # and reported that instead of checking the real one. Passing the value keeps the
+  # original intent (never honour a stray ambient one) while naming the right tree;
+  # this is what eng-env.sh means by "ENG_ROOT is what eng-gate-check.sh reads".
   local errf="$STATE/.gate-stderr.$$"
   GATE_RAN=1
-  GATE_OUT=$(env -u ENG_ROOT "$sh_bin" "$GATE_CHECK" 2>"$errf")
+  GATE_OUT=$(env ENG_ROOT="$ENG_INSTANCE" "$sh_bin" "$GATE_CHECK" 2>"$errf")
   GATE_STATUS=$?
   GATE_ERR=$(cat "$errf" 2>/dev/null)
   rm -f "$errf"
@@ -1765,7 +1784,7 @@ PASS_OUT="$STATE/.pass-out.$$"
 # degrades safely — no `result` event, no row — on a killed or never-started
 # pass, which is exactly this loop's own failure mode.
 REPO_SHA="$(cd "$ROOT" 2>/dev/null && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-AGENT_VERSION="$("$ROOT/lib/agent-version.sh" eng-manager 2>/dev/null || echo unknown)"
+AGENT_VERSION="$("$ENG_DEPT/lib/agent-version.sh" eng-manager 2>/dev/null || echo unknown)"
 COSTS="$ROOT/traces/costs-$(hostname -s 2>/dev/null || echo unknown).jsonl"
 
 # Wall clock across the launch. The third condition the classifier requires —
@@ -1782,7 +1801,7 @@ PASS_T0=$(date +%s)
 # identical in both — verified directly against both shells before relying on it.
 eng_run_claude --model "$MODEL" --effort max \
   --output-format stream-json --verbose -p "$PROMPT" 2>&1 \
-  | python3 "$ROOT/lib/run-stream.py" \
+  | python3 "$ENG_DEPT/lib/run-stream.py" \
       --routine eng_build_loop \
       --agent eng-manager \
       --agent-version "$AGENT_VERSION" \
