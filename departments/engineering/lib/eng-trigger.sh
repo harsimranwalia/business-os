@@ -1661,8 +1661,27 @@ that the department can act on now.
 Event: $EVENT
 ${CONTEXT:+Context: $CONTEXT}
 $GATE_BLOCK
-Follow schedules/eng_build_loop.md exactly. It is the procedure — do not
-improvise around it.
+WHERE THINGS LIVE. There are TWO roots, and every relative path in the procedure
+below belongs to exactly one of them. Your working directory is the instance.
+
+  DEPARTMENT (shared template, READ-ONLY — never write here):
+    $ENG_DEPT
+    holds: schedules/, docs/, skills/, lib/, and each agent's agent.md +
+    config.yaml — the definitions, identical for every business.
+
+  INSTANCE (this business's state, where everything you write goes):
+    $ENG_INSTANCE
+    holds: agents/*/board, agents/*/inbox, agents/*/notebook, config/, inbox/,
+    traces/, reports/ — the facts, unique to this business.
+
+If a relative path does not resolve from your working directory, resolve it
+against the department root before concluding the file is missing. This split is
+the one structural difference from the single-root system the procedure was
+written for, and a path that reads as absent is far more likely to be on the
+other side of it than actually gone.
+
+Follow $ENG_DEPT/schedules/eng_build_loop.md exactly. It is the procedure — do
+not improvise around it.
 
 An event pass is narrower than a scheduled one. Do only the work this event
 unblocked:
