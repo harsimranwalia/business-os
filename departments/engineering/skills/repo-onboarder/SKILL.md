@@ -53,8 +53,9 @@ The four that matter, taken from the repo's own scripts and CI, never guessed:
 | Typecheck | same |
 | Build | same |
 
-Record all four in the `## Commands` table in `config/projects.md`, in the same
-pass that registers the project.
+Record all four in the `## Commands` table in
+`agents/eng-manager/config/projects.md`, in the same pass that registers the
+project.
 
 A repo with no test command is a finding, not a blocker — record it as an empty
 cell in that table, not as absence. It changes what the quality gate can
@@ -101,10 +102,36 @@ true for a raise: three clean trips through the full pipeline.
 ### 10. Route to the approver
 
 The card goes to `inbox/` through the EM, as one decision: register this
-repo at this level, yes or no. On approval, append it to `projects.md`.
+repo at this level, yes or no. On approval, append it to
+`agents/eng-manager/config/projects.md`.
 
 **Until then, nothing in the department touches the repo** beyond this read-only
 scan.
+
+### 11. Check it out — a registry row is not a working copy
+
+Registration and checkout are two different things, and stopping after the first
+is the failure this step exists to prevent. `skills/release-runner/SKILL.md`
+works in `$ENG_WORKTREES/{project}` and refuses to run git in a human's own
+checkout, so a repo that is registered but never checked out passes onboarding
+cleanly and then fails at its first release — with an error that points at the
+release rather than at the onboarding that caused it.
+
+After appending to the registry, create the working copy:
+
+```sh
+sh "$ENG_DEPT/lib/eng-setup.sh" --apply
+```
+
+It reads the registry you just wrote, creates a worktree on `eng/base` for every
+row that lacks one, and leaves every existing one alone — so it is safe however
+many repos are already checked out. Confirm the new project appears under its
+section 2 before closing the run.
+
+Do not run `git worktree add` by hand instead. The skip conditions are the point:
+a repo with no commits yet gets a broken null-HEAD stub that the build loop
+chokes on, a multi-repo project needs one worktree per repo, and the instance's
+own operating repo must never get a second copy of itself.
 
 ---
 
@@ -114,6 +141,7 @@ scan.
 |---|---|
 | `inbox/{date}-project-card-{slug}.md` | The card and the level, for the approver |
 | `agents/eng-manager/config/projects.md` | Appended on approval only |
+| `$ENG_WORKTREES/{project}` | The department's own working copy, created on approval |
 
 ---
 
@@ -133,3 +161,5 @@ proposed level.
 - **Running anything against a client system** during the scan. Read the code
   and nothing else.
 - **Registering before approval.**
+- **Registering without checking out.** A row in the registry with no worktree
+  behind it looks like a successful onboarding and fails at the first release.

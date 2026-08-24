@@ -416,7 +416,11 @@ if [ "$APPLY" -eq 1 ]; then
   echo "Next:"
   echo "  1. Fill in config/config.yaml — approver name and any filers."
   echo "  2. Register repos:  skills/repo-onboarder/SKILL.md"
-  echo "  3. Run the department with ENG_INSTANCE=$INST"
+  echo "  3. ENG_INSTANCE=$INST sh $DEPT/lib/eng-setup.sh --apply"
+  echo "     repo-onboarder runs this itself on approval, so this is the repair"
+  echo "     command: it verifies the instance directories and checks out a"
+  echo "     worktree for any registry row that lacks one. Safe to re-run."
+  echo "  4. Run the department with ENG_INSTANCE=$INST"
 else
   echo "DRY RUN complete. Re-run with --apply to create it."
   echo

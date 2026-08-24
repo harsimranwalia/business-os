@@ -108,6 +108,67 @@ esac
 ENG_SHELL="$([ -x /bin/zsh ] && echo /bin/zsh || echo /bin/sh)"
 export ENG_HOST ENG_SHELL
 
+# ── PATH ───────────────────────────────────────────────────────────────────
+# launchd hands a job PATH=/usr/bin:/bin:/usr/sbin:/sbin and nothing else.
+# Verified 2026-08-24 with a throwaway probe job: under launchd `timeout`,
+# `gtimeout`, `node`, `npm`, `npx` and `gh` are ALL unreachable, while `git`,
+# `python3` and `jq` resolve from /usr/bin and work fine.
+#
+# That gap is not cosmetic. Every registered project's verification command is
+# `npm run lint` / `npm run build`, and L1 autonomy means opening a PR with
+# `gh` — so a scheduled pass would fail its quality gate for a reason that
+# looks nothing like a PATH problem, while the same pass run by hand from a
+# terminal passes. Add `timeout`, and the pass timeout silently degrades to
+# uncapped exactly when nobody is watching.
+#
+# Fixed here rather than in the plists because launchd is not the only
+# launcher: cron, a nested spawn and a bare `sh eng-trigger.sh` each inherit
+# whatever their parent had. eng-env.sh is the one file every entry point
+# sources. APPENDED, never prepended — a caller who deliberately put a
+# different toolchain in front keeps it.
+eng_path_add() {
+  [ -d "$1" ] || return 0
+  case ":$PATH:" in *":$1:"*) return 0 ;; esac
+  PATH="$PATH:$1"
+}
+# node FIRST, before homebrew. node lives under nvm, which has no stable path
+# — the version is in it. Homebrew also ships a node (v24 here) and it would
+# otherwise win, handing the department a different major than the human
+# builds on: `node --version` in a terminal says 22, a pass would say 24.
+# Honour nvm's own `default` alias (a bare major like "22") before falling back
+# to newest-installed: building against a newer node than the human ever tests
+# on is a real way to produce a green pass on code that breaks for them.
+_eng_nvm="$HOME/.nvm/versions/node"
+if [ -d "$_eng_nvm" ]; then
+  _eng_node_dir=""
+  _eng_alias="$(cat "$HOME/.nvm/alias/default" 2>/dev/null)"
+  if [ -n "$_eng_alias" ]; then
+    _eng_node_dir="$(ls -d "$_eng_nvm/v${_eng_alias#v}"* 2>/dev/null | sort -V | tail -1)"
+  fi
+  if [ -z "$_eng_node_dir" ]; then
+    _eng_node_dir="$(ls -d "$_eng_nvm"/v* 2>/dev/null | sort -V | tail -1)"
+  fi
+  if [ -n "$_eng_node_dir" ]; then eng_path_add "$_eng_node_dir/bin"; fi
+fi
+eng_path_add /opt/homebrew/bin      # timeout, gtimeout, gh, git
+eng_path_add /usr/local/bin         # intel homebrew, and anything hand-installed
+eng_path_add "$HOME/.local/bin"     # claude
+
+export PATH
+
+# ── The department's own working copies ────────────────────────────────────
+# NEVER a human's checkout: a cron-triggered pass running git under someone's
+# uncommitted changes is how work gets lost. Every registered repo gets a
+# worktree the department owns, at $ENG_WORKTREES/{project}.
+#
+# It sits beside the repos it mirrors rather than inside business-os, because a
+# git worktree nested inside another repo is a mess for both. Flat, not
+# namespaced per business: this directory already holds real worktrees created
+# before the carve-out, and skills/release-runner/SKILL.md documents
+# `_eng/{project}` as the path. lib/eng-setup.sh creates them.
+ENG_WORKTREES="${ENG_WORKTREES:-$(dirname "$(dirname "$BUSINESS_OS_ROOT")")/_eng}"
+export ENG_WORKTREES
+
 # ── Helpers ────────────────────────────────────────────────────────────────
 eng_timeout() {
   _t_secs="$1"; shift
