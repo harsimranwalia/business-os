@@ -53,7 +53,33 @@ export ENG_ROOT
 # the run exits silently. Same semantics the existing business-os components use.
 BUSINESS_OS_ROOT="${BUSINESS_OS_ROOT:-$(CDPATH= cd -P -- "$ENG_DEPT/../.." && pwd -P)}"
 export BUSINESS_OS_ROOT
-[ -f "$BUSINESS_OS_ROOT/.env" ] && . "$BUSINESS_OS_ROOT/.env" 2>/dev/null
+# The failure is REPORTED, not swallowed. `. .env 2>/dev/null` hid a real one:
+# an unquoted `REDDIT_USER_AGENT=…v1.0 (by /u/aiorders-io)` was a shell syntax
+# error, so sourcing aborted at that line and every variable BELOW it was never
+# loaded. MODE sits above it and loaded fine, so the pause switch worked and the
+# breakage was invisible — SLACK_WEBHOOK_URL, added below it, silently did not
+# exist. A partial source is the worst outcome here: it looks exactly like a
+# working one. Python components are unaffected (load_env() parses line by line);
+# this only ever bit the shell path.
+if [ -f "$BUSINESS_OS_ROOT/.env" ]; then
+  if ! . "$BUSINESS_OS_ROOT/.env" 2>/dev/null; then
+    echo "[eng-env] WARNING: $BUSINESS_OS_ROOT/.env did not source cleanly — variables after the first bad line are NOT loaded. Quote any value containing spaces or parentheses." >&2
+  fi
+fi
+
+# business-os writes .env as bare `KEY=value` because its Python components parse
+# the file themselves (see load_env() in scripts/telegram.py). Sourcing a bare
+# assignment sets a SHELL variable, which is enough for MODE — read in this same
+# shell — but not for anything read by a CHILD process. eng-notify.sh is a child,
+# and reads SLACK_WEBHOOK_URL from os.environ, so without this export it would
+# find nothing and log "SLACK_WEBHOOK_URL unset — cannot notify" on every raise.
+# Exported here rather than by writing `export` into .env: that would make the
+# key parse as "export SLACK_WEBHOOK_URL" in load_env(), which is a trap for the
+# next component that reads it that way.
+# `if`, not `[ … ] && export`: this is the last statement in the block, and the
+# `&&` form returns 1 when the variable is unset, which a caller sourcing this
+# under `set -e` would take as a failed source.
+if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then export SLACK_WEBHOOK_URL; fi
 
 eng_mode_halts() {
   case "${MODE:-}" in
