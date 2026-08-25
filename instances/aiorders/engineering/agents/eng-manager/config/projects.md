@@ -82,6 +82,12 @@ This is the same position Verido-CRM was in, and it was solved there the same wa
 (ENG-002, smoke test harness) for the same stated reason: the app had no CI to
 prove a change had not broken a route.
 
+**Filed as `ENG-002` on this instance too, 2026-08-25** — shaped from the
+approver's own request (`inbox/requests/2026-08-23-test-harness.md`, now
+`inbox/_handled/`), scoped to `restaurant-portal`, awaiting G1. This
+paragraph is now history, not an open gap — see the ticket rather than
+re-deriving this note.
+
 ## Working copies — the department never touches a human's directories
 
 ```

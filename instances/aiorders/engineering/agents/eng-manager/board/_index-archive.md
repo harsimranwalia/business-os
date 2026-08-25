@@ -12,4 +12,16 @@ there is a tax on every future pass.
 
 ---
 
-_(no archived entries yet)_
+## 2026-08-24 — decision: gate-check-unavailable resolved
+
+Acted on the answered incident gate `2026-08-24-eng-gate-check-unavailable.md`
+(`gate: incident`, tied to ENG-001 because it was the ticket in flight when the
+pre-pass check found `lib/eng-gate-check.sh` unreadable). Its `project: life-os`
+was stale — a leftover of the pre-carve-out hardcoding bug fixed in business-os
+`ed8dd56`/`58ae148`/`9366b84`; `ticket: ENG-001` was correct. Approver had
+already recorded `decision: approved`. Independently re-ran
+`lib/eng-gate-check.sh` against this instance this pass: exit 0, clean — ENG-001
+AC3 satisfied. Logged on ENG-001, moved the gate item to `inbox/_handled/`.
+Did not shape ENG-001 further — a decision pass is scoped to the gate it
+answers, not PM intake work — so `chained: ENG-001` to hand the ticket to a
+fresh `continue` pass.
