@@ -51,7 +51,7 @@ does not exist.
 | `aiorders-admin-hub` | — | `npm run lint` | — | `npm run build` |
 | `config-site-builder` | — | `npm run lint` | — | `npm run build` |
 | `restaurant-marketplace` | — | `npm run lint` | `npm run typecheck` | `npm run build` |
-| `restaurant-portal` | — | `npm run lint` | — | `npm run build` |
+| `restaurant-portal` | `npm run test` | `npm run lint` | — | `npm run build` |
 
 `aiorders-api` is empty across the board because it has no `package.json` at
 all — it is Deno (Supabase edge functions), so whatever verification it gets
