@@ -1,11 +1,11 @@
 ---
 ticket: ENG-004
 project: aiorders-admin-hub
-status: awaiting-scope
+status: approved
 size: L
 author: product-manager
 created: 2026-08-25
-decided:
+decided: 2026-08-26
 ---
 
 # Reconcile aiorders-admin-hub's deleted-but-uncommitted migration history
@@ -201,14 +201,20 @@ RLS/`search_path` hardening.
 
 ## Decision
 
-Filled in by the approver. G1 raised 2026-08-25 — `ENG-002`'s G1 was answered
-(approved) this pass, freeing the `wip.approver_limit` (2) slot `ENG-003` had
-been holding alongside it; this ticket took the freed slot on severity
-grounds (`P2`, the higher of the two remaining To-do tickets — `ENG-005` is
-`P3`). See `inbox/2026-08-25-eng004-g1-scope.md`.
+G1 raised 2026-08-25 — `ENG-002`'s G1 was answered (approved) that pass,
+freeing the `wip.approver_limit` (2) slot `ENG-003` had been holding
+alongside it; this ticket took the freed slot on severity grounds (`P2`, the
+higher of the two remaining To-do tickets — `ENG-005` is `P3`). See
+`inbox/2026-08-25-eng004-g1-scope.md`, now `inbox/_handled/`.
 
-- **The approver's answer:**
-- **Date:**
-- **Notes:** No `## Dissent` section yet either — will be added when G1 is
-  actually raised, same reasoning as `ENG-002`/`ENG-003`
-  (`agents/critic/agent.md` doesn't exist).
+- **The approver's answer:** approved
+- **Date:** 2026-08-26T22:57:21-07:00 (2026-08-27T05:57:21.472123+00:00)
+- **Notes:** Answered by directly editing the gate item file — `decision:`/
+  `decided:` set in its frontmatter and a second `## Decision` section
+  appended below the original unedited placeholder — rather than through
+  `lib/eng-notify.sh`'s reply channel. Second such occurrence after `ENG-001`'s
+  G3 (`agents/eng-manager/config/decision-journal.md`, 2026-08-26 row); moved
+  the item to `_handled/` unedited, same as that one, rather than normalizing
+  it. No `## Dissent` section — `agents/critic/agent.md` still doesn't exist
+  at the department or instance level (open proposal, `agents/eng-manager/proposals.md`,
+  2026-08-25).
