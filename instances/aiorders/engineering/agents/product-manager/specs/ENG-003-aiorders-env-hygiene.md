@@ -1,11 +1,11 @@
 ---
 ticket: ENG-003
 project: config-site-builder
-status: awaiting-scope
+status: rejected
 size: M
 author: product-manager
 created: 2026-08-25
-decided:
+decided: 2026-08-26
 ---
 
 # Untrack `.env` from config-site-builder and close related env-hygiene gaps
@@ -221,12 +221,22 @@ without console access this department doesn't have.
 
 ## Decision
 
-Filled in after G1.
+G1 raised 2026-08-25, notified 2026-08-25T13:55:41, nudged 2026-08-26T15:43:45
+(24h with no reply) — see `inbox/2026-08-25-eng003-g1-scope.md`, now
+`inbox/_handled/`.
 
-- **The approver's answer:**
-- **Date:**
-- **Notes:** No `## Dissent` section — `agents/critic/agent.md`, which
-  `skills/prd-writer/SKILL.md` step 8b calls for before every G1, doesn't
-  exist at the department or instance level. Already filed as a proposal
-  (`agents/eng-manager/proposals.md`, 2026-08-25, from `ENG-002`'s pass) —
-  not refiled here.
+- **The approver's answer:** rejected — killed at G1, nothing built.
+- **Date:** 2026-08-26T23:38:51.515614-07:00 (2026-08-27T06:38:51.515614+00:00)
+- **Notes:** "Drop this ticket do not  need to be done" — verbatim, the only
+  reason given. Answered by directly hand-editing the gate item file
+  (frontmatter `decision:`/`decided:` set, a second `## Decision` section
+  appended below the still-blank original placeholder) rather than through
+  `lib/eng-notify.sh`'s reply channel — fourth such occurrence today,
+  after `ENG-002`'s GitHub merge, `ENG-001`'s G3, and `ENG-004`'s G1 (all in
+  `agents/eng-manager/config/decision-journal.md`). First outright G1
+  rejection this department has recorded — every prior G1 (`ENG-002`,
+  `ENG-004`) was approved as scoped. No `## Dissent` section —
+  `agents/critic/agent.md`, which `skills/prd-writer/SKILL.md` step 8b calls
+  for before every G1, doesn't exist at the department or instance level.
+  Already filed as a proposal (`agents/eng-manager/proposals.md`, 2026-08-25,
+  from `ENG-002`'s pass) — not refiled here.

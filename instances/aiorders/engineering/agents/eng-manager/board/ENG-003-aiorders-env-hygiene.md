@@ -6,14 +6,14 @@ type: chore
 size: M
 severity: P2
 priority:
-state: awaiting-scope
-owner: approver
+state: dropped
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-26
 branch:
 depends_on: []
 blocks: []
@@ -98,6 +98,9 @@ This ticket does not and cannot check, restrict, or rotate any cloud-console
 credential (Google Maps key, Supabase keys) — the department's autonomy here
 is git-only. See PRD Non-goals.
 
+**Rejected at G1, never built.** None of the above executed — no repo was
+touched.
+
 ## Log
 
 Append-only. One line per state transition, newest last.
@@ -125,3 +128,25 @@ Append-only. One line per state transition, newest last.
   the same pass, from the same batch of previously-unprocessed requests)
   hold at `shaped` for that reason — see their own tickets. `chained: none`
   — sitting at `awaiting-scope`, owned by the approver.
+- `2026-08-26` `awaiting-scope → dropped` (eng-manager) — G1 rejected. The
+  approver's verbatim answer, the only reason given: "Drop this ticket do
+  not  need to be done" (`inbox/2026-08-25-eng003-g1-scope.md`, now
+  `inbox/_handled/`; frontmatter `decided: 2026-08-27T06:38:51.515614+00:00`
+  / `2026-08-26T23:38:51.515614-07:00` local). Hand-edited directly —
+  frontmatter `decision:`/`decided:` set, a second `## Decision` section
+  appended below the still-blank original placeholder — rather than through
+  `lib/eng-notify.sh`'s reply channel; fourth such occurrence today,
+  after `ENG-002`'s GitHub merge, `ENG-001`'s G3, and `ENG-004`'s G1 (see
+  `agents/eng-manager/config/decision-journal.md`). **First outright G1
+  rejection this department has recorded** — every prior G1 (`ENG-002`,
+  `ENG-004`) was approved as scoped. PRD `status: rejected`
+  (`agents/product-manager/specs/ENG-003-aiorders-env-hygiene.md`, `##
+  Decision` filled in). Gate item moved to `inbox/_handled/` unedited.
+  Journaled in `agents/eng-manager/config/decision-journal.md`, including a
+  labelled-as-interpretation read of why (grounded in the PRD's own Problem
+  section, not confirmed by the approver) and a flag that this is a relevant
+  prior data point for the still-open `restaurant-portal` `.env` proposal
+  (`agents/eng-manager/proposals.md`, 2026-08-26 row, same fix family) once
+  that batch reaches the approver. `depends_on`/`blocks` both empty — no
+  other ticket affected. Approval cap 1/3 → 0/3; approver-facing WIP 1 → 0.
+  `chained: none` — `dropped` is terminal.
