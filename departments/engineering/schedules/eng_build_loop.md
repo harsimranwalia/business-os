@@ -83,6 +83,20 @@ Each pass, in order:
    fix would not have worked. What is capped here is the department's ability to
    create its own work at all.
 
+   **What's capped is the department inventing work about its own machinery —
+   finishing a product feature the approver already scoped as a sequence
+   isn't that** (the approver, clarifying against `ENG-006`, 2026-08-28). When
+   a PRD proposes a multi-ticket sequence and the G1 answer on it affirms
+   proceeding with the whole shape, not just the one ticket in front of the
+   approver, the rest of that sequence isn't agent-originated — it's the
+   approver's own request, already reviewed once. `skills/acceptance-check/SKILL.md`
+   step 6b is where this runs: on verifying a ticket in that position, the PM
+   shapes and files the next named item itself, in the same pass, and raises
+   its own fresh G1 — then does it again for the item after, until the
+   sequence is done or a G1 comes back rejected or held. No gate gets skipped
+   anywhere in this; what stops being manual is only drafting and filing the
+   next PRD instead of waiting for the approver to notice it's missing.
+
    **The one carve-out, and the property that makes it safe.** A **P0 on a
    registered project that is not on the internal lane** — production down, or
    an actively exploitable vulnerability in code with real users — becomes a

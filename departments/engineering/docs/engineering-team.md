@@ -235,6 +235,25 @@ No id, no board row, nothing sequenced, nothing built. The weekly report puts
 the list to the approver as a **single batched G1**; only what the approver
 approves becomes a ticket.
 
+**The limit above targets the department inventing work about its own
+machinery — it says nothing about finishing a product feature the approver
+already asked for** (the approver, clarifying against `ENG-006`, 2026-08-28).
+A PRD can propose a multi-ticket sequence, and when the G1 answer on that
+first ticket affirms the whole shape rather than just the ticket in front of
+it, the rest of the sequence isn't a proposal waiting to be re-argued — it's
+already-approved work. `ENG-006`'s own G1 said exactly this: *"the proposed
+five-ticket sequence stands as shape to file incrementally, not as four
+pre-approved tickets."* In practice: ship ticket one, then the PM files
+ticket two itself, raises its own G1, ships it, files ticket three, and keeps
+going until the sequence is finished or a G1 comes back rejected or held. The
+mechanism lives in `skills/acceptance-check/SKILL.md` step 6b — it's what
+"file incrementally" was supposed to mean all along, and until this
+clarification nothing actually did it, so the department shipped ticket one
+and sat waiting to be asked for ticket two. Nothing about this skips a gate:
+every ticket in the sequence still earns its own full G1, its own design, its
+own review, QA, and security passes. The only thing that stops being a
+manual step is drafting and filing the next PRD.
+
 **Why this exists, in the numbers that produced it.** Technical intake used to
 shape straight onto the board, on the reasoning that agent findings are delivery
 work rather than business needs — sound for a department building someone else's

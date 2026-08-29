@@ -60,13 +60,54 @@ estimate is better.
 
 ### 6. Route
 
-- **All criteria pass** → state `verified`, owner `eng-manager`. Done.
+- **All criteria pass** → state `verified`, owner `eng-manager`. Done — but see
+  step 6b before you exit the pass.
 - **Any criterion fails** → state `building`, owner the implementing engineer,
   **with the specific criterion named** in the ticket log. Not "doesn't work" —
   "criterion 3 fails: given an empty cart, the total renders as NaN."
 
 A failed acceptance check on something already in production also gets a bug
 filed through `qa`, at the severity its impact warrants.
+
+### 6b. Continue an approved sequence
+
+This only runs off the `verified` branch. Look at the ticket's own PRD for a
+proposed multi-ticket sequence — usually a section titled something like
+"Feature shape and sequencing," written because the original ask didn't fit
+in one ticket (`ENG-006` set the precedent: five items, and this was item
+one).
+
+File the next item now, in this same pass, only if **both** of these hold:
+
+1. The PRD names a next item and gives it enough shape to draft from — a
+   single line is enough, since the new PRD will do the actual work.
+2. The **G1 answer on this ticket** explicitly signed off on the whole
+   sequence, not just the ticket that was in front of the approver.
+   `ENG-006`'s recorded answer is the bar to clear: *"the proposed five-ticket
+   sequence stands as shape to file incrementally, not as four pre-approved
+   tickets"* — nothing left to guess about continuing. A plain "approved"
+   that never touches the sequence does **not** clear this bar; handle it
+   like any other partial G1 (`docs/engineering-team.md` already has a
+   precedent for this in the decision journal, from `ENG-005`'s two-part G1)
+   — ask a targeted follow-up question rather than assume the rest was
+   approved by implication.
+
+When both hold and the board doesn't already have a ticket for that next
+item, shape it the same way a brand-new intake would: new ticket, problem
+statement, PRD, acceptance criteria, non-goals, a recommendation — the
+complete `skills/prd-writer/SKILL.md` process, with no shortcut just because
+the shape already existed on paper — then raise its own G1 to `inbox/` like
+any other ticket. WIP and approval caps apply exactly as `eng_build_loop.md`
+specifies; if a cap is in the way, say so in the ticket log and leave it for
+the next pass rather than working around the cap.
+
+None of this is the department commissioning itself
+(`docs/engineering-team.md`, "The department cannot commission itself") — the
+approver already reviewed and approved this shape at the sequence's first
+G1. Only the drafting and filing becomes automatic; everything else stays
+exactly as gated as before, with its own full G1, design, and
+review/QA/security passes for every item. A rejected or held G1 stops the
+chain on the spot — no retrying, no jumping to the next item anyway.
 
 ### 7. Note what the estimate missed
 
