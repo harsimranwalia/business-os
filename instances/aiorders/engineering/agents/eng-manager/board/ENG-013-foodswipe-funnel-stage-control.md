@@ -622,15 +622,33 @@ Append-only. One line per state transition, newest last.
   **Notify sweep:** nothing to raise — `building` needs no approver gate.
   Nothing to nudge.
 
-  **Observations:** none new. The `package-lock.json` drift and the host's
-  missing `docker`/`psql`/`supabase` CLI are both already-named, recurring
-  facts (see above); not re-logged as fresh observations a fourth/second
-  time respectively.
+  **Observations:** the `package-lock.json` drift and the host's missing
+  `docker`/`psql`/`supabase` CLI are both already-named, recurring facts
+  (see above); not re-logged a fourth/second time respectively. One new
+  observation filed: three unrelated, uncommitted, in-progress changes
+  found on disk at pass start (department `eng-manager/config.yaml`'s
+  `plan.tier` correction, `eng-trigger.sh`'s matching config-path fix,
+  this instance's own `config.yaml` raising `machine_limit` to 12) —
+  coherent and clearly intentional, left untouched and not committed
+  alongside this ticket's own changes; flagged because it makes
+  `board/_index.md`'s cached "Machine WIP 6... 6/6 at cap" header stale
+  against the real (if uncommitted) limit. See `observations.md`.
 
   `chained: ENG-013` — `building` is eng-manager-owned (principal-engineer
   + qa combined hop next), not the approver, not blocked, not terminal, not
   held by a cap. Fired
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`
-  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-  scoped (`ENG-013`) and whole-board: both exit 0, clean (re-verified
-  immediately before this entry was written).
+  before exiting. **Confirmed, not just assumed, sent:**
+  `traces/eng-loop-2026-08-29.log` shows this fire hit the single-flight
+  lock, found it held by this pass's own still-running PID (454, launched
+  13:37:11 for this same event), correctly declined to steal it, and
+  queued rather than launched — `traces/.pending` shows `continue ENG-013`
+  appended at the tail, twelfth behind a real backlog (`ENG-007`,
+  `watch schtasks`, `ENG-008`, three `decision`s, `scheduled schtasks`,
+  `ENG-022`, two more `decision`s, `ENG-024`, `ENG-011`). Not a broken
+  chain — the same FIFO-position shape this ticket's own two twin-no-op
+  entries above already documented for other events, now true of this one
+  too; a later fire or the safety-net scheduled pass will drain it. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: both exit 0, clean (re-verified immediately before this
+  entry was written).
