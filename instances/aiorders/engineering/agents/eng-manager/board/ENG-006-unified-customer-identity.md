@@ -6,8 +6,8 @@ type: feature
 size: L
 severity: P3
 priority:
-state: shipped
-owner: approver
+state: verified
+owner: product-manager
 lane: full
 blocked_on: 
 blocked_from: 
@@ -25,7 +25,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-006.md
   test_plan: agents/qa/test-plans/ENG-006.md
   security_review: agents/security/reviews/ENG-006.md
-  release:
+  release: agents/devops/releases/2026-08-28-aiorders-api-ENG-006.md
   pr: https://github.com/harsimranwalia/aiorders-api/pull/2
 ---
 
@@ -668,3 +668,101 @@ Append-only. One line per state transition, newest last.
   whole-board: both exit 0, clean.
 
 - `2026-08-28` `blocked → shipped` (control center, merge detected) — `loyalty-system` is an ancestor of `origin/main`. Advanced from the dashboard rather than by a build-loop pass; the loop's own ancestry check on its next pass will agree. The release record and `verified` still belong to a pass — this marks the merge, not the verification.
+
+- `2026-08-28` `shipped → verified` (devops, then product-manager —
+  `decision` event pass, context `inbox/2026-08-28-eng006-merge-request.md`).
+  Narrow scope per the event contract (act on the answered gate item, advance
+  only this ticket). Mode check clean (business-os `.env` → `MODE=active`).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped and
+  whole-board: both exit 0, clean.
+
+  **Found the ticket already past this gate item, not sitting cleanly behind
+  it.** The gate item carried `decision: approved`,
+  `decided: 2026-08-29T02:59:33.281266+00:00`, text "approved" — the tracked
+  channel. But the ticket's own `state:` was already `shipped`, set by the
+  same "control center" dashboard action documented in the row immediately
+  above this one, ahead of any build-loop pass. This is the second time that
+  mechanism has preempted a pass (`ENG-002` first, `proposals.md` 2026-08-26
+  row) — this time with a hybrid shape: unlike `ENG-002` (gate item left open
+  indefinitely, no reply at all), the tracked item *did* get answered, just
+  minutes after the merge rather than in place of it. Addendum filed in
+  `observations.md` rather than a new proposal row.
+
+  **Neither signal taken on its own text.** Re-ran the loop's own
+  merge-detection check (`schedules/eng_build_loop.md` step 5) from scratch
+  in the department's own worktree (`~/Documents/projects/_eng/aiorders-api`,
+  never the human's checkout): `git fetch origin`; `git merge-base
+  --is-ancestor origin/loyalty-system origin/main` → MERGED; `git log
+  origin/main --oneline -3` showed `40d7c36` (PR #2's own merge commit)
+  directly on top of `c3ab50c` (this ticket's commit) on top of `5b3bac2` —
+  no intervening commits, `git diff origin/loyalty-system origin/main` empty.
+  Cross-checked independently via `gh pr view 2 --json state,mergedAt`:
+  `MERGED`, `2026-08-29T02:57:05Z`. The merge commit's own timestamp lands
+  ~2m28s before the gate item's `decided:` stamp — same "merge, then record
+  the decision in the same sitting" shape `ENG-005` showed, a slightly wider
+  gap. Both routes agree with the control center's claim: genuinely merged.
+  The `blocked → shipped` transition above is confirmed correct; not redone.
+
+  **Acted as devops, closing out `shipped`'s exit condition**
+  (`config/definition-of-done.md`: "Deployed, health checks green, release
+  record written") **for what an L1 project with no CI/CD can actually
+  attest to.** `.github/workflows/` absent from `origin/main` — no
+  auto-deploy. `git ls-tree -r origin/main --name-only` confirms both the
+  migration file and all 7 `platform-customer-auth` source/test files are
+  present on `origin/main` under the paths already reviewed; since the
+  branch-to-main diff is empty, the 27/27 Deno test result and clean
+  `check`/`lint` already documented at `in-review` necessarily still hold —
+  re-running an identical suite against provably identical source would add
+  no new information, so it wasn't re-run. Checked whether this department
+  could even confirm a live Supabase deploy: `supabase/config.toml` points
+  at the registered project (`bmnmnejwdxbcqinqkwko`), but the worktree isn't
+  linked and no `SUPABASE_ACCESS_TOKEN` is available — a read-only `supabase
+  migration list --linked` returned "Cannot find project ref" rather than a
+  status. Recorded `health_check: not checked` and `rollback_tested: true
+  (drilled pre-merge against a throwaway Postgres container; not against the
+  live project)` honestly rather than inferring a status unavailable to
+  observe — same discipline `ENG-005` used for its own Cloudflare gap. Wrote
+  the release record from what was actually found:
+  `agents/devops/releases/2026-08-28-aiorders-api-ENG-006.md`, `links.release`
+  set.
+
+  **Acted as product-manager, confirming acceptance criteria against the live
+  (merged) tree** (`agents/product-manager/specs/ENG-006-unified-customer-identity.md`):
+  AC3 (legacy-record linking), AC4 (cross-restaurant resolution to one
+  platform customer), and AC7 (phone-normalization rejection) all confirmed
+  directly — each is exercised by `linking.ts`/`validation.ts`'s unit tests,
+  re-confirmed present and unchanged on `origin/main`, none needing a live
+  OTP call to exercise. **AC1, AC2, AC5, AC6 remain not verified live** —
+  each depends on Supabase's phone-auth provider and an SMS vendor being
+  configured, neither of which is done; this is not a new gap, it's the same
+  one QA named at `in-qa` and the same one the approver read and approved in
+  the merge-request item's own text. Carried forward explicitly rather than
+  silently claimed or allowed to block: applying the same "pass on the code
+  as written, gap named and not hidden" standard used at every gate on this
+  ticket so far, rather than a stricter one invented only at this last step.
+  PRD `status: designed → verified`.
+
+  **Gate item closed out.** `inbox/2026-08-28-eng006-merge-request.md` moved
+  to `inbox/_handled/` with a processed footer. Journaled in
+  `agents/eng-manager/config/decision-journal.md`.
+
+  **1 transition this pass** (`shipped → verified`; the `blocked → shipped`
+  half was already on record from the control center), well under the cap of
+  4. **Approval cap:** `ENG-006` no longer counts (was the only item on both
+  approver-facing WIP and the approval cap, as `blocked_on: approver`) —
+  `verified` is terminal and owes nothing to either cap. Approver-facing WIP
+  1 → 0; approval cap 1/3 → 0/3. `machine_wip` unchanged at 0/6 — neither
+  `shipped` nor `verified` sits inside the counted `ready`..`ready-to-ship`
+  range.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+  valid, accounted-for terminal state. No other ticket is in flight.
+
+  **Notify sweep:** nothing to raise this pass (`verified` raises no gate
+  item). Nothing to nudge — the merge-request item is now answered and
+  closed, not sitting open. Approval cap now 0/3, not full — no stall.
+
+  `chained: none` — `verified` is a terminal state. Nothing left for a
+  machine or the approver to do on this ticket. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped and whole-board:
+  both exit 0, clean.
