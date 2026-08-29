@@ -1,0 +1,215 @@
+---
+id: ENG-014
+title: Brand portal self-service — restaurant QR codes and marketing media downloads
+project: restaurant-portal
+type: feature
+size: M
+time_estimate: a day and a half to two days
+time_spent:
+time_remaining:
+severity: P2
+priority:
+state: awaiting-scope
+owner: approver
+lane: full
+blocked_on:
+blocked_from:
+source: approver
+created: 2026-08-29
+updated: 2026-08-29
+branch:
+depends_on: []
+blocks: []
+parent:
+links:
+  prd: agents/product-manager/specs/ENG-014-restaurant-qr-media-self-service.md
+  design:
+  adrs: []
+  review:
+  test_plan:
+  security_review:
+  release:
+  pr:
+---
+
+## Input
+
+Verbatim, from
+`agents/product-manager/inbox/2026-08-29-on-the-brand-portal-restaurant-is-not-able-to-see-or-generea.md`
+(now `agents/product-manager/inbox/_handled/`), filed by the approver, `via:
+control-center`, received 2026-08-29T08:20:42.534749+00:00 — preserved here
+per `skills/request-readback/SKILL.md` step 1, never edited:
+
+> # on the brand portal restaurant is not able to see or genereate the qr codes or the media downloads they have
+>
+> nor are they able to make changes to timing or anythings related to their
+> website from the brand portal. all of this has be be done from admin
+> portal which the restaurant owners dont have access to. aware that these
+> are onboarding task but there can be no self onboarding if the restaurant
+> owner/user is not able to do this.
+
+## Readback
+
+See
+`agents/product-manager/specs/ENG-014-restaurant-qr-media-self-service.md` →
+Readback — the full two-reading comparison lives there rather than
+duplicated here.
+
+## Problem
+
+Restaurant owners on the brand portal can't see, generate, or download their
+own QR codes or marketing materials — confirmed in code as admin-only end to
+end (UI and backend authorization both), not just a reported symptom. Every
+restaurant's onboarding depends on staff doing this by hand and manually
+sharing the result with the owner.
+
+## Outcome
+
+A restaurant/brand-manager user can view, generate, and download their own
+restaurant's QR codes and marketing media (bag insert, A4 poster) from the
+brand portal, with no admin-portal access and no staff hand-off required.
+
+## Notes
+
+**Severity called P2, not P1 or P3.** Calibrated against `ENG-013` (a
+same-day "confirmed zero capability, not just a UI gap" ticket, called P2):
+this ticket is the same shape — the backend path is hard-gated to admin,
+not merely missing a frontend screen. Not P1: a workaround exists and is
+presumably in active use (`Activation.tsx` step 8, "Share Bag Insert & QR
+with Owner" — staff does this manually today), so it clears P0/P1's "no
+workaround" bar.
+
+**Evidence found, not assumed.** Full detail in the PRD's Readback section.
+Summary: `restaurant-portal` (the brand portal — confirmed via its own
+`brandPortalApi.ts`) has zero QR/media surface anywhere in `src/`. The two
+live generators (`BagInsertGenerator.tsx`, `A4PosterGenerator.tsx`) and the
+QR flow (`getRestaurantQR` → `url-shortener` function) exist only in
+`aiorders-admin-hub`, reached from the staff-only `Activation.tsx` onboarding
+checklist and `RestaurantDetails.tsx`. The `url-shortener` function itself
+checks `profile.role === 'admin'` exactly — confirmed by reading
+`aiorders-api/supabase/functions/url-shortener/index.ts` directly, not
+inferred from the frontend gate — so this is a real backend authorization
+gap, not a routing/UI-only fix. QR images come from a free public API
+(`api.qrserver.com`); no recurring cost.
+
+**Project scoping.** Primary project set to `restaurant-portal` (the brand
+portal itself, where the acceptance criteria are observed), same split
+precedent `ENG-003`/`ENG-008`/`ENG-011`/`ENG-013` used — the other repo's
+work (`aiorders-api`, a new restaurant-scoped backend action) is named in
+the PRD rather than inventing a multi-project ticket shape. No eng worktree
+exists yet for `restaurant-portal` on this host
+(`~/Documents/_eng/aiorders-admin-hub` and `~/Documents/_eng/aiorders-api`
+do; `restaurant-portal` doesn't) — read from the human's checkout instead,
+which `config/projects.md` records as a clean tree, for this pass's
+research only; the worktree gets created at `building`, per
+`config/projects.md`.
+
+**One item intentionally not filed yet:** the website-settings/"timing"
+half of the same request, and its own open question (how far "anythings
+related to their website" should extend). Both readings flagged it as a
+joint gap rather than resolving it — see the PRD's Readback and "Feature
+shape and sequencing." Does not block this ticket.
+
+**Found and left untouched, out of scope for this `intake` event's own
+narrower contract.** Re-read `inbox/` fresh before raising this ticket's own
+G1 (not trusting the board's cached header) and found all four previously
+open items now answered: `inbox/2026-08-29-eng009-g1-scope.md` (approved
+09:20:42), `inbox/2026-08-29-eng010-g1-scope.md` (approved 10:49:55),
+`inbox/2026-08-29-eng012-g1-scope.md` (**rejected**), and
+`inbox/2026-08-29-eng013-presignup-leads-question.md` (approved) — all
+answered but none yet processed into their tickets' `state`/`owner`. Treated
+as closed, not open, for this pass's own cap arithmetic per this board's
+established convention (see `_index.md` header and prior board entries);
+left unprocessed since acting on someone else's ticket is a `decision`
+event's job, not this `intake` event's. This is now the fourth consecutive
+pass to find this same backlog without it clearing — flagged more pointedly
+than before in `observations.md`, since the pattern itself (not just the
+individual items) now looks worth a dead-end sweep rather than another
+re-verification. Nine-plus other requests still sit unshaped in
+`agents/product-manager/inbox/` — untouched, each with its own `intake`
+event already queued or pending.
+
+## Log
+
+Append-only. One line per state transition, newest last.
+
+- `2026-08-29` `intake → shaped → awaiting-scope` (product-manager, `intake`
+  event pass, context this exact request file). Mode check clean
+  (business-os `.env` →
+  `MODE=` empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board (no ticket yet
+  to scope to): exit 0, clean.
+
+  **Ran the full request-readback**
+  (`skills/request-readback/SKILL.md`): this PM's own reading plus a blind
+  architect reading (subagent, `opus`, raw request +
+  `knowledge/business-profile.md` only, no repo access, no exposure to this
+  PM's own reading). **No material divergence** — both converged on the same
+  shape: two portals for two audiences, QR/media already exist and are an
+  access gap rather than a greenfield build, "timing" means operating hours.
+  One joint gap both readings independently flagged rather than resolved:
+  how far "anythings related to their website" extends — carried into item
+  2's future scoping, not asked here since it doesn't gate this ticket.
+
+  **Checked the live repos before proposing anything**, same practice
+  `ENG-005`/`ENG-008`/`ENG-011`/`ENG-013` established — full detail in the
+  PRD's Readback and this ticket's Notes above. Confirmed zero QR/media
+  surface in `restaurant-portal`, confirmed the admin-only backend gate by
+  reading `url-shortener/index.ts` directly rather than assuming from the
+  frontend, confirmed the QR provider is a free API with no recurring cost,
+  and confirmed the owner/admin role split is by design
+  (`brand_managers`/`restaurant_managers` vs.
+  `admin`/`sub-admin`/`partner-admin`/`partner-user`).
+
+  **PRD written**:
+  `agents/product-manager/specs/ENG-014-restaurant-qr-media-self-service.md` —
+  acceptance criteria + non-goals naming the deferred website-settings item
+  explicitly, plus a "Feature shape and sequencing" section (same pattern
+  `ENG-008` used) naming it as item 2, `[proposed]`, to be filed once this
+  ticket verifies.
+
+  **G1 required** — full lane, not XS/bug/chore. Wrote
+  `inbox/2026-08-29-eng014-g1-scope.md` (`agent: product-manager`, `gate:
+  scope`, `project: restaurant-portal`, recommendation to build now). No
+  separate standing-question file this time — unlike `ENG-008`/`ENG-011`/
+  `ENG-013`, the one open gap (item 2's eventual scope) doesn't need an
+  approver answer to move this ticket forward, so it stays inside the PRD's
+  own "Feature shape and sequencing" section rather than spending an
+  approval-cap slot on a question nothing is currently blocked on.
+
+  Ran `departments/engineering/lib/eng-notify.sh raise` on the new file; see
+  its own frontmatter for the result and `notified:` timestamp.
+
+  **No dissent section** — `agents/critic/agent.md` still doesn't exist at
+  the department or instance level (confirmed absent again this pass, same
+  open proposal, `proposals.md` 2026-08-25 row); not refiled.
+
+  **Caps verified fresh from ground truth, not the cached board header** —
+  see Notes above: all four previously-open inbox items are now answered,
+  read as closed for this pass's cap arithmetic per established convention.
+  Approver-facing WIP and approval cap both fully free (0/2, 0/3) before
+  this ticket's own G1. **State:** `intake → shaped → awaiting-scope`,
+  `owner` moves `product-manager → approver`, both in this pass, PRD written
+  and G1 raised together per `templates/ticket.md`'s own convention.
+  **Consequence:** approver-facing WIP 0/2 → 1/2; approval cap 0/3 → 1/3.
+  Machine WIP unaffected (still whatever `ENG-007`/`ENG-008`/`ENG-011`/
+  `ENG-013` leave it at).
+
+  **Dead-end sweep:** out of scope for this `intake` event's own narrower
+  contract — not run beyond the fresh cap-verification above. `ENG-007`
+  through `ENG-013` otherwise untouched.
+
+  **Notify sweep:** this pass's own new item raised and stamped above.
+  Nothing else to nudge — the 24h nudge threshold doesn't apply to anything
+  else on the board yet today. Approval cap 1/3, not full — no stall.
+
+  **Observations filed** (`observations.md`): the confirmed admin-only
+  backend gate on `url-shortener` grounding this PRD's Risks section; the
+  free-QR-provider cost finding; the now-four-deep, four-pass-old
+  answered-but-unprocessed inbox backlog, flagged more pointedly as a
+  pattern.
+
+  `chained: none` — `awaiting-scope`, owned by the approver; the chaining
+  guard never fires on a ticket waiting on a human. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-014`) and
+  whole-board: see pass notes.
