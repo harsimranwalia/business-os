@@ -141,7 +141,7 @@ read_plan_budget() {
 MAX_HOPS_PER_TICKET="${ENG_MAX_HOPS_PER_TICKET:-$(read_plan_budget hops_per_ticket 8)}"
 MAX_HOPS_PER_DAY="${ENG_MAX_HOPS_PER_DAY:-$(read_plan_budget hops_per_day 40)}"
 STALE_LOCK_SECONDS=1800
-PASS_TIMEOUT_BASE_SECONDS=1800    # a hung session must not hold the lock forever
+PASS_TIMEOUT_BASE_SECONDS=3600    # a hung session must not hold the lock forever
 # `intake` runs PM shaping and often architect design in the same pass —
 # investigation with no natural stopping point (read live schema, correct a
 # design mid-write) rather than a bounded write/test/fix loop. 2026-08-29
@@ -149,6 +149,25 @@ PASS_TIMEOUT_BASE_SECONDS=1800    # a hung session must not hold the lock foreve
 # correction — the work was real, not stuck, and the retry has to re-read
 # everything from scratch. Doubled, matching this file's own back-off
 # doubling elsewhere rather than picking an arbitrary number.
+#
+# 2026-08-29, same day: the identical failure hit `continue` too, not just
+# `intake` — ENG-011's build (edit several files, then run its test suite,
+# lint, and typecheck in sequence) was still actively producing output at
+# the full 1800s and got killed mid-verification, exit 124, re-queued to redo
+# work that was already done. A build pass is at least as open-ended as an
+# intake pass, so the base ceiling — which `continue`, `decision`,
+# `scheduled`, `watch` and `finding` all still share — gets the same
+# doubling treatment intake already got, for the same reason: a wall-clock
+# cap can only tell "still running" from "done," never from "stuck," and 30
+# minutes was proving too short to make that distinction safely for real
+# work. There is no output-liveness check here instead (killing only once
+# $PASS_OUT stops growing, rather than once N seconds elapse regardless of
+# activity) because building one correctly — across the mac/Windows
+# process-signal differences this file has already been burned by more than
+# once (TCC EPERM, the WSL bash.exe stub) — is real, untested surgery on a
+# live dispatcher, not a same-day fix; a broken kill path that cannot
+# actually stop a truly hung process is worse than an occasionally-too-short
+# timeout, so the safer lever is pulled first.
 PASS_TIMEOUT_INTAKE_SECONDS=3600
 PASS_TIMEOUT_SECONDS="$PASS_TIMEOUT_BASE_SECONDS"  # overwritten per-event below; this default only
                                                     # matters before the drain loop's first iteration
@@ -442,10 +461,20 @@ fi
 #
 # Retry is BOUNDED. The failures actually observed — a spend limit, a TCC/EPERM
 # denial — do not clear within one pass, so infinite retry would be a loop that
-# never stops and burns the hop budget doing it. One retry, then drop LOUDLY:
+# never stops and burns the hop budget doing it. Still bounded, then drop LOUDLY:
 # a dropped event has to be more visible than a line in a daily log, because the
 # whole bug is that a dead pass looked exactly like a quiet night.
-MAX_EVENT_ATTEMPTS=2
+#
+# 2026-08-29: raised 2 -> 3 after a third failure class showed up that the
+# original two weren't tuned for — a Bun/Windows runtime segfault (`claude.exe`
+# itself crashing, exit 127) that is transient, not persistent like a spend
+# limit or a permission denial, and was observed hitting the SAME event twice
+# in one incident (traces/eng-loop-2026-08-29.log, ~08:38-08:55) right at the
+# tail end of a pass, after its real writes were already committed — so the
+# retry is cheap and safe, not a repeat of already-done work. One extra life
+# absorbs a flaky-runtime blip without weakening the bound against the two
+# persistent failure modes this constant was originally sized for.
+MAX_EVENT_ATTEMPTS=3
 
 commit_watch_fingerprint() {
   # Only ever called after a pass that finished. A watch event whose pass died
