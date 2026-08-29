@@ -46,6 +46,80 @@ Cap: 3 across all gates. **Currently 0/3.** Nothing waiting — `ENG-006`'s L1
 merge request was answered and independently confirmed this pass; see the
 dated entry below.
 
+## 2026-08-28 — continue ENG-006: fired externally against an already-terminal ticket — no-op
+
+`continue` event pass, context `ENG-006`. Per the event's own contract
+(resume the named ticket from its current state), scoped to this ticket
+only — no board-wide sweep. Mode check clean (business-os `.env` →
+`MODE=active`; instance `config/config.yaml` → `mode:` empty, falls
+through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-006`) and whole-board: both exit 0, clean.
+
+**Nothing to resume.** `ENG-006` has been `state: verified` — terminal —
+since the `decision` pass at 20:12:38, confirmed independently twice more
+since (the `watch` and `scheduled` passes immediately below). Re-confirmed
+fresh rather than trusted from the board's own account: the ticket's own
+frontmatter and log, this file's header/In-flight table, and
+`decision-journal.md` (all three of its gates — G1, G2, L1 merge — already
+journaled) all agree. `traces/.pending` empty; all three watched inboxes
+hold only `.gitkeep` and the already-notified, non-P0
+`2026-08-28-eng-events-dropped.md`. Nothing anywhere for a machine to act on.
+
+**This fire does not fit the instance's well-documented duplicate-queued-event
+race** (`observations.md`, eleven-plus prior rows) — that pattern is always
+two events the loop itself legitimately queued for the same underlying
+change, racing each other. This one doesn't: `traces/eng-loop-2026-08-28.log`
+shows no `continue — queued as pending` line and no pass since the
+`ready-to-ship → blocked` transition (14:38:21, its own chain already
+consumed) ever recording `chained: ENG-006` — the `decision`, `watch`, and
+`scheduled` passes since all correctly logged `chained: none`. This fire
+lands at 21:02:49, 27 minutes after the `scheduled` pass's own `pass end`
+line, with nothing queued between them — meaning it reached the lock and
+drained its own freshly-appended line, not an older one left waiting. That
+shape means the fire itself came from outside the loop's own chain
+mechanism — a direct invocation of `eng-trigger.sh continue ENG-006` — not
+from two internally-queued events racing. Filed as its own,
+differently-shaped observation rather than folded into the existing race
+count.
+
+**A concrete, plausible source surfaced mid-pass, while re-checking the
+working tree.** Commit `3c3dcd0` ("ENG-006: verify against production —
+migration and function confirmed deployed") landed at
+2026-08-28T21:09:07-07:00, authored by Harsimran — inside this pass's own
+window. Its message: the approver ran `supabase db push` and `supabase
+functions deploy platform-customer-auth` directly against production,
+confirmed by CLI output, and updated the release record's `environment`/
+`health_check` frontmatter accordingly — all "outside this department's own
+L1 workflow, which still only opens PRs." That's a plausible source for an
+external trigger fire landing on this exact ticket in this exact window,
+though nothing ties the commit to the fire directly (no log line names a
+cause), so it's recorded as circumstantial, not confirmed. Checking that
+commit's diff also surfaced a second thing, unrelated to the fire itself:
+its frontmatter update to `agents/devops/releases/2026-08-28-aiorders-api-ENG-006.md`
+wasn't matched by an update to that file's own prose body, which still reads
+the opposite (`## Deploy`/`## Health note`: "not established that a live
+Supabase deploy has happened yet"). Not fixed here — see the observation
+below for why.
+
+**0 transitions.** No cap affected — machine WIP 0/6, approver WIP 0/2,
+approval cap 0/3, all unchanged; `ENG-006` sits outside every counted range.
+
+**Dead-end sweep (scoped to this event):** `ENG-006`'s own log already ended
+in a valid, terminal, accounted-for state before this pass started, and this
+pass added one line confirming that rather than reopening it. No other
+ticket is in flight to check.
+
+**Notify sweep:** nothing to raise, nothing to nudge. Approval cap 0/3 — no
+stall.
+
+**Observation filed** (`observations.md`) — this fire's shape, distinct from
+the duplicate-event race.
+
+No ticket state changed, no gate item was written. `chained: none` —
+`verified` is terminal; firing `continue ENG-006` again would just repeat
+this same no-op. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-006`) and whole-board: both exit 0, clean.
+
 ## 2026-08-28 — scheduled (launchd): safety-net sweep — board fully terminal, nothing to act on
 
 `scheduled` event pass, context `launchd`, the four-times-daily safety net
@@ -156,63 +230,4 @@ No ticket was touched, no ticket state changed, no gate item was written.
 `chained: none` — this pass advanced no ticket, so there is no hop of its
 own to fire. All WIP/approval-cap figures unchanged. Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
-
-## 2026-08-28 — decision ENG-006: merge-request gate closed, control-center jump reconciled — shipped → verified
-
-`decision` event pass, context `inbox/2026-08-28-eng006-merge-request.md`.
-Narrow scope per the event contract (act on the answered gate item, advance
-only this ticket). Mode check clean (business-os `.env` → `MODE=active`).
-Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-006`)
-and whole-board: both exit 0, clean.
-
-**Found the ticket already past the gate item it was meant to act on.** The
-tracked item carried `decision: approved` (`decided: 2026-08-29T02:59:33Z`,
-text "approved"), but `ENG-006`'s own `state:` was already `shipped` — a
-"control center" dashboard action had advanced `blocked → shipped` ahead of
-any build-loop pass (the one-liner immediately above this entry, in the
-ticket's own log). Second occurrence of the gap `ENG-002` first hit
-(`proposals.md`, 2026-08-26 row), this time hybrid: unlike `ENG-002` (no
-reply at all, item left open), the tracked item *was* answered — just
-minutes after the merge rather than instead of it. Addendum filed in
-`observations.md` rather than a new proposal row; journaled in
-`decision-journal.md`.
-
-**Neither signal trusted on its own text.** Re-ran the loop's own
-merge-detection check from scratch in the department's own worktree: `git
-fetch` + `git merge-base --is-ancestor origin/loyalty-system origin/main` →
-MERGED, `40d7c36` (PR #2's merge commit) directly on `c3ab50c` with no
-intervening commits; cross-checked via `gh pr view 2` → `MERGED`,
-`2026-08-29T02:57:05Z`, ~2m28s before the gate item's `decided:` stamp — same
-"merge, then record" shape as `ENG-005`. The control center's `shipped` call
-checks out; not redone.
-
-**Closed out `shipped → verified` in one hop.** Acted as devops: confirmed
-the migration and all 7 edge-function files present on `origin/main`
-(branch-to-main diff empty, so the already-passing 27/27 Deno suite still
-holds — not re-run for zero new information); confirmed no CI/CD exists;
-confirmed this worktree has no linked Supabase session
-(`supabase migration list --linked` → "Cannot find project ref"), so
-`health_check: not checked` recorded honestly rather than inferred. Release
-record: `agents/devops/releases/2026-08-28-aiorders-api-ENG-006.md`. Acted as
-product-manager: AC3/4/7 confirmed directly against the merged tree
-(unit-test-covered linking/validation logic, no live OTP needed); AC1/2/5/6
-remain **not verified live**, unchanged from the already-named, already
-approver-seen gap (Supabase phone-auth + SMS vendor not yet configured) —
-carried forward, not new, not blocking, same standard applied at every gate
-on this ticket. PRD `status: designed → verified`. Full reasoning on the
-ticket's own log.
-
-**1 transition this pass** (`shipped → verified`), well under the cap of 4.
-Approver-facing WIP 1 → 0; approval cap 1/3 → 0/3 — `ENG-006` was the only
-item on either. `machine_wip` unaffected (0/6).
-
-**Dead-end sweep (scoped to this event):** this ticket's log now ends in a
-valid, accounted-for terminal state. No other ticket in flight.
-
-**Notify sweep:** nothing to raise (`verified` raises no gate item); nothing
-to nudge (item now closed, not open). Approval cap 0/3 — no stall.
-
-`chained: none` — `verified` is terminal. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, scoped and whole-board: both
-exit 0, clean.
 

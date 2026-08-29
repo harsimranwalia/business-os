@@ -74,27 +74,30 @@ just a slightly longer gap. The claim checks out on both counts.
 
 ## Deploy
 
-- **Method:** merge to `main` only. Confirmed directly this pass:
-  `.github/workflows/` absent from `origin/main` — no CI/CD auto-deploy exists
-  on this repo, same as every other registered project.
-- **Why no deploy run:** `aiorders-api` is registered **L1** — the department
-  writes on a branch and opens a PR; a human merges, and a human or their own
-  process runs the actual Supabase deploy (`supabase db push` for the
-  migration, `supabase functions deploy platform-customer-auth` for the edge
-  function). Running either from here would push a production release this
-  department has no autonomy to trigger, regardless of diff content — the
-  same boundary `ENG-005` documented for Cloudflare. Checked whether this
-  worktree could even attempt it: `supabase/config.toml` points at
-  `bmnmnejwdxbcqinqkwko` (the registered project), but the worktree isn't
-  linked and no `SUPABASE_ACCESS_TOKEN` is available (`supabase migration
-  list --linked` → "Cannot find project ref") — not a deliberate withholding,
-  genuinely no credentials from here either way.
+- **Method:** merge to `main` only — no CI/CD auto-deploy exists on this repo
+  (`.github/workflows/` absent from `origin/main`, same as every other
+  registered project). The actual Supabase deploy ran as a separate,
+  out-of-band step (see below), not triggered by the merge itself.
+- **Why this department didn't run it:** `aiorders-api` is registered **L1**
+  — the department writes on a branch and opens a PR; a human merges, and
+  running the deploy itself would push a production release outside this
+  department's own autonomy, regardless of diff content — the same boundary
+  `ENG-005` documented for Cloudflare. This worktree genuinely couldn't have
+  run it anyway at merge time: `supabase/config.toml` points at
+  `bmnmnejwdxbcqinqkwko`, but the worktree wasn't linked and no
+  `SUPABASE_ACCESS_TOKEN` was available (`supabase migration list --linked` →
+  "Cannot find project ref").
+- **What actually happened:** the migration (`supabase db push`) and the edge
+  function (`supabase functions deploy platform-customer-auth`) were both run
+  directly against `bmnmnejwdxbcqinqkwko` on 2026-08-28, outside this
+  department's L1 workflow — confirmed by the deploy commands' own CLI output,
+  not inferred from the merge. See `environment` in the frontmatter above.
 - **Migration:** additive (`20260828120000_platform_customer_identity.sql`),
-  present on `origin/main`; not confirmed pushed to the live project — see
-  above.
+  present on `origin/main` and confirmed pushed to the live project.
 - **Feature flag:** none — the function has no live caller, so no flag is
   needed to keep it dark.
-- **Duration:** n/a — no deploy executed by this department.
+- **Duration:** n/a for this department — the deploy ran outside its
+  workflow, so it has no timing to report.
 
 ## Verification
 
@@ -112,7 +115,8 @@ pre-merge branch:
   and all 7 `platform-customer-auth` source/test files are present on
   `origin/main` under the same paths reviewed.
 - Health checks: not run — see `health_check` above and the Health note
-  below. Not established that a live Supabase deploy has happened yet.
+  below. The deploy itself is now confirmed (see Deploy above); its runtime
+  behavior in production is what remains unchecked.
 - Acceptance criteria: 3 of 7 confirmed against the live (merged) tree; 4
   remain open pending a separate configuration dependency — see Acceptance
   criteria below.
@@ -170,23 +174,26 @@ open and named, not silently claimed.
 ## Health note
 
 Same boundary `ENG-005` hit on Cloudflare, here for Supabase: this department
-has no dashboard or monitoring access to `bmnmnejwdxbcqinqkwko`, and the
-worktree itself isn't linked (`supabase link` never run, no
-`SUPABASE_ACCESS_TOKEN` available) — confirmed by attempting a read-only
-`supabase migration list --linked`, which failed with "Cannot find project
-ref" rather than returning a status. `health_check` is recorded "not checked"
-rather than inferring green from the merge alone. Unlike `ENG-002`, this
-release does have new production infrastructure (two tables, one function)
-once whatever process runs the actual Supabase deploy catches up to `main` —
-so "nothing to go unhealthy" doesn't apply here either.
+has no dashboard or monitoring access to `bmnmnejwdxbcqinqkwko` from its own
+worktree (`supabase link` was never run *from here*, no
+`SUPABASE_ACCESS_TOKEN` available to this department — confirmed by a
+read-only `supabase migration list --linked`, which failed with "Cannot find
+project ref"). The deploy itself was carried out separately, outside this
+worktree, and is confirmed (see Deploy above); `health_check` stays "not
+checked" because nothing here can see whether the deployed migration and
+function are behaving correctly in production, not because the deploy is in
+question. Unlike `ENG-002`, this release does have new production
+infrastructure (two tables, one function) now live — so "nothing to go
+unhealthy" doesn't apply here.
 
 ## Observability
 
 New: every failure branch in `handler.ts` logs server-side with `userId` and
 error context (confirmed in the security review), through Supabase's own
 function-log mechanism — same pattern every other function in this repo
-already uses, no new tooling. Not independently exercised against a live
-deploy this pass, since none is confirmed to exist yet.
+already uses, no new tooling. Not independently exercised against the live
+deploy by this department, since it has no log/dashboard access to
+`bmnmnejwdxbcqinqkwko` — see Health note.
 
 ## Cost
 
@@ -204,7 +211,8 @@ open, and what AC1/2/5/6 are waiting on; (2) consent capture for the new
 cross-restaurant correlation (`consent_recorded_at`) — the approver's/counsel's
 call, not built here; (3) phone-recycling mitigation — deliberately deferred
 per the architect, a build-time refinement rather than a requirement of this
-ticket. None block this release; none are new. Whether/when the actual
-Supabase deploy happens is outside this department's visibility, same as
-`ENG-005`'s Cloudflare gap — nothing here schedules that check, since the
-department has no way to run it.
+ticket. None block this release; none are new. The Supabase deploy itself is
+now confirmed (see Deploy above); whether the deployed migration and function
+are actually healthy in production stays outside this department's
+visibility, same as `ENG-005`'s Cloudflare gap — nothing here schedules that
+check, since the department has no way to run it.

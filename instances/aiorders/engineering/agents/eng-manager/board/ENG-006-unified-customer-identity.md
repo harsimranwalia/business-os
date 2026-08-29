@@ -766,3 +766,30 @@ Append-only. One line per state transition, newest last.
   machine or the approver to do on this ticket. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped and whole-board:
   both exit 0, clean.
+
+- `2026-08-28` (no-op) `continue ENG-006` event pass, context `ENG-006`. Mode
+  check clean (`MODE=active`). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped and whole-board:
+  both exit 0, clean.
+
+  **Nothing to resume — `state: verified` since 20:12:38, independently
+  reconfirmed** against this ticket's own frontmatter/log, the board index,
+  and `decision-journal.md` (all three gates journaled). Mid-pass, commit
+  `3c3dcd0` landed (Harsimran, 2026-08-28T21:09:07-07:00): the approver ran
+  `supabase db push` / `supabase functions deploy` directly against
+  production and updated the release record's frontmatter accordingly,
+  outside this department's own L1 workflow — a concrete, plausible source
+  for this event's own external fire, though not confirmed as the literal
+  cause. Full reasoning, including why this fire doesn't match the
+  instance's documented duplicate-queued-event race, is on
+  `board/_index.md`'s dated entry for this pass rather than repeated here.
+  Observations filed (`observations.md`): this fire's shape, and a
+  frontmatter/body inconsistency that same commit left in the release
+  record, found while checking it.
+
+  **0 transitions.** No cap affected (machine WIP 0/6, approver WIP 0/2,
+  approval cap 0/3 — unchanged).
+
+  `chained: none` — `verified` is terminal; nothing for a machine to resume.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped and
+  whole-board: both exit 0, clean.

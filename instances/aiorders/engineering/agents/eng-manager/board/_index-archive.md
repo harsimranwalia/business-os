@@ -12,6 +12,65 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-28 — decision ENG-006: merge-request gate closed, control-center jump reconciled — shipped → verified
+
+`decision` event pass, context `inbox/2026-08-28-eng006-merge-request.md`.
+Narrow scope per the event contract (act on the answered gate item, advance
+only this ticket). Mode check clean (business-os `.env` → `MODE=active`).
+Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-006`)
+and whole-board: both exit 0, clean.
+
+**Found the ticket already past the gate item it was meant to act on.** The
+tracked item carried `decision: approved` (`decided: 2026-08-29T02:59:33Z`,
+text "approved"), but `ENG-006`'s own `state:` was already `shipped` — a
+"control center" dashboard action had advanced `blocked → shipped` ahead of
+any build-loop pass (the one-liner immediately above this entry, in the
+ticket's own log). Second occurrence of the gap `ENG-002` first hit
+(`proposals.md`, 2026-08-26 row), this time hybrid: unlike `ENG-002` (no
+reply at all, item left open), the tracked item *was* answered — just
+minutes after the merge rather than instead of it. Addendum filed in
+`observations.md` rather than a new proposal row; journaled in
+`decision-journal.md`.
+
+**Neither signal trusted on its own text.** Re-ran the loop's own
+merge-detection check from scratch in the department's own worktree: `git
+fetch` + `git merge-base --is-ancestor origin/loyalty-system origin/main` →
+MERGED, `40d7c36` (PR #2's merge commit) directly on `c3ab50c` with no
+intervening commits; cross-checked via `gh pr view 2` → `MERGED`,
+`2026-08-29T02:57:05Z`, ~2m28s before the gate item's `decided:` stamp — same
+"merge, then record" shape as `ENG-005`. The control center's `shipped` call
+checks out; not redone.
+
+**Closed out `shipped → verified` in one hop.** Acted as devops: confirmed
+the migration and all 7 edge-function files present on `origin/main`
+(branch-to-main diff empty, so the already-passing 27/27 Deno suite still
+holds — not re-run for zero new information); confirmed no CI/CD exists;
+confirmed this worktree has no linked Supabase session
+(`supabase migration list --linked` → "Cannot find project ref"), so
+`health_check: not checked` recorded honestly rather than inferred. Release
+record: `agents/devops/releases/2026-08-28-aiorders-api-ENG-006.md`. Acted as
+product-manager: AC3/4/7 confirmed directly against the merged tree
+(unit-test-covered linking/validation logic, no live OTP needed); AC1/2/5/6
+remain **not verified live**, unchanged from the already-named, already
+approver-seen gap (Supabase phone-auth + SMS vendor not yet configured) —
+carried forward, not new, not blocking, same standard applied at every gate
+on this ticket. PRD `status: designed → verified`. Full reasoning on the
+ticket's own log.
+
+**1 transition this pass** (`shipped → verified`), well under the cap of 4.
+Approver-facing WIP 1 → 0; approval cap 1/3 → 0/3 — `ENG-006` was the only
+item on either. `machine_wip` unaffected (0/6).
+
+**Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+valid, accounted-for terminal state. No other ticket in flight.
+
+**Notify sweep:** nothing to raise (`verified` raises no gate item); nothing
+to nudge (item now closed, not open). Approval cap 0/3 — no stall.
+
+`chained: none` — `verified` is terminal. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped and whole-board: both
+exit 0, clean.
+
 ## 2026-08-28 — scheduled (launchd): safety-net sweep — merge check confirms PR #2 still open
 
 `scheduled` event pass, context `launchd`, the four-times-daily safety net.
