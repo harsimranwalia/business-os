@@ -32,6 +32,7 @@ Tabs:
 import json
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -197,7 +198,7 @@ ENG_TRIGGER_SCRIPT = ENG_DEPT_DIR / "lib" / "eng-trigger.sh"
 
 TICKET_KEYS = ["id", "title", "project", "type", "size", "severity", "state",
                "owner", "lane", "blocked_on", "source", "created", "updated",
-               "branch", "priority"]
+               "branch", "priority", "time_estimate", "time_spent", "time_remaining"]
 
 # Harry's ordering lever, and deliberately not `severity`. Severity is the
 # agent's read of how bad a problem is; priority is his instruction about
@@ -303,6 +304,9 @@ def list_engineering(instance_id=None):
                 "blocked_on": fm.get("blocked_on", ""),
                 "updated": fm.get("updated", ""),
                 "branch": fm.get("branch", ""),
+                "time_estimate": fm.get("time_estimate", ""),
+                "time_spent": fm.get("time_spent", ""),
+                "time_remaining": fm.get("time_remaining", ""),
                 "problem": problem,
                 "pr_url": pr_m.group(1) if pr_m else "",
                 "path": str(f.relative_to(inst_root)),
@@ -330,7 +334,8 @@ def list_engineering(instance_id=None):
         for f in sorted(decisions_inbox.glob("*.md")):
             fm, body = _read_frontmatter(
                 f, ["type", "gate", "ticket", "project", "recommendation",
-                    "raised", "pr_url", "decision", "decided"])
+                    "raised", "pr_url", "decision", "decided",
+                    "time_estimate", "time_impact"])
             if fm.get("type") != "eng-decision":
                 continue
             if fm.get("decision"):
@@ -341,6 +346,12 @@ def list_engineering(instance_id=None):
                     "project": fm.get("project", ""),
                     "decision": fm.get("decision", ""),
                     "decided": fm.get("decided", ""),
+                    "recommendation": fm.get("recommendation", ""),
+                    # The full readback/recommendation text — dropped from this
+                    # payload before, which is exactly why the text you just
+                    # approved became unreadable the moment it moved out of
+                    # "Waiting on you": the API response never carried it.
+                    "body": body,
                 })
                 continue
             waiting.append({
@@ -351,6 +362,8 @@ def list_engineering(instance_id=None):
                 "recommendation": fm.get("recommendation", ""),
                 "raised": fm.get("raised", ""),
                 "pr_url": fm.get("pr_url", ""),
+                "time_estimate": fm.get("time_estimate", ""),
+                "time_impact": fm.get("time_impact", ""),
                 "body": body,
             })
 
@@ -395,6 +408,7 @@ def list_engineering(instance_id=None):
         ],
         "deciding": deciding,
         "submitted": submitted,
+        "activity": eng_activity(inst),
         "stats": {
             "waiting_on_harry": len(waiting) + len(blocked_on_harry),
             "approval_cap": limits["approval_cap"],
@@ -631,7 +645,161 @@ def eng_limits(inst):
     return defaults
 
 
-TRIGGER_SHELL = "bash" if os.name == "nt" else ("/bin/zsh" if os.uname().sysname == "Darwin" else "/bin/bash")
+def _pid_alive(pid):
+    """Ask the SAME check `lib/eng-trigger.sh`'s own `acquire()` uses
+    (`kill -0` under Git Bash), not a Windows-native tool. The PID in
+    `.loop.lock/pid` is bash's own `$$` — under Git Bash that is an
+    MSYS-namespace PID, which `tasklist` cannot reliably resolve, so a
+    `tasklist`-based check can disagree with the script that actually holds
+    the lock and report a live pass as dead. That's a worse failure than a
+    slow status readout: it's the same false-status problem the WSL bug
+    caused, one layer up. On error, assume alive rather than falsely tell
+    the approver a live pass has died — this only feeds a status readout,
+    never a decision that deletes or steals anything."""
+    if os.name == "nt":
+        try:
+            bash = _resolve_windows_bash()
+            r = subprocess.run([bash, "-c", f"kill -0 {int(pid)} 2>/dev/null"], timeout=5)
+            return r.returncode == 0
+        except Exception:
+            return True
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except Exception:
+        return True
+
+
+def eng_activity(inst):
+    """What `lib/eng-trigger.sh` is actually doing right now, for one
+    instance — not what the board says, which only updates once a pass
+    finishes. Reads the same `traces/` state the trigger script itself reads
+    (`.loop.lock`, `.pending`, `.hops-*`, `.backoff`), so this is a live
+    readout, not a derived guess. Every field is read straight off disk and
+    every read is wrapped — a missing or half-written file (a pass is
+    writing it right now) must not take the dashboard down; it just shows as
+    "unknown" for that one field rather than a 500."""
+    root = Path(inst["env"]["ENG_INSTANCE"])
+    state = root / "traces"
+    today = datetime.now().strftime("%Y-%m-%d")
+    out = {
+        "mode": os.environ.get("MODE", ""),
+        "running": False, "pid": None, "running_seconds": None, "current_event": "",
+        "pending_count": 0, "pending_preview": [],
+        "hops_today": 0, "hops_budget": None, "refunds_today": 0,
+        "backoff_active": False, "backoff_seconds": None,
+        "recent_log": [],
+    }
+    if not state.is_dir():
+        return out
+
+    lock = state / ".loop.lock"
+    if lock.is_dir():
+        try:
+            out["pid"] = int((lock / "pid").read_text(encoding="utf-8").strip())
+            out["running"] = _pid_alive(out["pid"])
+            out["running_seconds"] = max(0, int(time.time() - lock.stat().st_mtime))
+        except Exception:
+            pass
+
+    pending = state / ".pending"
+    if pending.exists():
+        try:
+            lines = [l for l in pending.read_text(encoding="utf-8", errors="replace").splitlines() if l.strip()]
+            out["pending_count"] = len(lines)
+            for l in lines[:8]:
+                parts = l.split(" ", 2)
+                out["pending_preview"].append({
+                    "event": parts[1] if len(parts) > 1 else l,
+                    "context": (parts[2][:80] if len(parts) > 2 else ""),
+                })
+        except Exception:
+            pass
+
+    try:
+        out["hops_today"] = int((state / f".hops-{today}").read_text(encoding="utf-8").strip() or 0)
+    except Exception:
+        pass
+    try:
+        out["refunds_today"] = int((state / f".refunds-{today}").read_text(encoding="utf-8").strip() or 0)
+    except Exception:
+        pass
+
+    try:
+        cfg_text = (ENG_DEPT_DIR / "agents" / "eng-manager" / "config.yaml").read_text(encoding="utf-8")
+        tier_m = re.search(r"^\s*tier:\s*(\S+)", cfg_text, re.MULTILINE)
+        if tier_m:
+            # Capture only the lines directly under `    <tier>:` that are
+            # indented one level deeper (6 spaces) — stops at the next sibling
+            # tier or any less-indented line, wherever this tier falls in the
+            # file, without relying on DOTALL reaching a lookahead that may
+            # never match (e.g. the last tier in the block).
+            block = re.search(rf"^    {re.escape(tier_m.group(1))}:\n((?:^ {{6}}.*\n?)*)",
+                              cfg_text, re.MULTILINE)
+            if block:
+                hpd = re.search(r"hops_per_day:\s*(\d+)", block.group(1))
+                if hpd:
+                    out["hops_budget"] = int(hpd.group(1))
+    except Exception:
+        pass
+
+    backoff = state / ".backoff"
+    if backoff.exists():
+        try:
+            until = int(backoff.read_text(encoding="utf-8").split()[0])
+            if until > time.time():
+                out["backoff_active"] = True
+                out["backoff_seconds"] = int(until - time.time())
+        except Exception:
+            pass
+
+    log_f = state / f"eng-loop-{today}.log"
+    if log_f.exists():
+        try:
+            lines = log_f.read_text(encoding="utf-8", errors="replace").splitlines()
+            timestamped = [l for l in lines if re.match(r"^\[\d{4}-\d{2}-\d{2}", l)]
+            out["recent_log"] = timestamped[-6:]
+            for l in reversed(timestamped):
+                m = re.search(r"pass start: (\S+)", l)
+                if m:
+                    out["current_event"] = m.group(1)
+                    break
+        except Exception:
+            pass
+
+    return out
+
+
+def _resolve_windows_bash():
+    """Git Bash's bash.exe, resolved explicitly rather than left as a bare
+    "bash" string. subprocess.run(["bash", ...]) hands that to Windows'
+    CreateProcess, which searches C:\\Windows\\System32 BEFORE consulting
+    PATH for a bare command name — and System32\\bash.exe is the WSL launcher
+    stub, not a shell. A trigger fired through it dies instantly with "Windows
+    Subsystem for Linux has no installed distributions" (this is what an
+    approved decision — e.g. ENG-007 — hit). lib/eng-schedule-win.sh fought
+    the identical landmine on the Task Scheduler side; same fix here: never
+    hand Windows a bare "bash" and hope PATH order saves you.
+    """
+    candidates = [os.environ.get("ENG_BASH_BIN", "")]
+    for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")):
+        if base:
+            candidates.append(os.path.join(base, "Git", "bin", "bash.exe"))
+    for c in candidates:
+        if c and os.path.isfile(c):
+            return c
+    # shutil.which walks PATH in order (unlike CreateProcess, it does not
+    # special-case System32), so it normally finds Git's bash.exe first — but
+    # reject it anyway if PATH somehow put the WSL stub ahead of Git.
+    found = shutil.which("bash")
+    if found and "system32" not in found.lower():
+        return found
+    return "bash"  # nothing found; let it fail loudly rather than silently
+
+
+TRIGGER_SHELL = _resolve_windows_bash() if os.name == "nt" else ("/bin/zsh" if os.uname().sysname == "Darwin" else "/bin/bash")
 
 
 def _spawn_trigger(script, args, label, env=None):

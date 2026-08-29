@@ -141,7 +141,17 @@ read_plan_budget() {
 MAX_HOPS_PER_TICKET="${ENG_MAX_HOPS_PER_TICKET:-$(read_plan_budget hops_per_ticket 8)}"
 MAX_HOPS_PER_DAY="${ENG_MAX_HOPS_PER_DAY:-$(read_plan_budget hops_per_day 40)}"
 STALE_LOCK_SECONDS=1800
-PASS_TIMEOUT_SECONDS=1800  # a hung session must not hold the lock forever
+PASS_TIMEOUT_BASE_SECONDS=1800    # a hung session must not hold the lock forever
+# `intake` runs PM shaping and often architect design in the same pass —
+# investigation with no natural stopping point (read live schema, correct a
+# design mid-write) rather than a bounded write/test/fix loop. 2026-08-29
+# killed a genuinely productive intake pass at 30 minutes mid-design-
+# correction — the work was real, not stuck, and the retry has to re-read
+# everything from scratch. Doubled, matching this file's own back-off
+# doubling elsewhere rather than picking an arbitrary number.
+PASS_TIMEOUT_INTAKE_SECONDS=3600
+PASS_TIMEOUT_SECONDS="$PASS_TIMEOUT_BASE_SECONDS"  # overwritten per-event below; this default only
+                                                    # matters before the drain loop's first iteration
 
 # ── ENG-016 Half B: the model is chosen by the WORK, not by the event name ──
 # Passing no --model makes every pass inherit ~/.claude/settings.json, which is
@@ -319,6 +329,22 @@ pass_model() {
   esac
 }
 # ── end ENG-016 Half B ─────────────────────────────────────────────────────
+
+# ── Timeout is chosen by the WORK too, same reasoning as pass_model() above ─
+# `building`/`in-review`/`in-qa`/`in-security` are bounded loops — write, test,
+# fix — that a 30-minute ceiling fits and has fit since this guard was added.
+# `intake` is open-ended investigation: PM shaping plus, often in the same
+# pass, architect design against a live schema. There is no natural stopping
+# point partway through correcting a design once new evidence contradicts it
+# — see 2026-08-29's build log. The default covers everything except the one
+# event proven to need longer; a future event that turns out equally
+# open-ended gets added here when it's actually observed, not guessed at now.
+pass_timeout() {
+  case "$1" in
+    intake) printf '%s\n' "$PASS_TIMEOUT_INTAKE_SECONDS" ;;
+    *)      printf '%s\n' "$PASS_TIMEOUT_BASE_SECONDS" ;;
+  esac
+}
 
 mkdir -p "$STATE"
 
@@ -1788,6 +1814,11 @@ cd "$ROOT" || exit 1
 # so PASS_TIMEOUT_SECONDS was computed, exported under the old name, and never
 # applied. "A hung session must not hold the lock forever" (line 144) was not
 # true here: a wedged pass would have held the lock indefinitely.
+# Resolved per-event via pass_timeout() — see that function's comment — so an
+# intake pass gets the longer ceiling and everything else keeps the original
+# 30-minute one. Recomputed every drain-loop iteration, same as MODEL below,
+# since EVENT changes each time drain_next() pops the next queued item.
+PASS_TIMEOUT_SECONDS="$(pass_timeout "$EVENT")"
 export ENG_PASS_TIMEOUT="$PASS_TIMEOUT_SECONDS"
 eng_wait_for_git_sync
 MODEL="$(pass_model "$EVENT" "$TICKET_ID")"

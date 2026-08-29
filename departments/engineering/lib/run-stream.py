@@ -153,6 +153,25 @@ def main():
     except (AttributeError, ValueError):
         pass
 
+    # Same problem, the write side. Default stdout on Windows is the console's
+    # ANSI codepage (cp1252 here), not UTF-8, unless the interpreter is launched
+    # with -X utf8/PYTHONUTF8=1 — which `python3 lib/run-stream.py` in
+    # lib/eng-trigger.sh's pipeline is not. Claude's own assistant text is full
+    # of exactly the characters that break this (arrows, em-dashes, checkmarks):
+    # 2026-08-29 hit `UnicodeEncodeError: 'charmap' codec can't encode
+    # character '→'` mid-stream, which killed this filter's stdin loop
+    # early. The filter itself degrades safely (the outer try/except in
+    # __main__ catches it and exits 0, per this file's own contract) — but the
+    # `claude` process upstream in the pipe does not: it kept writing into a
+    # pipe nothing was reading any more, and the pass sat orphaned for ~89
+    # minutes until a stale-lock check eventually noticed and recovered it.
+    # Reconfiguring here, the same way stdin already is, closes the actual hole
+    # rather than only containing its symptom.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
     result = None
     printed_any = False
 

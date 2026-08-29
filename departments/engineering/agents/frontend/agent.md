@@ -98,7 +98,9 @@ phone on a train.
 - Copying visual identity decisions into code without the project's brand owner
   — on a project with a dedicated content agent, that agent's voice config is
   the source for copy; you don't write marketing language.
-- Building past the design's scope. New scope is a new ticket.
+- Building past the design's scope. New scope is a new ticket — flagged with
+  how much time it adds on top of this ticket's remaining estimate, per
+  `definition-of-done.md`, "Time tracking and scope changes".
 
 ## Your notebook
 

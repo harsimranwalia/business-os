@@ -106,6 +106,17 @@
       color: var(--muted-mid); text-transform: uppercase; letter-spacing: .04em; }
     .tag.gate { border-color: rgba(139,92,246,.5); color: #a78bfa; }
     .tag.p0, .tag.p1 { border-color: rgba(239,68,68,.55); color: #f87171; }
+    .tag.time-impact { background: #92400e; color: #fff; border-color: transparent; }
+    .meta.warn { color: #fbbf24; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+    .status-dot.dot-on { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,.7); }
+    .status-dot.dot-off { background: var(--muted); }
+    .activity-detail { margin-top: 8px; font-size: 11px; }
+    .activity-detail summary { cursor: pointer; color: var(--muted-mid); }
+    .queue-list { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .queue-row { font-size: 11px; color: var(--muted-mid); }
+    .log-tail { font-size: 10px; color: var(--muted-mid); background: var(--surface);
+      border-radius: 6px; padding: 8px; margin-top: 6px; overflow-x: auto; white-space: pre-wrap; }
     .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
     .decide-note { display: block; width: 100%; box-sizing: border-box; margin: 8px 0; font-size: 12px; }
     .note-text { font-size: 11px; color: var(--muted); }
@@ -394,6 +405,59 @@ function esc(s) {
 function escAttr(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtDur(sec) {
+  if (sec == null) return '';
+  sec = Math.max(0, Math.round(sec));
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  const remMin = min % 60;
+  return `${hr}h${remMin ? ' ' + remMin + 'm' : ''}`;
+}
+function shortCtx(context) {
+  if (!context) return '';
+  return context.split(/[\\/]/).pop().replace(/\.md$/, '');
+}
+function renderActivity(a) {
+  if (!a) return '';
+  const dotClass = a.running ? 'dot-on' : 'dot-off';
+  const statusText = a.running ? `Working — ${esc(a.current_event || 'a pass')}` : 'Idle';
+  const bits = [];
+  if (a.running && a.running_seconds != null) bits.push(`session active ${fmtDur(a.running_seconds)}`);
+  bits.push(`today ${a.hops_today}${a.hops_budget ? '/' + a.hops_budget : ''} hops`);
+  if (a.refunds_today) bits.push(`${a.refunds_today} refunded`);
+  bits.push(`${a.pending_count} queued`);
+
+  let h = '<div class="section"><div class="h">Right now</div><div class="card activity">';
+  h += `<div class="row"><span class="status-dot ${dotClass}"></span><span class="title">${statusText}</span></div>`;
+  h += `<div class="meta">${esc(bits.join(' · '))}</div>`;
+
+  if (a.mode) {
+    h += `<div class="meta warn">MODE=${esc(a.mode)} — this instance goes silent; nothing here will notify or post until it's cleared.</div>`;
+  }
+  if (a.backoff_active) {
+    h += `<div class="meta warn">Backed off after repeated failed starts — next attempt in ~${fmtDur(a.backoff_seconds)}.</div>`;
+  }
+
+  if (a.pending_preview && a.pending_preview.length) {
+    const label = a.pending_count > a.pending_preview.length
+      ? `Up next (${a.pending_preview.length} of ${a.pending_count})` : `Up next (${a.pending_count})`;
+    h += `<details class="activity-detail"><summary>${esc(label)}</summary><div class="queue-list">`;
+    a.pending_preview.forEach(p => {
+      h += `<div class="queue-row"><span class="tag stage">${esc(p.event)}</span> ${esc(shortCtx(p.context))}</div>`;
+    });
+    h += '</div></details>';
+  }
+
+  if (a.recent_log && a.recent_log.length) {
+    h += '<details class="activity-detail"><summary>Recent activity</summary>' +
+      `<pre class="log-tail">${esc(a.recent_log.join('\n'))}</pre></details>`;
+  }
+
+  h += '</div></div>';
+  return h;
 }
 function relTime(iso) {
   if (!iso) return '';
@@ -811,6 +875,8 @@ function renderEng() {
     `<div class="stat"><b>${s.shipped_recent}</b>verified</div>` +
     '</div>';
 
+  h += renderActivity(d.activity);
+
   if (engView === 'decide') {
     const blocked = d.blocked_on_harry || [];
     h += '<div class="section"><div class="h">Waiting on you ' +
@@ -836,6 +902,8 @@ function renderEng() {
           `<span class="tag gate">${esc(w.gate || 'decision')}</span>` +
           `<span class="title">${esc(w.ticket)}</span>` +
           (w.project ? `<span class="tag">${esc(w.project)}</span>` : '') +
+          (w.time_estimate ? `<span class="tag">est. ${esc(w.time_estimate)}</span>` : '') +
+          (w.time_impact ? `<span class="tag time-impact">+${esc(w.time_impact)}</span>` : '') +
         '</div>' +
         (w.recommendation ? `<div class="meta">Recommendation: <b>${esc(w.recommendation)}</b></div>` : '') +
         `<div class="body-text">${renderDecisionBody(w.body)}</div>` +
@@ -850,6 +918,17 @@ function renderEng() {
     h += '</div>';
 
     if (d.deciding && d.deciding.length) {
+      const a = d.activity;
+      // Honest, not optimistic: a decision is recorded the instant you answer
+      // it, whether or not the trigger that's supposed to act on it actually
+      // fired — a bare "the department is acting on it now" was true only by
+      // accident (see the WSL bug that motivated this). Say what's actually
+      // observed instead.
+      const activityNote = a && a.running
+        ? `the department is working on it now (${esc(a.current_event || 'a pass')})`
+        : (a && a.pending_count > 0
+            ? `queued — ${a.pending_count} item${a.pending_count === 1 ? '' : 's'} ahead of it, nothing running right now`
+            : 'nothing is running and nothing is queued — if this sits here, the trigger may not have fired; check "Right now" above');
       h += '<div class="section"><div class="h">Applying your answer ' +
            `<span class="count">${d.deciding.length}</span></div>`;
       d.deciding.forEach(w => {
@@ -859,7 +938,10 @@ function renderEng() {
             `<span class="title">${esc(w.ticket)}</span>` +
             (w.project ? `<span class="tag">${esc(w.project)}</span>` : '') +
           '</div>' +
-          `<div class="meta">you said <b>${esc(w.decision)}</b> ${esc(relTime(w.decided))} · the department is acting on it now</div></div>`;
+          `<div class="meta">you said <b>${esc(w.decision)}</b> ${esc(relTime(w.decided))} · ${activityNote}</div>` +
+          (w.body ? '<details class="activity-detail"><summary>Show what you approved</summary>' +
+            `<div class="body-text">${renderDecisionBody(w.body)}</div></details>` : '') +
+          '</div>';
       });
       h += '</div>';
     }
@@ -955,10 +1037,19 @@ function renderEng() {
               (canHold ? opt('hold', 'hold') : '') +
               (t.priority ? opt('', 'clear') : '') + '</div>';
           }
+          const timeBits = [];
+          if (t.time_spent || t.time_remaining) {
+            if (t.time_spent) timeBits.push(`${esc(t.time_spent)} spent`);
+            if (t.time_remaining) timeBits.push(`${esc(t.time_remaining)} left`);
+          } else if (t.time_estimate) {
+            timeBits.push(`est. ${esc(t.time_estimate)}`);
+          }
+          const timeLine = timeBits.length ? `<div class="sub">${timeBits.join(' · ')}</div>` : '';
           h += '<div class="mini">' +
                `<div class="mini-title">${esc(t.title)}</div>` +
                `<div class="mini-tags">${tags.join('')}</div>` +
                `<div class="sub">${esc(t.id)} · ${esc(t.project)} · ${esc(t.owner)}</div>` +
+               timeLine +
                mergeControls + controls + '</div>';
         });
         h += '</div>';

@@ -11,6 +11,15 @@ title: One line, imperative, what changes
 project: <project>          # must exist in config/projects.md
 type: feature               # feature | bug | chore | security | spike
 size: M                     # XS | S | M | L  (XL must be split)
+time_estimate:              # from the PRD's Cost section — a band or specific figure,
+                            # e.g. "half a day" or "S (~4h)". Empty until the PRD exists.
+time_spent:                 # running total, kept current alongside the Log — e.g. "~3h".
+                            # Empty until building starts.
+time_remaining:              # revised each Log entry at `building` — e.g. "~2h" or
+                            # "unchanged". These three fields are the dashboard's read of
+                            # the Log's time narrative; see definition-of-done.md "Time
+                            # tracking and scope changes" — keep them in sync with it,
+                            # never let the frontmatter and the Log disagree.
 severity: P2                # P0 | P1 | P2 | P3 — how bad the problem is. The AGENT's call.
 priority:                   # now | next | hold | empty — what to work first. THE PRINCIPAL'S call.
                             # Empty is the default and means the EM orders it. Never set or
@@ -66,10 +75,15 @@ Context the next agent needs and can't get from the linked artifacts.
 
 ## Log
 
-Append-only. One line per state transition, newest last.
+Append-only. One line per state transition, newest last. Once `time_estimate`
+is set, an entry made while the ticket is at `building` (or back in it after a
+review round) also carries elapsed time and a revised remaining estimate — see
+`definition-of-done.md`, "Time tracking and scope changes".
 
 - `YYYY-MM-DD` `intake → shaped` (eng-manager) — sized M, project <project>
 - `YYYY-MM-DD` `shaped → awaiting-scope` (product-manager) — PRD written, G1 raised
+- `YYYY-MM-DD` `ready → building` (backend) — time_estimate half a day, 0h spent, ~half a day remaining
+- `YYYY-MM-DD` `building` (backend) — ~3h spent since last entry, ~2h remaining
 ```
 
 ## Rules

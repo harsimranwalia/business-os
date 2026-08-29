@@ -86,7 +86,9 @@ What could make this the wrong call, and what we'd have to learn to know.
 
 ## Cost
 
-- Build: rough size, and what it displaces on the board
+- Build: rough size, a rough build-time estimate (see `definition-of-done.md`'s
+  Size table for the band; narrow it with specifics when this ticket has them),
+  and what it displaces on the board
 - Run: recurring $/month, if any. Anything above zero goes to CFO before release.
 
 ## Decision

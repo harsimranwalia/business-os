@@ -155,16 +155,65 @@ is reported the same way.
 
 ## Size
 
-| Size | Meaning | G1 required? |
-|---|---|---|
-| `XS` | Under an hour of work, single file, no new behaviour | No |
-| `S` | One clear change, one surface, no new interfaces | Yes, unless bug/chore |
-| `M` | Multiple files or surfaces, new interface, no new architecture | Yes |
-| `L` | New subsystem, new dependency, new data model, or cross-project | Yes + likely G2 |
-| `XL` | Doesn't fit — must be split before it leaves `intake` | Split it |
+| Size | Meaning | Rough build time | G1 required? |
+|---|---|---|---|
+| `XS` | Under an hour of work, single file, no new behaviour | Under an hour | No |
+| `S` | One clear change, one surface, no new interfaces | A few hours to half a day | Yes, unless bug/chore |
+| `M` | Multiple files or surfaces, new interface, no new architecture | Half a day to a couple of days | Yes |
+| `L` | New subsystem, new dependency, new data model, or cross-project | Several days to a week+ | Yes + likely G2 |
+| `XL` | Doesn't fit — must be split before it leaves `intake` | — | Split it |
 
-The EM sizes on intake and the architect may resize after design. An `XL` never
+Rough build time is a band for prioritizing against other queued work, not a
+commitment — a ticket's own PRD may narrow it with specifics the letter alone
+can't carry (see `templates/prd.md`'s Cost section). The EM sizes on intake and
+the architect may resize after design. An `XL` never
 proceeds; splitting it is the EM's job, not the approver's.
+
+## Time tracking and scope changes
+
+Every ticket carries a build-time estimate from its PRD's Cost section, set at
+G1 from the Size table's band above and narrowed with specifics when the
+ticket has them (`templates/prd.md`). That estimate is not written once and
+forgotten — it is carried and revised through `templates/ticket.md`'s `## Log`:
+
+- **Time spent.** Each `## Log` entry written while a ticket is at `building`
+  (or back in it after a review round) states the elapsed time for that entry,
+  not just the state transition — e.g. `~3h since ready → building`, not just
+  `ready → building` — and the same figure, as a running total, is written to
+  the ticket's `time_spent` frontmatter field in the same edit.
+- **Time remaining.** Each such entry also carries a revised remaining-time
+  estimate, mirrored into `time_remaining`. "Unchanged since last entry" is a
+  legitimate answer — say so — but the field is never silently dropped once a
+  ticket has one.
+- **Frontmatter is what the control-center dashboard reads.** `time_estimate`,
+  `time_spent`, and `time_remaining` in the ticket's frontmatter are not
+  decoration alongside the Log — they're the structured mirror of it that the
+  dashboard actually renders. An agent that updates the Log prose without
+  updating these three fields has left the dashboard showing stale numbers;
+  update both in the same edit, always.
+- **Scope discovered outside G1 is never silently absorbed.** A requirement,
+  integration conflict, or piece of work that was not in the ticket's PRD is
+  new scope, full stop — whether an architect finds it at design time (a
+  one-way door, G2), an engineer finds it mid-build
+  (`agents/backend/agent.md`, `agents/frontend/agent.md` — "that's a new
+  ticket"), or the approver asks for it while this ticket is already queued or
+  building. Each is raised — as a G2 item if it's a one-way door, as a new
+  ticket via the PM otherwise — and the raise states, plainly:
+    1. what the new piece is,
+    2. how much time it adds on top of the current ticket's remaining
+       estimate (a number or band, never "some more time"), and
+    3. the two options this leaves: absorb it now (the remaining estimate
+       moves and is logged), or hold it as a new ticket behind what's already
+       queued.
+  The added figure from (2) is also set in the gate item's own `time_impact`
+  frontmatter field — the control-center dashboard reads that field to flag a
+  gate as scope-affecting, not the prose. A gate with nothing to add on top of
+  the current estimate leaves `time_impact` empty. Every `type: eng-decision`
+  inbox item — not only scope-change ones — also carries `time_estimate` in
+  its own frontmatter (mirroring the ticket's own field), so the dashboard
+  shows the current estimate on the card itself, before it's opened.
+  The approver decides which. Nobody upstream of that decision picks for them
+  by quietly doing the extra work anyway.
 
 ## Severity — the only urgency vocabulary
 

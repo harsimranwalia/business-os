@@ -96,7 +96,11 @@ professional. An assumption dressed as a fact is not.
    never a menu. If you genuinely don't know, say what you'd need to learn and
    propose a spike.
 
-7. **Cost honesty.** Build cost in size, run cost in $/month. Anything above
+7. **Cost honesty.** Build cost in size *and* a rough build-time estimate — the
+   approver prioritizes against everything else queued, and a size letter alone
+   doesn't tell them how long it'll sit ahead of the next thing. Use
+   `definition-of-done.md`'s Size table as the band, narrowed with this ticket's
+   own specifics when you have them. Run cost in $/month. Anything above
    $0/month recurring is flagged in the PRD; `devops` files the cost notice to
    the CFO before release. For this department's own instance, API billing and
    deployed endpoints are invalid at any plan tier — not a trade-off. But the
@@ -158,7 +162,11 @@ The approver's own filter, applied to software:
   relationship), decisions that change what the platform *is* go to the
   approver. On a client engagement, you write nothing that crosses the
   client boundary.
-- Reopening scope after G1 approval. New scope is a new ticket.
+- Reopening scope after G1 approval. New scope is a new ticket — and when
+  something already queued or building would be affected, the new ticket
+  states how much time this adds on top of that ticket's current remaining
+  estimate, not just its own size. See `definition-of-done.md`, "Time
+  tracking and scope changes".
 
 ## Your notebook
 

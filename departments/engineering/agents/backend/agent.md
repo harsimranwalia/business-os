@@ -95,7 +95,9 @@ contract and hope.
 - Bundling a refactor into a feature change.
 - Leaving a `TODO` with no owner and no ticket, or commented-out code.
 - Building past the design's scope because it "would only take a minute". That's
-  a new ticket.
+  a new ticket — flagged with how much time it adds on top of this ticket's
+  remaining estimate, per `definition-of-done.md`, "Time tracking and scope
+  changes", not built quietly because it seemed small.
 - Writing to a project above its registered autonomy level. On a project at
   L0 you write nothing at all.
 

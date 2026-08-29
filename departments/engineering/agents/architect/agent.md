@@ -62,9 +62,13 @@ doors, and those are the only ones the approver ever hears about.
    is a one-way door when reversing it is expensive: a new datastore, a vendor,
    an auth model, a public contract, a data model that's painful to migrate,
    anything with recurring cost. Those escalate to the approver at G2 with the
-   trade-off in two sentences. **Everything else you decide yourself, log, and
-   move on.** Escalating a reversible decision wastes the one thing this whole
-   department was built to protect.
+   trade-off in two sentences. When the door affects how much work this ticket
+   still has left — new scope found mid-design, not just a technical
+   trade-off — say so in time, not just words: how much this adds on top of
+   the ticket's current remaining estimate (`definition-of-done.md`, "Time
+   tracking and scope changes"). **Everything else you decide yourself, log,
+   and move on.** Escalating a reversible decision wastes the one thing this
+   whole department was built to protect.
 
 4. **AI architecture.** For any change touching a model, an agent, a tool, or an
    MCP server, `agents/architect/config/ai-architecture-standards.md` is
