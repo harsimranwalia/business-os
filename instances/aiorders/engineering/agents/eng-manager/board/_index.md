@@ -1,16 +1,17 @@
 # Board
 
-**Next ID: ENG-007** (`config/templates/ticket.md` — IDs are never reused;
+**Next ID: ENG-008** (`config/templates/ticket.md` — IDs are never reused;
 this line is the counter it says lives here.)
 
 **Machine WIP 6** (`config/config.yaml` → `wip.machine_limit`) — counts states
-`ready` through `ready-to-ship`. **Currently 0/6** — no ticket is in flight;
-`ENG-006` reached `verified` this pass.
-**Approver-facing WIP 2 — currently 0/2** — nothing waiting on a human.
-**Approval cap 3 — currently 0/3** — `ENG-001`'s G3, `ENG-002`'s merge
+`ready` through `ready-to-ship`. **Currently 0/6** — `ENG-007` sits at
+`awaiting-scope`, before that range.
+**Approver-facing WIP 2 — currently 1/2** — `ENG-007`'s G1.
+**Approval cap 3 — currently 1/3** — `ENG-001`'s G3, `ENG-002`'s merge
 request, `ENG-003`'s G1, `ENG-004`'s G1 **and** G3, `ENG-005`'s G1 — fork,
 surface follow-up — **and** its merge request, and `ENG-006`'s G1, G2,
 **and** merge request are all already answered and off the board.
+`ENG-007`'s G1 (raised this pass) is the one open item.
 
 `priority:` is a field on every ticket, and **only the approver sets it.** It is
 not `severity`, which is the agent's read of how bad a problem is.
@@ -19,7 +20,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 
 | ID | Title | Project | State | Priority | Owner | Size | Updated |
 |---|---|---|---|---|---|---|---|
-| *(none — all six tickets are terminal)* | | | | | | | |
+| ENG-007 | Per-restaurant loyalty configuration — earn rates and redemption value | aiorders-api | awaiting-scope | | approver | S | 2026-08-28 |
 
 `ENG-002` shipped and reached `verified` in an earlier pass today — off the
 In-flight table (terminal); see its own board file. `ENG-001` — this
@@ -42,9 +43,59 @@ file and `agents/devops/releases/2026-08-28-aiorders-api-ENG-006.md`.
 
 ## Waiting on the approver
 
-Cap: 3 across all gates. **Currently 0/3.** Nothing waiting — `ENG-006`'s L1
-merge request was answered and independently confirmed this pass; see the
-dated entry below.
+Cap: 3 across all gates. **Currently 1/3.** `ENG-007`'s G1 scope
+(`inbox/2026-08-28-eng007-g1-scope.md`, raised this pass) — item 2 of the
+approved loyalty sequence.
+
+## 2026-08-28 — watch: filed ENG-007, item 2 of the approved loyalty sequence — G1 raised
+
+`watch` event pass, context `launchd`, attempt 2/2 of this fire — attempt 1
+(21:33–21:38) reached the same request and died mid-flight on the account's
+monthly spend limit right after spawning the blind architect-reading
+subagent (`traces/eng-loop-2026-08-28.log`: `pass end: watch (exit 1,
+352s)`, charged not refunded — 352s clears the 60s never-started
+threshold). No artifact from attempt 1 survived on disk or as a live
+subagent, so this pass redid the work from scratch. Mode check clean
+(business-os `.env` → `MODE=active`).
+
+**Swept all three watched inboxes fresh**, per the `watch` event's own
+contract. `agents/product-manager/inbox/` and `agents/eng-manager/inbox/`
+held only `.gitkeep` plus already-`_handled/` items; `inbox/` held one
+already-notified, non-P0 item (`2026-08-28-eng-events-dropped.md`,
+untouched, out of scope). `inbox/requests/` held exactly one new file,
+`2026-08-28-eng006-sequence-item-2.md` — the approver continuing the
+`ENG-006` loyalty sequence by hand, since `skills/acceptance-check/SKILL.md`
+step 6b (the automation meant to do this the moment a sequenced ticket
+verifies) didn't exist yet when `ENG-006` itself verified. A queued `intake`
+event for the same file sat behind this pass in `traces/.pending` —
+matches this instance's well-documented duplicate-queued-event race; that
+event will very likely no-op when it drains next, since this pass processed
+the file fully.
+
+**Ran the full request-readback** (this PM's reading plus a blind architect
+subagent, neither seeing the other) and found no material divergence — both
+converged on a per-restaurant, effective-dated config table (two earn
+rates, one redemption value), no dependency on `ENG-006`'s identity work.
+Full comparison on the ticket's own log and PRD. Sized `S`. `size: L`'s G1
+requirement doesn't apply here, but full lane always requires G1 regardless
+of size, and caps were fully free (0/2, 0/3) before raising. Wrote and
+notified `inbox/2026-08-28-eng007-g1-scope.md`. Filed the intake request to
+`inbox/_handled/`.
+
+**1 transition-worthy stop.** `ENG-007`: `intake → shaped → awaiting-scope`
+in one pass, `owner` moving `product-manager → approver`. Approver-facing
+WIP 0 → 1/2; approval cap 0 → 1/3; machine WIP unaffected (0/6).
+
+**Dead-end sweep:** no other ticket was in flight before this pass — nothing
+else to check. **Notify sweep:** this pass's own gate item raised and
+stamped; nothing else to nudge; cap 1/3, not full — no stall. **Observation
+filed** (`observations.md`) — a second monthly-spend-limit death today,
+worth watching as a pattern.
+
+`chained: none` — `ENG-007` sits at `awaiting-scope`, owned by the
+approver; the chaining guard never fires on a ticket waiting on a human.
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-007`) and whole-board: both run clean.
 
 ## 2026-08-28 — continue ENG-006: fired externally against an already-terminal ticket — no-op
 
@@ -182,52 +233,4 @@ No ticket was touched, no ticket state changed, no gate item was written.
 own to fire. All WIP/approval-cap figures unchanged (0/6, 0/2, 0/3). Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
 
-## 2026-08-28 — watch: swept all three inboxes, nothing new — board already fully terminal
-
-`watch` event pass, context `launchd`. Per the event's own narrower contract,
-swept `agents/product-manager/inbox/`, `agents/eng-manager/inbox/`, and
-`inbox/` (including `inbox/requests/`) only — not a board-wide sweep. Mode
-check clean (business-os `.env` → `MODE=active`). Pre-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board (this event
-names no ticket to scope to): exit 0, clean.
-
-**Drained immediately behind the `decision ENG-006` pass directly below, in
-the same lock hold, not a separate concurrent invocation.**
-`traces/eng-loop-2026-08-28.log`: that pass ended at 20:12:38 (785s, exit
-0), the queue then collapsed 2 duplicate event(s), and this `watch` fire was
-drained next and launched in the same breath. Verified rather than assumed:
-process ancestry (`traces/.loop.lock`, pid 33561, `eng-trigger.sh decision
-...`) traces to this session's own `claude` process via `lib/run-claude.sh`
-— the same wrapper invocation working through its queue, not a second live
-pass touching the same files.
-
-**Swept all three inboxes fresh; found nothing unprocessed.**
-`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
-`.gitkeep` (plus the former's already-`_handled/` entries); `inbox/requests/`
-is empty. `inbox/` holds exactly one live item,
-`2026-08-28-eng-events-dropped.md` — read directly: still no `decision:`
-field, still not P0, already notified once (10:42:17), and already fully
-accounted for both in `ENG-006`'s own ticket log and the immediately
-preceding `decision` pass's addendum. `2026-08-28-eng006-merge-request.md`
-is no longer a live inbox item at all — that same preceding pass closed it
-out and moved it to `_handled/`. Nothing new anywhere.
-
-**Board already fully terminal by the time this pass ran** — confirmed
-against the header the preceding pass already updated, not re-derived:
-`ENG-001`–`ENG-006` all terminal (`verified` ×5, `dropped` ×1); machine WIP
-0/6, approver-facing WIP 0/2, approval cap 0/3. No ticket to dispatch, no
-free slot to fill from an empty To-do regardless.
-
-**Dead-end sweep:** nothing beyond the inboxes to check — no ticket in
-flight, so no chain to verify.
-
-**Notify sweep:** nothing to raise, nothing to nudge, approval cap 0/3 —
-no stall.
-
-**Nothing to journal** — no gate was answered this pass.
-
-No ticket was touched, no ticket state changed, no gate item was written.
-`chained: none` — this pass advanced no ticket, so there is no hop of its
-own to fire. All WIP/approval-cap figures unchanged. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
 

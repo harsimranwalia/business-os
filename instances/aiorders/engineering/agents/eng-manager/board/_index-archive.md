@@ -12,6 +12,55 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-28 — watch: swept all three inboxes, nothing new — board already fully terminal
+
+`watch` event pass, context `launchd`. Per the event's own narrower contract,
+swept `agents/product-manager/inbox/`, `agents/eng-manager/inbox/`, and
+`inbox/` (including `inbox/requests/`) only — not a board-wide sweep. Mode
+check clean (business-os `.env` → `MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (this event
+names no ticket to scope to): exit 0, clean.
+
+**Drained immediately behind the `decision ENG-006` pass directly below, in
+the same lock hold, not a separate concurrent invocation.**
+`traces/eng-loop-2026-08-28.log`: that pass ended at 20:12:38 (785s, exit
+0), the queue then collapsed 2 duplicate event(s), and this `watch` fire was
+drained next and launched in the same breath. Verified rather than assumed:
+process ancestry (`traces/.loop.lock`, pid 33561, `eng-trigger.sh decision
+...`) traces to this session's own `claude` process via `lib/run-claude.sh`
+— the same wrapper invocation working through its queue, not a second live
+pass touching the same files.
+
+**Swept all three inboxes fresh; found nothing unprocessed.**
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
+`.gitkeep` (plus the former's already-`_handled/` entries); `inbox/requests/`
+is empty. `inbox/` holds exactly one live item,
+`2026-08-28-eng-events-dropped.md` — read directly: still no `decision:`
+field, still not P0, already notified once (10:42:17), and already fully
+accounted for both in `ENG-006`'s own ticket log and the immediately
+preceding `decision` pass's addendum. `2026-08-28-eng006-merge-request.md`
+is no longer a live inbox item at all — that same preceding pass closed it
+out and moved it to `_handled/`. Nothing new anywhere.
+
+**Board already fully terminal by the time this pass ran** — confirmed
+against the header the preceding pass already updated, not re-derived:
+`ENG-001`–`ENG-006` all terminal (`verified` ×5, `dropped` ×1); machine WIP
+0/6, approver-facing WIP 0/2, approval cap 0/3. No ticket to dispatch, no
+free slot to fill from an empty To-do regardless.
+
+**Dead-end sweep:** nothing beyond the inboxes to check — no ticket in
+flight, so no chain to verify.
+
+**Notify sweep:** nothing to raise, nothing to nudge, approval cap 0/3 —
+no stall.
+
+**Nothing to journal** — no gate was answered this pass.
+
+No ticket was touched, no ticket state changed, no gate item was written.
+`chained: none` — this pass advanced no ticket, so there is no hop of its
+own to fire. All WIP/approval-cap figures unchanged. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
 ## 2026-08-28 — decision ENG-006: merge-request gate closed, control-center jump reconciled — shipped → verified
 
 `decision` event pass, context `inbox/2026-08-28-eng006-merge-request.md`.
