@@ -6,14 +6,14 @@ type: chore
 size: L
 severity: P2
 priority:
-state: designed
-owner: architect
+state: verified
+owner: product-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-25
-updated: 2026-08-26
+updated: 2026-08-27
 branch:
 depends_on: []
 blocks: []
@@ -22,9 +22,9 @@ links:
   prd: agents/product-manager/specs/ENG-004-admin-hub-migration-history.md
   design: agents/architect/designs/ENG-004-admin-hub-migration-history.md
   adrs: [ADR-003, ADR-004]
-  review:
-  test_plan:
-  security_review:
+  review: agents/principal-engineer/reviews/ENG-004.md
+  test_plan: agents/qa/test-plans/ENG-004.md
+  security_review: agents/security/reviews/ENG-004.md
   release:
 ---
 
@@ -292,3 +292,431 @@ Append-only. One line per state transition, newest last.
   `eng-manager` for work breakdown (agent, not the approver, not blocked, not
   terminal); firing `/bin/zsh departments/engineering/lib/eng-trigger.sh
   continue ENG-004`.
+- `2026-08-27` `designed → ready` (eng-manager, `continue ENG-004` event pass)
+  — work breakdown, narrow scope per the event's own contract (resume this
+  ticket from its current state; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`: exit 0, clean.
+
+  **Work breakdown: zero implementation units.** Per `ADR-003` and `ADR-004`,
+  the remediation this ticket investigated was already executed by the
+  approver directly, on `origin/main`, on 2026-08-24 — no code, migration, or
+  config change is owed by this ticket in either registered project. There is
+  nothing to sequence and nothing to assign; the ticket proceeds directly to
+  the building-as-verification-record step `ADR-004` defines (record the
+  exact commits/files/diffs already checked at design time, `branch:` stays
+  empty with a one-line note, per `ADR-001`'s pattern). `owner` moves from
+  `architect` to `eng-manager` per `definition-of-done.md`'s state table.
+
+  `machine_wip` (6, `config/config.yaml` → `wip.machine_limit`, re-checked
+  fresh this pass) at 0/6 going in — nothing else on the board sits in
+  `ready`..`ready-to-ship` (`ENG-005` is still at `shaped`, not in the counted
+  range) — 1/6 after this ticket enters `ready`. No approver-facing WIP or
+  approval-cap impact: `ready` raises no gate.
+
+  **Not proceeding into `building` this pass, deliberately** — same reasoning
+  `ENG-001`'s own history applied at this identical hop
+  (`designed → ready` was one eng-manager pass, `ready → building` a separate
+  one) and the same split this ticket's own prior log entry already flagged
+  for this exact point. The building-as-verification-record write is real,
+  distinct work reserved for its own session rather than the tail end of this
+  one.
+
+  **Dead-end sweep (scoped to `ENG-004`, the ticket this event names):** its
+  log now ends in a valid, accounted-for state with a chain record below.
+  `ENG-005` (`shaped`, owner `product-manager`) untouched this pass — out of
+  scope for a `continue` event naming one ticket.
+
+  **Notify sweep:** nothing to raise (`ready` raises no gate item this pass).
+  Nothing open to nudge — approval cap 0/3, nothing waiting on the approver.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`: exit 0, clean.
+  `chained: ENG-004` — sitting at `ready`, owned by `eng-manager` (agent, not
+  the approver, not blocked, not terminal); firing `/bin/zsh
+  departments/engineering/lib/eng-trigger.sh continue ENG-004` for the
+  building-as-verification-record session.
+- `2026-08-27` `ready → building` (eng-manager, `continue ENG-004` event pass)
+  — building-as-verification-record per `ADR-004`. Narrow scope per the
+  event contract (resume this ticket from its current state; no board-wide
+  sweep). Mode check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`: exit 0, clean.
+
+  **Re-verified all five acceptance criteria against disk/git this pass**,
+  fresh in `_eng/aiorders-admin-hub` and `_eng/aiorders-api` (`git fetch
+  origin` in both first), rather than trusting the design's prior citations:
+  - **AC1** — both repos' `supabase/config.toml` still name `project_id =
+    "bmnmnejwdxbcqinqkwko"`, read fresh off disk this pass.
+  - **AC2/AC3** — `git ls-tree -r origin/main -- supabase` on
+    `aiorders-admin-hub` returns exactly one entry, `supabase/config.toml` —
+    no `migrations/` or `functions/` directory exists on `origin/main`. Both
+    matched consolidation commit pairs (`4b6a835`/`c90c02c`,
+    `5b3bac2`/`919d355`) are still present, unchanged, on their respective
+    `origin/main`s (`git show --stat` on all four). Re-hashed all six named
+    files with `sha256` — admin-hub's tree at `7009f18` against
+    `aiorders-api`'s current `origin/main` — a stronger check than the
+    design's own byte-diff: all six **identical**.
+  - **AC4** — `git ls-tree -r --name-only origin/main -- supabase/migrations`
+    on `aiorders-api` lists **22** files; sorted, `20260312000001_restaurant_activations.sql`
+    (line 12) immediately precedes `20260408000001_google_review_history.sql`
+    (line 13).
+  - **AC5** — `git branch -vv` in `_eng/aiorders-admin-hub` shows local
+    `main` marked `+` (checked out in the linked worktree at the human's own
+    `~/Documents/projects/aiorders/aiorders-admin-hub`) at `919d355`,
+    `[origin/main]`; `git rev-list --left-right --count main...origin/main`
+    returns `0	0`. Ref-level only — no working-tree file in the human's
+    checkout was read, per `config/projects.md`'s repo isolation.
+
+  All five hold exactly as `designed` recorded them on 2026-08-26 — nothing
+  drifted in the one day between design and this pass.
+
+  `branch:` stays empty — this ticket produces no diff of its own; the diff
+  it investigated already exists on `origin/main` in both repos, produced by
+  the approver directly on 2026-08-24, two days before this ticket reached
+  `designed`. Per `ADR-004`, this is the documented shape for this ticket's
+  entire remaining lane, not an omission. `machine_wip` (6) unchanged at
+  1/6 — `ready` and `building` both fall inside the counted range, so this
+  transition crosses no cap boundary. No approver-facing WIP or
+  approval-cap impact — `building` raises no gate.
+
+  **Not proceeding into `in-review`/`in-qa` this pass, deliberately.** Per
+  `schedules/eng_build_loop.md` step 6 those two are one combined hop, and
+  per `ADR-004` each still owes its own independent re-derivation of the
+  acceptance criteria against disk/git rather than a rubber-stamp of this
+  pass's numbers — real, distinct gate work reserved for its own session,
+  the same discipline this ticket has applied at every earlier hop
+  (`intake→shaped`, `shaped→awaiting-scope`, `awaiting-scope→designed`,
+  the `designed` investigation itself, and `designed→ready` were each their
+  own pass).
+
+  **Dead-end sweep (scoped to `ENG-004`, the ticket this event names):** its
+  log now ends in a valid, accounted-for state with a chain record below.
+  `ENG-005` (`awaiting-scope`, owner approver) untouched this pass — out of
+  scope for a `continue` event naming one ticket.
+
+  **Notify sweep:** nothing to raise (`building` raises no gate item).
+  Nothing new to nudge — approval cap unchanged at 1/3 (`ENG-005`'s G1
+  only).
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`: exit 0, clean.
+  `chained: ENG-004` — sitting at `building`, owned by `eng-manager` per
+  `ADR-001`'s owner override as extended by `ADR-004` (agent, not the
+  approver, not blocked, not terminal); firing `/bin/zsh
+  departments/engineering/lib/eng-trigger.sh continue ENG-004` for the
+  combined `in-review`/`in-qa` session.
+- `2026-08-27` `building → in-review → in-qa` (eng-manager acting as
+  principal-engineer and qa, `continue ENG-004` event pass — the dedicated
+  combined session the preceding hop chained). Narrow scope per the event
+  contract (resume this ticket from its current state; no board-wide sweep).
+  Mode check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped and whole-board:
+  both exit 0, clean. Fresh sweep found nothing pending for `ENG-004`
+  specifically (the only open inbox item is `ENG-005`'s G1, untouched by this
+  event).
+
+  **The combined review+quality hop, per `schedules/eng_build_loop.md` step
+  6.** Per `ADR-004`, neither role reviews a diff — both independently
+  re-derive all five acceptance criteria against disk and git, fresh, not
+  cited from the design's or the `building` pass's own numbers. Re-ran `git
+  fetch origin` in both `_eng/aiorders-admin-hub` and `_eng/aiorders-api`
+  first.
+
+  **Acted as principal-engineer (`in-review`).** Re-confirmed: both repos'
+  `supabase/config.toml` still name `project_id = "bmnmnejwdxbcqinqkwko"`
+  (AC1); `git ls-tree -r origin/main -- supabase` on admin-hub still returns
+  only `config.toml`, both consolidation commit pairs (`4b6a835`/`c90c02c`,
+  `5b3bac2`/`919d355`) still present and unchanged on their respective
+  `origin/main`s (AC2/AC3 provenance); re-hashed all six named files with
+  `shasum -a 256`, admin-hub's tree at `7009f18` against `aiorders-api`'s
+  current `origin/main` — all six **identical** (AC3 content); `aiorders-api`
+  `origin/main` still lists 22 migrations with `restaurant_activations`
+  immediately preceding `google_review_history` (AC4); admin-hub's local
+  `main` still `0`/`0` ahead/behind `origin/main`, at `919d355` (AC5).
+  Verdict **pass** — `agents/principal-engineer/reviews/ENG-004.md` written,
+  `links.review` set.
+
+  **Acted as qa (`in-qa`).** Wrote the test plan this ticket never had
+  (`agents/qa/test-plans/ENG-004.md`), one row per acceptance criterion, each
+  a direct git/disk check rather than an automated test — no suite exists to
+  run and none is owed, per `ADR-001`/`ADR-004`. Failure-paths table names the
+  design's own residual risk explicitly (a future pass trusting a worktree's
+  stale branch instead of `origin/main`) and records that both this pass's
+  receipts read `origin/main` directly, never the `_eng/` worktree's own
+  checked-out files. Verdict **pass**, `links.test_plan` set.
+
+  **2 transitions this pass** (`building→in-review`, `in-review→in-qa`) —
+  well inside the 4-transition cap. `machine_wip` (6) unchanged at 1/6 — both
+  states fall inside the counted `ready`..`ready-to-ship` range. No
+  approver-facing WIP or approval-cap impact — neither state raises a gate.
+
+  **Not proceeding into `in-security` this pass, deliberately.** Same
+  discipline this ticket has applied at every earlier hop — each real,
+  distinct piece of gate work gets its own session rather than the tail end of
+  this one — but here the reason is sharper than "same discipline": `ADR-004`
+  says explicitly that this ticket's security gate has real content (five of
+  the six files under review **are** the RLS/`search_path` hardening surface)
+  and "must not be waved through as if it were" ceremony, unlike `ENG-001`'s
+  own security pass (ten OWASP categories `n/a`), which is the one case on
+  this instance where review+quality+security were combined into a single
+  pass. Folding a substantive security review onto the end of an
+  already-complete review+quality hop risks exactly the rubber-stamp `ADR-004`
+  warns against. `in-security`'s own dedicated pass gets a fresh context to
+  confirm the hardening's *content*, not just its byte-identity.
+
+  **Dead-end sweep (scoped to `ENG-004`, the ticket this event names):** its
+  log now ends in a valid, accounted-for state with a chain record below.
+  `ENG-005` (`awaiting-scope`, owner approver) untouched this pass — out of
+  scope for a `continue` event naming one ticket.
+
+  **Notify sweep:** nothing to raise (`in-qa` raises no gate item). Nothing
+  new to nudge — `ENG-005`'s G1 (raised 09:59:41) is well under the 24h
+  threshold; approval cap unchanged at 1/3, not full, no stall.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped and
+  whole-board: both exit 0, clean. `chained: ENG-004` — sitting at `in-qa`,
+  owned by `qa` (agent, not the approver, not blocked, not terminal); firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-004` for
+  the dedicated `in-security` session.
+- `2026-08-27` `in-qa → in-security` (eng-manager acting as security,
+  `continue ENG-004` event pass — the dedicated session the preceding
+  combined review+quality hop chained). Narrow scope per the event contract
+  (resume this ticket from its current state; no board-wide sweep). Mode
+  check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`
+  (`ENG_ROOT=instances/aiorders/engineering`): exit 0, clean.
+
+  **The one gate on this ticket with real content, per `ADR-004` — not waved
+  through as ceremony.** Threat-modelled first: no new input, capability, or
+  data exposure exists anywhere in this ticket's own evidence (no diff, no
+  new component); the equivalent question for a reconciliation ticket is
+  whether the *tracked history* is trustworthy, which AC3/AC4 already speak
+  to. Re-ran `git fetch origin` fresh in both `_eng/aiorders-admin-hub` and
+  `_eng/aiorders-api` and independently re-derived, not cited from any prior
+  hop's numbers:
+  - **AC1** — both `supabase/config.toml` still name `project_id =
+    "bmnmnejwdxbcqinqkwko"`.
+  - **Presence** — all six files (one renamed) found on `aiorders-api`
+    `origin/main`; `admin-hub`'s `origin/main` still carries no
+    `supabase/migrations/`.
+  - **AC3 (unmodified)** — checked by a **different mechanism** than
+    review's and QA's SHA-256 hash: compared git's own blob SHA for each of
+    the six files, content-addressed and independent of path/filename. All
+    six identical pairwise, `admin-hub@7009f18` vs. `aiorders-api`
+    `origin/main` (`204ccb6f…`, `11d8407a…`, `366dab7e…`, `2b441662…`,
+    `431a7324…`, `8657b0c8…`). Confirmed by a second, independent method, not
+    a re-run of the first.
+  - **AC4 (ordering)** — 22 files on `aiorders-api` `origin/main`;
+    `restaurant_activations` (line 12) immediately precedes
+    `google_review_history` (line 13).
+
+  **Read the six files' actual content — the substantive check neither
+  review nor QA did (review's own words: "does not re-audit what they
+  say").** All six are coherent, complete hardening: pinned `search_path` on
+  two `SECURITY DEFINER` trigger functions; the `profiles` table's
+  public-read policies replaced with owner-only + role-gated admin access
+  (via a `SECURITY DEFINER` helper added specifically to break an
+  infinite-recursion defect the first fix introduced); `restaurants`'
+  unconditional public read blocked (`USING (false)`) and replaced with a
+  `restaurants_public` view exposing an explicit safe-column allowlist
+  filtered to `approved = true`; `restaurant_activations` created with RLS
+  enabled and a `service_role`-only policy, correctly not granted to
+  `anon`/`authenticated`. Full per-file breakdown in
+  `agents/security/reviews/ENG-004.md`.
+
+  **One observation, explicitly not filed as a finding against this
+  ticket.** Migration 5's own comment ("recreate the view without SECURITY
+  DEFINER — default is SECURITY INVOKER") is likely backwards — Postgres's
+  actual default for a plain `CREATE VIEW` is owner-rights execution unless
+  `WITH (security_invoker = true)` is set, which neither version of the view
+  sets — so the drop-and-recreate may not have changed `restaurants_public`'s
+  RLS-bypass posture at all. Not a finding here: the PRD's own non-goals
+  exclude "whether that policy is still the right policy today," and this is
+  exactly that question, not a question about whether this ticket's
+  reconciliation preserved the content (it did, confirmed above by an
+  independent hash method). No DB credential is available to check
+  Supabase's advisor output live either (design, Risks). Logged in
+  `agents/eng-manager/observations.md` rather than escalated or held against
+  this gate.
+
+  **OWASP walk, secrets, SOC 2 trail** — full table in the receipt file. A01
+  engaged as content (not `n/a`) since access control on
+  `profiles`/`restaurants` is exactly what these six files are; A02–A10 all
+  `n/a` with reasons (no crypto, no dynamic SQL, no new feature, no new
+  config surface, no dependency, no auth path change, no build artifact, no
+  new logged event, no server-side fetch). Secret-shaped-string scan
+  (`grep -niE 'api[_-]?key|secret|password|token|bearer|-----BEGIN'`) over
+  the six files' content and this ticket's entire paper trail (PRD, design,
+  both ADRs, board, review, test plan): zero hits in either sweep. SOC 2
+  trail complete: ticket → PRD → `ADR-003`/`ADR-004` → design → review → test
+  plan → this verdict, no gap.
+
+  **Verdict: PASS.** `agents/security/reviews/ENG-004.md` written,
+  `links.security_review` set. `machine_wip` (6) unchanged at 1/6 —
+  `in-security` still falls inside the counted `ready`..`ready-to-ship`
+  range. No approver-facing WIP or approval-cap impact — `in-security` raises
+  no gate.
+
+  **Not proceeding into `ready-to-ship` this pass, deliberately** — same
+  discipline this ticket has applied at every earlier hop. Devops's own
+  confirmation (per `ADR-004`: that no release plan, rollback, or
+  observability plan exists, because the change already shipped outside this
+  ticket on 2026-08-24) is real, distinct work reserved for its own session,
+  not the tail end of an already-complete security hop.
+
+  **Dead-end sweep (scoped to `ENG-004`, the ticket this event names):** its
+  log now ends in a valid, accounted-for state with a chain record below.
+  `ENG-005` (`awaiting-scope`, owner approver) untouched this pass — out of
+  scope for a `continue` event naming one ticket.
+
+  **Notify sweep:** nothing to raise (`in-security` raises no gate item).
+  Nothing new to nudge — `ENG-005`'s G1 (raised 09:59:41) is well under the
+  24h threshold; approval cap unchanged at 1/3, not full, no stall.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped and
+  whole-board: both exit 0, clean. `chained: ENG-004` — sitting at
+  `in-security`, owned by `security` (agent, not the approver, not blocked,
+  not terminal); firing `/bin/zsh departments/engineering/lib/eng-trigger.sh
+  continue ENG-004` for the dedicated `ready-to-ship` (devops) session.
+- `2026-08-27` `in-security → ready-to-ship → awaiting-release → shipped →
+  verified` (eng-manager acting as devops, then product-manager —
+  `continue ENG-004` event pass, the dedicated session the preceding
+  `in-security` hop chained; this ticket reached terminal within the same
+  pass because the G3 it raised was answered while the pass was still
+  running). Narrow scope per the event contract (resume this ticket from its
+  current state; no board-wide sweep). Mode check clean (business-os `.env`
+  → `MODE=active`; instance `config/config.yaml` → `mode:` empty, falls
+  through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  and whole-board: both exit 0, clean.
+
+  **Acted as devops at `ready-to-ship`, per `ADR-004`.** Confirmed and
+  logged rather than skipped: no release, rollback, or observability plan is
+  owed, because the change this ticket concerns already reached
+  `origin/main` on 2026-08-24, two days before this ticket reached
+  `designed` — a different reason than `ADR-002`'s (no registered project
+  carried a diff at all), same honest-recording shape. Re-checked fresh
+  rather than cited: `config/projects.md` still lists `aiorders-admin-hub`
+  at **L1** with a real Cloudflare deploy target; its `_eng/` worktree is
+  present. Release window checked for consistency even though nothing
+  deploys: 2026-08-27 is a Thursday, `ENG_RELEASE_FREEZE` unset — clean,
+  moot either way. Recurring cost: `$0/month`, no CFO escalation owed — no
+  diff, no new infrastructure. `machine_wip` (6) drops from 1/6 to 0/6 —
+  `ready-to-ship` is the last state in the counted `ready`..`ready-to-ship`
+  range; nothing else on the board sits inside it.
+
+  **1 transition** (`in-security → ready-to-ship`).
+
+  **Continued into `awaiting-release` the same pass, deliberately, unlike
+  `ENG-001`'s split at this identical boundary.** Re-checked the approval
+  cap and approver-facing WIP fresh from `inbox/` directly (one open item,
+  `ENG-005`'s G1) rather than from the board's cached header: cap 1/3, room
+  for two more; approver WIP 1, room for one more. Per the Guards section,
+  raising this ticket's G3 is advancing an already-in-flight ticket into its
+  own next gate, not a new start — the same reasoning `ENG-001`'s own history
+  used at 2/3 approval cap with `wip.approver_limit` already held — so
+  nothing caps it. This differs from `ENG-001`'s `ready-to-ship`/
+  `awaiting-release` split, which its own log names as cap-driven and
+  "independently sufficient on its own"; that condition doesn't hold here.
+  No schedule rule or ADR names a fresh-context requirement between these two
+  states the way step 6 names one for security-after-quality, and neither
+  `ADR-002` nor `ADR-004` distinguishes a session boundary here — unlike
+  `building`/`in-review`/`in-qa`/`in-security`, `awaiting-release`'s own
+  "work" is writing and raising the gate item this state's exit condition
+  already requires, not a fresh independent re-derivation. Per the schedule's
+  own top-line description ("runs every in-flight ticket forward until it
+  hits a human"), `ready-to-ship` is machine-owned and `awaiting-release` is
+  exactly that human stop, so continuing into it is the literal dispatch
+  rule, not a departure from it.
+
+  Wrote the G3 item per `ADR-004`'s own framing — not "ship this to
+  production" (nothing is shipping), but "is this ticket's record accurate,
+  and is it done" — at `inbox/2026-08-27-eng004-g3-verification.md`, and
+  raised it (`lib/eng-notify.sh raise`). Reproduced the already-filed,
+  already-proposed `eng-notify.sh` bugs (`proposals.md`, 2026-08-25 row): log
+  line read `sent: active`, not `sent: raise` (the `MODE` variable
+  collision), and the message went to Slack rather than the Telegram
+  `config/config.yaml` names as this instance's actual channel — not a new
+  finding, not re-filed. `notified:` stamped by hand (`11:01:34` local) since
+  the script never writes back. Approval cap 1/3 → 2/3 (`ENG-005`'s G1 +
+  this ticket's G3); approver-facing WIP 1 → 2 (at the limit, not over it).
+
+  **2nd transition** (`ready-to-ship → awaiting-release`).
+
+  **The G3 was answered before this pass exited.** `decision: approved`,
+  `decided: 2026-08-27T18:03:06.296846+00:00` (`11:03:06` local) — roughly
+  92 seconds after `notified:` was stamped, by a direct hand-edit of the gate
+  item's frontmatter plus a second `## Decision` section below the original
+  placeholder, same shape as every gate answer on this instance except
+  `ENG-002`'s GitHub merge. No additional comment beyond the decision itself.
+  Journaled in `agents/eng-manager/config/decision-journal.md` (fifth data
+  point on the hand-edit pattern; the turnaround itself flagged there as
+  consistent with, not proof of, the open notify-channel proposal). Moved
+  as-is to `inbox/_handled/2026-08-27-eng004-g3-verification.md`, no edit
+  needed.
+
+  **Acted as devops at `shipped`, per `ADR-004`.** Recorded the G3
+  confirmation in place of a deploy. **No release record is fabricated** at
+  `agents/devops/releases/` for a deploy that never happened — this log
+  entry is the record, same as `ADR-002` decided for `ENG-001`. `links.release`
+  stays empty, same shape as `branch:` staying empty under `ADR-001`.
+
+  **3rd transition** (`awaiting-release → shipped`).
+
+  **Acted as product-manager at `verified`.** Re-confirmed all five
+  acceptance criteria against disk/git fresh this pass, not cited from any
+  prior hop's numbers — `git fetch origin` in both `_eng/aiorders-admin-hub`
+  and `_eng/aiorders-api` first:
+  - **AC1** — both `supabase/config.toml` still name `project_id =
+    "bmnmnejwdxbcqinqkwko"`.
+  - **AC2/AC3** — `aiorders-admin-hub`'s `origin/main` still carries only
+    `supabase/config.toml` (no `migrations/`); re-sampled two of the six
+    files' git blob SHAs on `aiorders-api`'s `origin/main` —
+    `20250729143432_updated_at_functions.sql` → `204ccb6f…`,
+    `20260312000001_restaurant_activations.sql` → `8657b0c8…` — both match
+    every prior gate's recorded values exactly.
+  - **AC4** — `aiorders-api`'s `origin/main` still lists 22 migrations,
+    sorted; `restaurant_activations` (line 12) still immediately precedes
+    `google_review_history` (line 13).
+  - **AC5** — `git rev-list --left-right --count main...origin/main` in
+    `_eng/aiorders-admin-hub` still returns `0	0`.
+
+  All five hold exactly as every earlier gate recorded them — nothing
+  drifted across the two days since `designed`. Also re-opened and read (not
+  just cited) all three receipts this pass:
+  `agents/principal-engineer/reviews/ENG-004.md` (`verdict: pass`),
+  `agents/qa/test-plans/ENG-004.md` (`last_result: pass`, all five AC rows
+  `pass`), `agents/security/reviews/ENG-004.md` (`verdict: pass`, content
+  read confirmed coherent, all ten OWASP categories addressed, secret scan
+  clean). All three hold.
+
+  **4th transition** (`shipped → verified`) — **4 transitions this pass**
+  in total, at the 4-transition cap, not over it.
+
+  **This ticket is now terminal.** All five acceptance criteria hold, every
+  receipt this lane requires is on file and independently re-verified at
+  least four times over (design, building, review+QA, security, this
+  pass), and `aiorders-api` is confirmed, on record, as the authoritative
+  migration history for this database. `ADR-003` and `ADR-004` stay on
+  record for whichever future ticket needs the same pattern.
+
+  As a side effect of this ticket closing, `machine_wip` stays 0/6 (it left
+  the counted range at `ready-to-ship`, one transition ago); the approval cap
+  drops from 2/3 back to 1/3 (`ENG-005`'s G1 only) and approver-facing WIP
+  drops from 2 back to 1 — noted here for the next pass's arithmetic, not
+  acted on: dispatching any newly-freed capacity onto another ticket is out
+  of scope for a `continue ENG-004` pass scoped to this ticket.
+
+  **Dead-end sweep (scoped to `ENG-004`, the ticket this event names):** its
+  log now ends in a valid, terminal state. `ENG-005` (`awaiting-scope`, owner
+  approver) untouched this pass — out of scope for a `continue` event naming
+  one ticket.
+
+  **Notify sweep:** nothing to raise this pass beyond the G3 item already
+  raised and now answered above; nothing to nudge (`ENG-005`'s G1 is well
+  under 24h old); approval cap not full, no stall.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped and
+  whole-board: both exit 0, clean. `chained: none` — `verified`, a terminal
+  state. Per the chaining guard, a terminal ticket is never re-fired.
