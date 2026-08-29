@@ -1,0 +1,9 @@
+---
+source: harry
+via: control-center
+received: 2026-08-27T20:19:21.498718+00:00
+---
+
+# I want to be able to give the customers points for online ordering and dine in they do at a restaurant and the points would be restaurant specific only but all of them would have the same naming in the frontend. For now we are just going to build the backend to support this.
+
+Add a new table that saves points per customer per restaurant, api to add points, redeem points. Save redemption history, spent history for dine-in that led to points. We also need a way to manage how much %age points to be give by each restaurant and separate for online ordering and dine in configs.  We are also introducing the concept of a foodswipe customer who will be identified by a unique phone number and they will be authenticated through an sms otp and session would be maintained. Currently each restaurant has its own customer even though its the same physical human being which will now be identified in the system as a xxx customer (do no use the name xxx anywhere in db and code thats more for branding). We can map the new foodswipe customer to the legacy restaurant customer but for loyalty it will be one user but collecting and redeeming points for multiple restaurants and see all of them on one ui. and one qr code of the user would be scanned  by all restaurants to add and redeem points. Define the feature and we may have to split this into multiple tickets that can be delivered individually one after another instead of full feature being just one bug ticket. Also create this int a separate branch of loyalty-system and backend and supabase migrations go in aiorders-api. Frontend stories/tasks can be written but they will be done later on in a separate discussion. as the frontend goes in multiple repos restaurant-marketplace for the customer, restaurant-portal for the restaurant and admin-hub for our internal use
