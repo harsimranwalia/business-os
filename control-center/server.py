@@ -631,7 +631,7 @@ def eng_limits(inst):
     return defaults
 
 
-TRIGGER_SHELL = "/bin/zsh" if os.uname().sysname == "Darwin" else "/bin/bash"
+TRIGGER_SHELL = "bash" if os.name == "nt" else ("/bin/zsh" if os.uname().sysname == "Darwin" else "/bin/bash")
 
 
 def _spawn_trigger(script, args, label, env=None):

@@ -51,6 +51,37 @@ sh "$ENG_DEPT/lib/eng-trigger.sh" scheduled
 `ENG_INSTANCE` is never guessed. Guessing wrong means writing one business's
 board into another's repo, which is the one failure the split exists to prevent.
 
+## Hosts
+
+The department runs on macOS and on Windows (Git Bash). `lib/eng-env.sh` sets
+`$ENG_HOST` to `mac`, `windows`, `linux` or `unknown`, and every host difference
+in the department resolves through that one variable.
+
+| | macOS | Windows (Git Bash) |
+|---|---|---|
+| Scheduler | `launchd`, `~/Library/LaunchAgents` | Task Scheduler, tasks under `\business-os\` |
+| Installed by | `lib/eng-schedule.sh --apply` | the same command — it dispatches to `lib/eng-schedule-win.sh` |
+| Inbox watch | `WatchPaths` — a filesystem interrupt | a 5-minute poll (Task Scheduler has no file trigger) |
+| Missed run while asleep | caught up by `StartCalendarInterval` | caught up by `StartWhenAvailable` |
+| Runs a pass with | `/bin/zsh lib/run-claude.sh` | `Git\bin\bash.exe -l` → `lib/run-claude.sh` |
+| Needs by hand | Full Disk Access for `sh`, `zsh`, `claude` | nothing; but tasks run only while you are logged on |
+
+Three things are worth knowing before debugging a Windows pass:
+
+- **`-l` is required.** A scheduled task inherits only the Windows `PATH`, so a
+  non-login shell cannot find `dirname` or `date`, let alone `node`. The login
+  shell sources `/etc/profile`, which builds the MSYS `PATH`.
+- **`python3` is not an interpreter on a stock Windows.** It is a Microsoft Store
+  redirector that exits 49. `lib/eng-env.sh` resolves a real one into
+  `$ENG_PYTHON` and puts `lib/shims/python3` on `PATH` so the bare-name call
+  sites keep working.
+- **On-demand task launches are slow** — measured at ~2.5 minutes from
+  `schtasks /Run` to first output on a laptop. Scheduled fires are prompt. If a
+  task looks hung, check `Get-ScheduledTaskInfo` before assuming it is.
+
+Neither host is guessed at install time: `lib/eng-setup.sh` reports what it
+finds, and says what is missing.
+
 ## Roles
 
 **The approver** — the single human with gate authority: G1 scope, G2
@@ -67,8 +98,13 @@ Bound per instance in `config/config.yaml`. No file in the template names a pers
 ## Pause
 
 `.env` → `MODE` set to `sabbath`, `retreat` or `quiet` halts every component.
-Checked inside each component at start of run, never by the scheduler — cron keeps
-firing and the run exits silently. Same convention the rest of business-os uses.
+Checked inside each component at start of run, never by the scheduler — the
+scheduler (cron, launchd or Task Scheduler) keeps firing and the run exits
+silently. That is what makes resuming a one-line edit with nothing to reinstall.
+Same convention the rest of business-os uses.
+
+To pause ONE business rather than all of them, set `mode:` in that instance's
+`config/config.yaml`; it wins over the global value.
 
 ## Contract
 

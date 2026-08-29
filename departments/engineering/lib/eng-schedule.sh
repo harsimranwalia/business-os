@@ -38,6 +38,29 @@ BUSINESS_OS="$(CDPATH= cd -P -- "$DEPT/../.." && pwd -P)"
 AGENTS="$HOME/Library/LaunchAgents"
 RUNNER="$DEPT/lib/eng-loop-all.sh"
 
+# Host dispatch. Everything below this line is launchd, which exists only on
+# macOS. The Windows equivalent is Task Scheduler and lives in its own file
+# rather than as branches threaded through this one: the two schedulers share a
+# job LIST and nothing else — no plists, no launchctl, a different idempotency
+# story and a poll where this has a filesystem watch — so interleaving them
+# would make both harder to read than either is alone.
+#
+# Dispatched here rather than at every caller so install.sh and lib/eng-setup.sh
+# keep calling the one name they have always called.
+case "$(uname -s)" in
+  Darwin) : ;;
+  MINGW*|MSYS*|CYGWIN*) exec /bin/sh "$DEPT/lib/eng-schedule-win.sh" "$@" ;;
+  *)
+    # Linux/container: no wiring is generated, and that is said out loud. A
+    # scheduler that silently installs nothing is indistinguishable from one
+    # that installed something broken. Exit 0, not 1 — install.sh calls this on
+    # every onboard, and an unschedulable host must not fail the onboard.
+    echo "eng-schedule: no scheduler wiring for $(uname -s) — no jobs installed." >&2
+    echo "eng-schedule: wire lib/eng-loop-all.sh into cron by hand on this host:" >&2
+    echo "  30 2,9,15,20 * * *  /bin/sh $DEPT/lib/eng-loop-all.sh scheduled cron" >&2
+    exit 0 ;;
+esac
+
 MODE_ARG="${1:-}"
 APPLY=0; REMOVE=0
 case "$MODE_ARG" in

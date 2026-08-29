@@ -1,0 +1,26 @@
+#!/bin/sh
+# lib/shims/python3 — a working `python3` for a host that does not ship one.
+#
+# Exists for exactly one host: Windows. A stock Windows PATH carries an App
+# Execution Alias at AppData/Local/Microsoft/WindowsApps/python3 that is a Store
+# redirector, not an interpreter — it prints "Python was not found" and exits 49
+# whatever you pass it — and it resolves AHEAD of a real python.org install. So
+# `command -v python3` finds something, and running it fails.
+#
+# lib/eng-env.sh resolves a real interpreter into $ENG_PYTHON and puts this
+# directory at the FRONT of PATH only when the inherited `python3` fails to
+# execute. On mac and linux that check passes and this file is never on PATH.
+#
+# Why a shim rather than editing the call sites: `python3` is invoked by bare
+# name in lib/run-stream.py's callers (lib/eng-trigger.sh, lib/eng-report.sh)
+# and in lib/eng-notify.sh, and those call sites are correct — the interpreter
+# is genuinely named python3 everywhere the department is expected to run. One
+# shim fixes every call site at once, including any added later, and it cannot
+# drift out of sync the way three separate $ENG_PYTHON substitutions could.
+#
+# $ENG_PYTHON is an absolute path, so this never re-enters itself.
+if [ -z "${ENG_PYTHON:-}" ]; then
+  echo "python3 shim: \$ENG_PYTHON is unset — lib/eng-env.sh must be sourced before anything invokes python3 through this shim." >&2
+  exit 127
+fi
+exec "$ENG_PYTHON" "$@"

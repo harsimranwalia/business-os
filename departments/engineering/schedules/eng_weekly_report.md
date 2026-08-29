@@ -1,6 +1,6 @@
 # Schedule: eng_weekly_report
 
-**Status:** ✅ WIRED — `com.businessos.eng-report` (macOS launchd), Sundays 18:30. Runner: `lib/eng-report.sh`, installed via `lib/eng-schedule.sh --apply`.
+**Status:** ✅ WIRED — Sundays 18:30. `com.businessos.eng-report` on macOS launchd, `\business-os\eng-report` on Windows Task Scheduler. Runner: `lib/eng-report.sh`, installed via `lib/eng-schedule.sh --apply` on either host.
 
 **Description:** One engineering report a week — shipped, in flight, blocked, bugs, cost, and what needs the approver.
 

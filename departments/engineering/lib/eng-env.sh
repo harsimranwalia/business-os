@@ -100,10 +100,15 @@ eng_mode_halts() {
 }
 
 # ── Host + shell detection ─────────────────────────────────────────────────
+# `windows` means Git Bash / MSYS2, which is the only way the department's
+# shell scripts run there — there is no POSIX shell in stock Windows. uname
+# reports MINGW64_NT-* under Git Bash, MSYS_NT-* under an MSYS2 shell and
+# CYGWIN_NT-* under Cygwin; all three are the same host to everything below.
 case "$(uname -s)" in
-  Darwin) ENG_HOST="mac" ;;
-  Linux)  ENG_HOST="linux" ;;
-  *)      ENG_HOST="unknown" ;;
+  Darwin)               ENG_HOST="mac" ;;
+  Linux)                ENG_HOST="linux" ;;
+  MINGW*|MSYS*|CYGWIN*) ENG_HOST="windows" ;;
+  *)                    ENG_HOST="unknown" ;;
 esac
 ENG_SHELL="$([ -x /bin/zsh ] && echo /bin/zsh || echo /bin/sh)"
 export ENG_HOST ENG_SHELL
@@ -154,7 +159,90 @@ eng_path_add /opt/homebrew/bin      # timeout, gtimeout, gh, git
 eng_path_add /usr/local/bin         # intel homebrew, and anything hand-installed
 eng_path_add "$HOME/.local/bin"     # claude
 
+# Windows has the same problem as launchd, from a different direction. Task
+# Scheduler builds a task's PATH from the registry and sh.exe prepends the MSYS
+# tree on top of it, so a scheduled pass gets /usr/bin, /mingw64/bin and the
+# system PATH — but NOT the per-user directories winget and the node .msi
+# install into. `claude` and `node` are both reachable from an interactive Git
+# Bash and both invisible to a scheduled pass, which is exactly the class of
+# failure this block already exists to prevent, so it is fixed in the same place.
+if [ "$ENG_HOST" = "windows" ]; then
+  # $HOME rather than $LOCALAPPDATA: the Windows form of that variable is
+  # C:\Users\... and the backslashes are escapes to every test and glob here.
+  eng_path_add "$HOME/AppData/Local/Microsoft/WinGet/Links"   # winget's claude shim
+  _eng_pf="$(cygpath -u "${PROGRAMFILES:-}" 2>/dev/null)"
+  [ -n "$_eng_pf" ] || _eng_pf="/c/Program Files"
+  eng_path_add "$_eng_pf/nodejs"                              # node + npm (.msi)
+  eng_path_add "$_eng_pf/GitHub CLI"                          # gh
+  # python.org's installer offers "Add to PATH" as an OPT-IN checkbox and writes
+  # only the per-user registry PATH when it is ticked, so a scheduled task can
+  # easily inherit a PATH with no interpreter on it at all — verified by running
+  # a pass under PATH=/usr/bin:/bin, where node and claude were both recovered by
+  # the lines above and python3 was not. An unmatched glob expands to itself and
+  # eng_path_add's -d test rejects it, so a machine without these is unaffected.
+  for _eng_pydir in "$HOME/AppData/Local/Programs/Python"/Python3* /c/Python3*; do
+    eng_path_add "$_eng_pydir"
+  done
+fi
+
 export PATH
+
+# ── python3 ────────────────────────────────────────────────────────────────
+# lib/run-stream.py and lib/eng-notify.sh invoke the interpreter by the bare
+# name `python3`. That is right on mac and linux and WRONG on Windows, in a way
+# that passes every obvious check: a stock Windows PATH carries an App Execution
+# Alias at AppData/Local/Microsoft/WindowsApps/python3 which is not an
+# interpreter at all. Given arguments it prints "Python was not found; run
+# without arguments to install from the Microsoft Store" and exits 49. It sits
+# AHEAD of a real python.org install on PATH, so `command -v python3` succeeds,
+# eng-setup.sh's toolchain check passes, and the interpreter still never runs —
+# cost tracking silently records nothing and every approver notification fails.
+#
+# So the test here is "does it execute python", not "is it on PATH". The answer
+# is resolved once and EXPORTED, which serves both kinds of caller: anything
+# that wants to be explicit reads $ENG_PYTHON, and the existing bare-name call
+# sites keep working through lib/shims/python3.
+#
+# PREPENDED, unlike everything above it. eng_path_add appends on purpose, so a
+# caller who deliberately put a toolchain in front keeps it; here the whole
+# point is to beat an entry that is already on PATH, so this one goes first.
+eng_python_ok() { [ -n "${1:-}" ] && "$1" -c 'import sys' >/dev/null 2>&1; }
+if ! eng_python_ok "${ENG_PYTHON:-}"; then
+  ENG_PYTHON=""
+  for _eng_py in python3 python python3.exe python.exe; do
+    _eng_py_path="$(command -v "$_eng_py" 2>/dev/null)" || continue
+    if eng_python_ok "$_eng_py_path"; then ENG_PYTHON="$_eng_py_path"; break; fi
+  done
+  # Last resort on Windows: the `py` launcher. It installs to C:\Windows, which
+  # is on every PATH that exists at all, and it knows where the interpreters are
+  # even when none of them is on PATH. Asked for the real executable rather than
+  # used directly, because $ENG_PYTHON is expanded as a single word.
+  if [ -z "$ENG_PYTHON" ] && command -v py >/dev/null 2>&1; then
+    _eng_py_path="$(py -3 -c 'import sys; print(sys.executable)' 2>/dev/null)"
+    if eng_python_ok "$_eng_py_path"; then ENG_PYTHON="$_eng_py_path"; fi
+  fi
+fi
+export ENG_PYTHON
+
+if [ -z "${ENG_PYTHON:-}" ]; then
+  echo "[eng-env] WARNING: no working python3 on this host — cost tracking (lib/run-stream.py) and approver notifications (lib/eng-notify.sh) will not run." >&2
+elif ! eng_python_ok "$(command -v python3 2>/dev/null)"; then
+  # cygpath, and NOT a bare "$ENG_DEPT/lib/shims". On Windows `pwd -P` returns a
+  # native path — ENG_DEPT is C:/Users/... — and PATH is colon-separated, so
+  # prepending it raw contributes TWO broken entries, "C" and "/Users/...".
+  # Nothing errors: PATH looks plausible, the directory is simply never
+  # searched, and python3 stays missing for a reason invisible in the value.
+  # Everywhere else ENG_DEPT is used as a filesystem path, where the native form
+  # is fine; PATH is the one place the colon matters.
+  _eng_shims="$ENG_DEPT/lib/shims"
+  if command -v cygpath >/dev/null 2>&1; then
+    _eng_shims="$(cygpath -u "$_eng_shims" 2>/dev/null || echo "$_eng_shims")"
+  fi
+  case ":$PATH:" in
+    *":$_eng_shims:"*) : ;;
+    *) PATH="$_eng_shims:$PATH"; export PATH ;;
+  esac
+fi
 
 # ── The department's own working copies ────────────────────────────────────
 # NEVER a human's checkout: a cron-triggered pass running git under someone's
@@ -178,6 +266,8 @@ eng_timeout() {
 }
 eng_timed_out() { [ "$1" -eq 124 ] || [ "$1" -eq 137 ]; }
 
+# BSD stat on mac, GNU stat everywhere else — Git Bash ships GNU coreutils, so
+# `windows` takes the same branch as linux and needs no case of its own.
 eng_mtime() {
   if [ "$ENG_HOST" = "mac" ]; then stat -f %m "$1" 2>/dev/null
   else stat -c %Y "$1" 2>/dev/null; fi

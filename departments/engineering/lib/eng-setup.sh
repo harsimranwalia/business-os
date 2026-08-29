@@ -141,7 +141,6 @@ for entry in "node:npm run build / lint — every registered project's verificat
              "npm:the quality gate has nothing to run without it" \
              "git:branches, worktrees, merge-base" \
              "gh:opening the pull request an L1 project ends at" \
-             "python3:lib/run-stream.py and eng-notify.sh" \
              "timeout:caps a pass; without it ENG_PASS_TIMEOUT is ignored and a hung pass runs forever"; do
   bin="${entry%%:*}"; why="${entry#*:}"
   if command -v "$bin" >/dev/null 2>&1; then
@@ -150,6 +149,23 @@ for entry in "node:npm run build / lint — every registered project's verificat
     bad "$(printf '%-8s missing — %s' "$bin" "$why")"
   fi
 done
+
+# python3 is checked by RUNNING it, not by finding it, and so is not in the loop
+# above. On Windows `command -v python3` succeeds against an App Execution Alias
+# that is a Microsoft Store redirector rather than an interpreter — so the loop's
+# test passes, this section reports OK, and every cost record and every approver
+# notification silently fails anyway. That is precisely the shape of bug this
+# section exists to catch, so it gets the stricter test. eng-env.sh has already
+# resolved and exported $ENG_PYTHON.
+if [ -n "${ENG_PYTHON:-}" ]; then
+  ok "$(printf '%-8s %s' "python3" "$ENG_PYTHON")"
+  if ! eng_python_ok "$(command -v python3 2>/dev/null)"; then
+    echo "        (the inherited 'python3' does not execute — passes reach a real"
+    echo "         interpreter through lib/shims/python3, which eng-env.sh puts on PATH)"
+  fi
+else
+  bad "$(printf '%-8s missing — %s' "python3" "lib/run-stream.py cost tracking and eng-notify.sh approver posts")"
+fi
 echo
 
 # ── 4. Notifications ───────────────────────────────────────────────────────
@@ -165,10 +181,33 @@ fi
 echo
 
 # ── 5. Scheduling ──────────────────────────────────────────────────────────
-echo "5. Scheduling (lib/eng-schedule.sh owns these — one pair of jobs, all instances)"
-for label in com.businessos.eng-loop com.businessos.eng-watch; do
-  if launchctl list 2>/dev/null | grep -q "$label"; then ok "$label loaded"; else warn "$label not loaded"; fi
-done
+echo "5. Scheduling (lib/eng-schedule.sh owns these — one set of jobs, all instances)"
+case "$ENG_HOST" in
+  mac)
+    for label in com.businessos.eng-loop com.businessos.eng-watch com.businessos.eng-report; do
+      if launchctl list 2>/dev/null | grep -q "$label"; then ok "$label loaded"; else warn "$label not loaded"; fi
+    done ;;
+  windows)
+    # Task Scheduler, registered by lib/eng-schedule-win.sh. The DISABLED state is
+    # checked, not just presence: a disabled task looks identical to a working one
+    # in every listing that only asks whether it exists, and is a real way to lose
+    # a week of runs without a single error anywhere.
+    for tn in "\business-os\eng-loop" "\business-os\eng-watch" "\business-os\eng-report"; do
+      # MSYS_NO_PATHCONV: without it MSYS rewrites /Query and /FO into paths
+      # under the Git install before schtasks sees them, and every task reports
+      # as "not registered" whether or not it exists. Same guard, same reason as
+      # schtasks_() in lib/eng-schedule-win.sh.
+      _q="$(MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' schtasks /Query /TN "$tn" /FO LIST 2>/dev/null)" \
+        || { warn "$tn not registered"; continue; }
+      case "$_q" in
+        *Disabled*) warn "$tn registered but DISABLED — it will never fire" ;;
+        *)          ok "$tn registered" ;;
+      esac
+    done
+    echo "     Note: these run only while you are logged on (LogonType InteractiveToken)." ;;
+  *)
+    warn "no scheduler wiring for ENG_HOST=$ENG_HOST — see lib/eng-schedule.sh" ;;
+esac
 echo
 if [ "$APPLY" = "1" ]; then sh "$ENG_DEPT/lib/eng-schedule.sh" --apply; else sh "$ENG_DEPT/lib/eng-schedule.sh"; fi
 echo
@@ -179,21 +218,41 @@ if curl -s -o /dev/null -m 2 "http://localhost:7777/api/engineering?instance=$BU
   ok "running and serving $BUSINESS"
 else
   warn "not responding on :7777 — the Engineering tab and its Approve buttons need it."
-  echo "        It is a life-os component: launchctl load ~/Library/LaunchAgents/com.lifeos.control-center.plist"
+  if [ "$ENG_HOST" = "mac" ]; then
+    echo "        It is a life-os component: launchctl load ~/Library/LaunchAgents/com.lifeos.control-center.plist"
+  else
+    echo "        Start it with: sh $BUSINESS_OS_ROOT/control-center/start.sh"
+  fi
 fi
 echo
 
-# ── 7. Full Disk Access ────────────────────────────────────────────────────
-# Cannot be checked programmatically — TCC failures look like ordinary
-# permission errors and only appear when a launchd-spawned pass tries to read
-# ~/Documents. Printed every run because it is the single most common reason a
-# correctly wired routine silently does nothing.
-echo "7. Full Disk Access — check by hand, once"
-echo "   System Settings -> Privacy & Security -> Full Disk Access must include:"
-echo "     /bin/sh        (launchd runs the scheduler with it)"
-echo "     /bin/zsh       (\$ENG_SHELL — runs each pass)"
-echo "     /Users/hwalia/.local/bin/claude"
-echo "   launchd-spawned processes do NOT inherit Terminal's grant."
+# ── 7. Host permissions ────────────────────────────────────────────────────
+# Cannot be checked programmatically on either host — the failures look like
+# ordinary permission errors, and only appear once something OTHER than your own
+# terminal spawns a pass. Printed every run because this is the single most
+# common reason a correctly wired routine silently does nothing.
+case "$ENG_HOST" in
+  mac)
+    echo "7. Full Disk Access — check by hand, once"
+    echo "   System Settings -> Privacy & Security -> Full Disk Access must include:"
+    echo "     /bin/sh        (launchd runs the scheduler with it)"
+    echo "     /bin/zsh       (\$ENG_SHELL — runs each pass)"
+    echo "     $(command -v claude 2>/dev/null || echo "$HOME/.local/bin/claude")"
+    echo "   launchd-spawned processes do NOT inherit Terminal's grant."
+    ;;
+  windows)
+    echo "7. Host permissions — check by hand, once"
+    echo "   Windows has no TCC, so there is nothing to grant. Two things bite instead:"
+    echo "     - Tasks run only while you are LOGGED ON. Locking the screen is fine;"
+    echo "       signing out is not."
+    echo "     - Defender's controlled folder access, if on, blocks writes to"
+    echo "       Documents by processes it does not recognise. If passes fail writing"
+    echo "       to the instance, allow claude and sh.exe there."
+    ;;
+  *)
+    echo "7. Host permissions — nothing known for ENG_HOST=$ENG_HOST"
+    ;;
+esac
 echo
 
 echo "──────────────────────────────────────────────"
@@ -213,4 +272,7 @@ echo "  A pass finishes mid-flow                          -> it fires its own ne
 echo "  Daily 09:30 / 15:30 / 20:30 / 02:00                -> safety-net sweep, every instance"
 echo
 echo "Watch it:  tail -f $ENG_INSTANCE/traces/eng-loop-\$(date +%Y-%m-%d).log"
+if [ "$ENG_HOST" = "windows" ]; then
+echo "Fire one:  schtasks /Run /TN \"\\business-os\\eng-loop\""
+fi
 echo "Pause it:  set 'mode: sabbath' in $ENG_INSTANCE/config/config.yaml (this business only)"

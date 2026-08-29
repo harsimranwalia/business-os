@@ -1,0 +1,21 @@
+# Line endings. Every .sh here is executed by a POSIX shell, and on Windows that
+# shell is Git Bash — which tolerates CRLF, but nothing else in the chain
+# promises to: the same checkout run under WSL, a container, or a plain
+# /bin/sh fails on a `\r` with errors that name the wrong thing entirely
+# ("$'\r': command not found"). git's core.autocrlf=true, the Windows default,
+# is what introduces them, so pin the files that must not have them.
+*.sh            text eol=lf
+*.py            text eol=lf
+**/shims/*      text eol=lf
+
+# Data the shell parses with sed/awk. A stray \r ends up INSIDE a captured
+# value, where it survives every visual inspection: `mode: sabbath` parses to
+# "sabbath\r", which matches no case pattern, and the pause switch silently
+# stops pausing.
+*.yaml          text eol=lf
+*.yml           text eol=lf
+.env.example    text eol=lf
+
+# Documents. Agents read and rewrite these; keeping them LF keeps a Windows
+# edit from showing up as a whole-file diff.
+*.md            text eol=lf

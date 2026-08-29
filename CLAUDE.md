@@ -42,6 +42,11 @@ python scripts/reddit_post.py          # posts APPROVED records; the only write 
 ./scripts/install_cron.sh              # install the managed cron block (--remove to uninstall)
 ```
 
+`install_cron.sh` is POSIX-only — there is no `crontab` on Windows. The
+engineering department schedules itself per host instead (`lib/eng-schedule.sh`
+dispatches to launchd on macOS and to Task Scheduler on Windows); the Reddit
+pipeline above has no Windows scheduler yet.
+
 Everything else (`telegram.py`) is invoked as a subprocess by the other scripts, not run directly.
 Config is env vars, loaded from a repo-root `.env` (gitignored) by each script's own `load_env()`.
 Required vars are listed in each script's module docstring (Twenty API creds, Telegram bot token/chat
@@ -87,6 +92,12 @@ See the module docstring in `content_loop.py` for the one-time Twenty object/fie
   (per-subreddit rules/cooldowns/status, maintained by the triage agent) and
   `memory/marketing/engagement-log.md` (append-only decision log).
 - `logs/` — cron job stdout/stderr, written by `install_cron.sh`'s crontab entries.
+
+**Hosts:** macOS and Windows (Git Bash) are both supported. `$ENG_HOST`, set in
+`departments/engineering/lib/eng-env.sh`, is the single place host differences
+are decided — scheduler, PATH recovery, `stat` flags and the `python3` shim all
+branch on it. `.gitattributes` pins `*.sh`, `*.py` and `*.yaml` to LF so a
+Windows checkout does not put a carriage return inside a value the shell parses.
 
 **Execution model:** the agent is cron-invoked, not a persistent loop (see the header comment in
 `scripts/install_cron.sh`). Every run is stateless; all state lives in the CRM, `memory/`, and
