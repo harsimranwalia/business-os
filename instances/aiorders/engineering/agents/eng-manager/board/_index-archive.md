@@ -12,6 +12,2053 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — continue ENG-011: recovered an unrecorded build already through security, live-DB read verification closed part of the migration gap, ready → ready-to-ship
+
+`continue` event pass, context `ENG-011`, its actual turn at the front of
+`traces/.pending`. Narrow scope per the event's own contract. Mode check
+clean; pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board: exit 0, clean.
+
+Same recovery shape `ENG-007` hit earlier the same day, one occurrence
+further: both `_eng` worktrees already carried a pushed
+`feat/ENG-011-client-stage-health-visibility` branch, and all four gate
+receipts (database migration, code review, QA test plan, security review)
+already existed on disk with `pass` verdicts. Verified fresh rather than
+trusted — git state, `deno test` (12/12), `npm run build` (clean) all
+independently reproduced and matched. New this time: the Supabase MCP
+connection reaches the real `aiorders-api` project read-only, used at zero
+cost to independently confirm the migration's schema assumptions and rule
+out catalog-level dependents — closing the "is it safe" half of the
+long-standing no-live-Postgres gap without spending the approver's money
+or writing DDL to production ahead of review (both declined as out of this
+pass's own authority). Third occurrence of that host limitation crossed
+the threshold `observations.md` set for a proposal; filed one
+(`proposals.md`), not another observation.
+
+State recorded to match reality: `ready → building → in-review →
+in-security → ready-to-ship`, 4 transitions (cap). `machine_wip` and both
+approver-facing counters unaffected — no gate raised this pass, the L1
+merge request (both repos, this board's first two-repo release) is the
+next hop's work. Release window independently reconfirmed closed (Saturday
+2026-08-29, `releases.block_weekends`) — flagged for the next hop, not
+acted on, same split `ENG-006`/`ENG-007` used at this boundary.
+
+`chained: ENG-011` — `ready-to-ship` is agent-owned (devops opens the PR
+next). Fired `continue ENG-011`. Post-pass gate check: see pass notes. Full
+detail on the ticket's own log
+(`agents/eng-manager/board/ENG-011-client-stage-health-visibility.md`).
+
+## 2026-08-29 — decision ENG-011 (tickets-source question): a second predicted twin no-op, arrived after the fact was carried all the way to a closed thread
+
+`decision` event pass, context
+`inbox/_handled/2026-08-29-eng011-tickets-source-question.md` — the same
+duplicate-queued-event shape as the entry directly above, but a different
+gate item: `ENG-011`'s standing "tickets" question was queued as its own
+independent `decision` event, separate from its G1. Sixth occurrence of
+this shape today (`ENG-008`'s two gate items, `ENG-009`'s G1, `ENG-010`'s
+G1, `ENG-011`'s own G1, now this). Per this event's own narrower contract
+(act on the answered gate item, advance only the ticket it belongs to),
+scoped to `ENG-011` only — no board-wide sweep. Mode check clean
+(business-os `.env` → `MODE=` empty).  Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+whole-board: both exit 0, clean.
+
+**Confirmed rather than assumed.** `traces/eng-loop-2026-08-29.log`:
+`11:13:54 queue: collapsed 3 duplicate event(s)` fires immediately before
+`11:13:54 draining queued event: decision
+(2026-08-29-eng011-tickets-source-question.md)`, pass start `11:13:55`,
+claude launched `11:14:48`. By the time this pass reached the file, the
+same `intake` pass that raised the question had already caught the
+approver's hand-edit (`decision: rejected`, free text "Reading A",
+`decided: 2026-08-29T11:16:32.000840+00:00`) while still running, read it
+as a selection of Reading A rather than a flat rejection, shaped it
+directly into `ENG-012` in that same pass, and journaled the read
+(`decision-journal.md` row 27). Checked further than the last twin
+required: `ENG-012`'s own board file shows the thread didn't stop at
+"shaped" — a later `scheduled` pass found its G1 answered `rejected`
+("later") and carried it to terminal `state: dropped`. Frontmatter,
+footer, journal row, and `ENG-012`'s own log all agree — this thread is
+not just consumed, it's closed end to end.
+
+**0 transitions.** No cap affected — `ENG-011` was already inside the
+counted `ready`..`ready-to-ship` machine-WIP range before this pass, and
+this standing question was already off both approver-facing WIP and the
+approval cap (closed the same pass it was raised).
+
+**Dead-end sweep (scoped to this event):** re-confirmed `continue
+ENG-011` still sitting in `traces/.pending`, undrained, now behind a
+considerably longer backlog than the entry above last saw (fires for
+`ENG-013` through `ENG-024` have since queued). Still not stuck — no
+documented sequencing hold against a sibling ticket, purely FIFO
+position.
+
+**Notify sweep:** nothing to raise or nudge.
+
+`chained: none` — no state change; `ENG-011`'s existing chain (`continue
+ENG-011`) is already queued and will run when it reaches the front.
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-011`) and whole-board: both exit 0, clean. Full detail on the
+ticket's own log
+(`agents/eng-manager/board/ENG-011-client-stage-health-visibility.md`).
+
+## 2026-08-29 — decision ENG-011 (G1 scope): the predicted twin no-op — arrived after the fact was already consumed
+
+`decision` event pass, context `inbox/_handled/2026-08-29-eng011-g1-scope.md`
+— the same duplicate-queued-event shape already logged for `ENG-008`'s two
+gate items, `ENG-009`'s G1, and `ENG-010`'s G1 earlier today. Per this
+event's own narrower contract (act on the answered gate item, advance only
+the ticket it belongs to), scoped to `ENG-011` only — no board-wide sweep.
+Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+whole-board: both exit 0, clean.
+
+**Confirmed rather than assumed.** `traces/eng-loop-2026-08-29.log`:
+`10:59:40 queue: collapsed 2 duplicate event(s)` fires immediately before
+`10:59:40 draining queued event: decision (2026-08-29-eng011-g1-scope.md)`
+— duplicate copies of this event collapsed to the oldest, which is this
+pass. This item's fact — the approver's G1 approval — was fully consumed by
+the `intake` pass that raised it, which caught the hand-edit (`decided:
+2026-08-29T11:14:54.862156+00:00`) while still running: architect design
+work done (`stage`/`health` both derived at read time from existing
+columns/pipelines, no new stored fields — closing the drift-risk the
+readback itself flagged), the ticket carried `awaiting-scope → designed →
+ready`, journaled (`agents/eng-manager/config/decision-journal.md`, row
+26), and the gate item moved to `inbox/_handled/` with its own processed
+footer. Checked fresh: the ticket's own frontmatter (`state: ready`,
+`owner: eng-manager`), the journal row, and the footer all agree. Nothing
+left for this event to act on.
+
+**0 transitions.** No cap affected — `ENG-011` was already inside the
+counted `ready`..`ready-to-ship` machine-WIP range (6/6, at cap) before
+this pass, and this G1 was already off both the approver-facing WIP and
+approval cap counts.
+
+**Dead-end sweep (scoped to this event):** confirmed `continue ENG-011` —
+fired by the pass that closed this ticket's G1 — still queued and
+undrained in `traces/.pending`, behind several older not-yet-drained
+fires. Unlike `ENG-009`/`ENG-010`, `ENG-011` carries no documented
+sequencing hold against a sibling ticket, so nothing here is deliberately
+parked — it's simply not yet its turn in the FIFO queue.
+
+**Notify sweep:** nothing to raise or nudge.
+
+`chained: none` — no state change; `ENG-011`'s existing chain
+(`continue ENG-011`) is already queued and will run when it reaches the
+front. Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-011`) and whole-board: both exit 0, clean. Full detail on the
+ticket's own log
+(`agents/eng-manager/board/ENG-011-client-stage-health-visibility.md`).
+
+## 2026-08-29 — intake: FoodSwipe location-search bug traced to onboarding's missing `show_in_marketplace`, shaped to ENG-024, fast lane, G1 auto-skipped
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-fix-the-location-bug-on-foodswipe.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end — did not sweep the rest of
+the board. Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` not re-checked separately this pass, no signal it
+changed). No pre-pass `lib/eng-gate-check.sh` run through the trigger this
+session either (started directly, same known gap prior entries have already
+named) — ran it post-pass instead, scoped and whole-board (below).
+
+**No worktree existed on this host for any of the five registered projects**
+(`~/Documents/projects/_eng/` itself was absent, not just missing entries) —
+none created; `git worktree add` felt like more than an `intake` pass should
+reach for on its own initiative when the investigation could be done
+read-only. Investigated by reading the human's own checkout directly
+(`~/Documents/projects/aiorders/*`), strictly read-only — no git command run
+there, no file written there. Whoever next needs to actually build against
+`aiorders-api` for this ticket still needs a real worktree
+(`config/projects.md`'s by-hand `git worktree add -b eng/base` command, or a
+full `lib/eng-setup.sh --apply`); not created here.
+
+**Traced the report to a full, confirmed root cause across two repos before
+sizing anything** — skipped `skills/request-readback/SKILL.md`'s dual-reading
+ceremony by design (fast lane, see below), and used the saved budget to chase
+the actual code instead: `aiorders-api/supabase/functions/restaurant-portal-onboarding/restaurants.ts`'s
+`createRestaurant` inserts a new restaurant with `approved: true` but never
+sets `show_in_marketplace`; the same file's `updateRestaurantDetails`, called
+immediately after in the same onboarding action
+(`restaurant-portal/src/components/onboarding/steps/AddLocationsStep.tsx` →
+`addLocationFromPlace`), writes Google Places data through
+`mapPlaceToRestaurantRow` (`_shared/googlePlaces.ts`) — confirmed its own
+`RESTAURANT_PLACE_COLUMNS` whitelist also excludes `show_in_marketplace`, so
+nothing anywhere in the sign-up path ever sets it. Every marketplace search
+path hard-requires it: `restaurant-marketplace/handlers/restaurants.ts`'s
+primary `get_restaurants_optimized` RPC and its own fallback query both filter
+`.eq('approved', true).eq('show_in_marketplace', true)`, matching the RPC's
+own definition
+(`restaurant-marketplace/supabase/migrations/20240302_optimize_restaurant_discovery.sql`);
+`sitemap.ts` carries the same requirement. The only place in the codebase that
+ever sets the flag `true` is a manual checkbox on an internal admin page
+(`aiorders-admin-hub/src/pages/RestaurantDetails.tsx`). `geo` itself **is**
+set correctly by `updateRestaurantDetails` — this is specifically a
+visibility-flag gap, not a geocoding one, confirmed rather than assumed from
+the report's "search by location" wording.
+
+**Sized XS, lane `fast`** — single-file code fix (one field on one existing
+insert) plus a one-time backfill `UPDATE` for rows already stuck invisible;
+no schema change (column exists already), no new interface, touches none of
+the fast-lane exclusion list (auth, payments, data deletion, schema,
+dependencies, model calls, public contracts, PII). `type: bug` — G1
+auto-skipped per `definition-of-done.md`'s state table, so no gate item
+raised and neither approver-facing WIP nor the approval cap is touched by
+this ticket at all.
+
+**Filed `ENG-024`** (project `aiorders-api`; severity `P1` — the sign-up
+flow's entire point silently fails with no error and no signal to anyone,
+though a manual admin workaround exists so it falls short of P0). PRD:
+`agents/product-manager/specs/ENG-024-onboarded-restaurants-missing-from-marketplace-search.md`.
+Named two things explicitly out of scope rather than silently narrowing: a
+second insert site with the identical omission
+(`aiorders-api/supabase/functions/restaurant-claims/index.ts`, the separate
+"claim your restaurant" flow) sets `approved: false` by design, so whether
+*its* eventual approval step also needs to set the flag is a different,
+unverified question, not pulled into this ticket; and the column's actual
+DB-level default isn't defined in any tracked migration in any of the five
+repos, left for whoever builds this to confirm on the way past.
+
+**Held at `shaped` only long enough to write this entry, not blocked by any
+cap** — machine WIP counts `ready`..`ready-to-ship` only, and G1 being
+auto-skipped means this ticket never touched approver-facing WIP or the
+approval cap either. Owner handed to `eng-manager` immediately: per
+`agents/product-manager/agent.md`, sequencing/WIP/assignment is the EM's job
+even for an auto-approved bug, never the PM's, so this pass deliberately
+stopped short of pushing the ticket into `ready`/`building` itself — the
+latter is new implementation work, which is this `intake` event's own named
+stopping condition regardless of lane. **1 transition**
+(`intake → shaped`), well under the cap of 4.
+
+**Rolled the board index this pass** — one more dated entry than the
+keep-three rule allows before this one landed; moved the oldest
+(`ENG-021`'s chat-bar entry) to the top of `_index-archive.md`'s list,
+verified by direct before/after line comparison rather than assumed clean.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract beyond the fresh work above. `ENG-007` through `ENG-023` otherwise
+untouched.
+
+**Observations filed** (`observations.md`): the `restaurant-claims` sibling
+gap named above, as a suspicion worth a follow-up look rather than a
+confirmed second bug — not escalated to a proposal since it's unverified
+whether the claims-approval step already closes it downstream.
+
+`chained: ENG-024` — fired `lib/eng-trigger.sh continue ENG-024` before this
+pass exits: `shaped`, owner `eng-manager`, an agent-owned state with no gate
+to wait at (G1 auto-skipped), nothing about this ticket waiting on a human.
+Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-024-onboarded-restaurants-missing-from-marketplace-search.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-024`)
+and whole-board: both exit 0, clean.
+
+## 2026-08-29 — decision ENG-009 (G1 scope): the predicted twin no-op — arrived after the fact was already consumed
+
+`decision` event pass, context `inbox/_handled/2026-08-29-eng009-g1-scope.md`
+— the same duplicate-queued-event shape already logged twice on this board
+for `ENG-008`'s own two gate items (now both archived). Per this event's own
+narrower contract (act on the answered gate item, advance only the ticket it
+belongs to), scoped to `ENG-009` only — no board-wide sweep. Mode check
+clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+`mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-009`) and whole-board: both exit 0, clean.
+
+**Confirmed rather than assumed.** `traces/eng-loop-2026-08-29.log`:
+`10:18:40 queue: collapsed 3 duplicate event(s)` fires immediately before
+`10:18:40 draining queued event: decision (2026-08-29-eng009-g1-scope.md)`
+— three legitimately-queued copies of this event collapsed to the oldest,
+which is this pass. This item's fact — the approver's G1 approval, plus an
+unprompted staff-notes addendum already shaped into `ENG-010` — was fully
+consumed by the `scheduled` pass (context `schtasks`) that found it sitting
+answered-but-unprocessed: shaped, journaled (`decision-journal.md` row 25),
+moved to `inbox/_handled/` with its own processed footer, and `ENG-009`
+itself carried `awaiting-scope → designed → ready` in that same pass.
+Checked fresh: this item's frontmatter (`decision: approved`, `decided:
+2026-08-29T09:20:42.679606+00:00`), the journal row, and `ENG-009`'s own
+`state: ready` all agree — nothing left for this event to act on.
+
+**0 transitions.** No cap affected — `ENG-009` was already inside the
+counted `ready`..`ready-to-ship` machine-WIP range (6/6, at cap) before this
+pass, and this G1 was already off both the approver-facing WIP and approval
+cap counts.
+
+**Dead-end sweep (scoped to this event):** confirmed `continue ENG-008`
+still queued and undrained in `traces/.pending`, behind several other
+not-yet-drained fires — consistent with `ENG-008` still sitting at `ready`
+with no branch or build started. `ENG-009`'s existing sequencing hold
+(re-check once `ENG-008` reaches `in-review` or later) therefore still
+applies unchanged. Nothing to resume.
+
+**Notify sweep:** nothing to raise or nudge.
+
+`chained: none` — no state change; `ENG-009` remains held at `ready` pending
+`ENG-008`. Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-009`) and whole-board: both exit 0, clean. Full detail on the ticket's
+own log
+(`agents/eng-manager/board/ENG-009-influencer-engagement-info.md`).
+
+## 2026-08-29 — intake: feedback-board status/notes shaped to ENG-023, held at `shaped` — and a P0 tenant-isolation bug found along the way, filed as ENG-022
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-the-feedback-board-on-the-brand-portal-does-not-have-status-.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end — did not sweep the rest
+of `agents/product-manager/inbox/` (`fix-the-location-bug-on-foodswipe`
+untouched). Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Caps checked fresh from `inbox/` directly**: `ENG-014`'s and `ENG-015`'s
+G1s both still sit in `inbox/`, both `decision: approved`, neither
+frontmatter advanced — same answered-but-unprocessed state as every pass
+today since `ENG-021`'s. Treated conservatively as still 2/2 approver-facing
+WIP, 2/3 approval cap.
+
+**Traced the request to its backend before proposing anything**: brand
+portal's Feedback page → `brandPortalApi.getFeedback` →
+`aiorders-api`'s `brand-portal/feedback.ts` → `restaurant_feedback` schema
+(no `status`/`notes` columns at all, confirmed). That trace surfaced a
+second thing: `feedback.ts`'s own access check,
+`verifyRestaurantAccess(supabase, user.id, restaurant_id)`, has its
+arguments in the wrong order against the real signature
+(`restaurantId, supabase, user, options`) *and* checks the returned
+`{hasAccess, error}` object's truthiness instead of its `.hasAccess` field
+— so the check can never deny access, for anyone, to any restaurant's
+feedback. Grepped every `verifyRestaurantAccess` call site in
+`brand-portal/` (9 files) rather than assuming this was isolated: found the
+identical wrong-order-plus-truthiness bug in all 8 call sites of
+`offers.ts`, and a second, different mistake — the check called but its
+return value discarded entirely, so it does nothing regardless of argument
+order — in `customers.ts` (5 sites), `hiring.ts` (3), `website.ts` (2).
+Confirmed correct, for contrast: `catering.ts`, `restaurants.ts`, `menus.ts`
+(7 sites), `onlineOrders.ts`. Net: any authenticated brand-portal user can
+read or write any other restaurant's customer feedback, customer list,
+offers, or website content by supplying a different `restaurant_id` — no
+exploit tooling needed. `aiorders-api` is documented in `config/projects.md`
+as "Highest blast radius of the set — shared backend for all four
+frontends."
+
+**Filed as its own ticket, not folded into the feedback ticket and not
+routed through `agents/eng-manager/proposals.md`.** Per
+`agents/product-manager/agent.md`'s `never_touches` list, a security finding
+isn't the PM's to fix or fold into a feature PRD — but per
+`schedules/eng_build_loop.md` step 3's explicit bypass and
+`templates/ticket.md`'s `source:` note, **a P0 on a registered non-internal
+project "keeps its agent source"** and is filed directly rather than queued
+for a weekly batched G1: "a live security hole must not wait for a weekly
+batch." Rated **P0** rather than P1 on the merits (weighed directly against
+this board's other confirmed cross-tenant finding, `ENG-015`, itself P1):
+`agents/eng-manager/config/security-baseline.md` names "exposed data" as an
+active-security-incident example on par with a leaked credential, and
+`agents/security/agent.md`'s own `interrupt_rule` is "P0 only — active
+incident, leaked credential, or exposed data." This exposes live customer
+PII (not just listings, as `ENG-015` did) and grants unauthorized
+cross-tenant *writes* (offers, website content), across five files rather
+than one.
+
+**Filed `ENG-022`** (`type: security`, `severity: P0`, `project:
+aiorders-api`). PRD (short-form — auto-skip type, no readback needed for an
+agent-originated finding with its own evidence):
+`agents/product-manager/specs/ENG-022-brand-portal-tenant-isolation-broken.md`.
+Landed at `state: shaped, owner: architect` rather than attempting
+`designed` myself — that state's exit condition (tech design, ADRs) is the
+architect's own output. **Per `security-baseline.md`, "only two things reach
+the approver directly... an active security incident — P0,"** so this also
+raised an incident notice rather than only a ticket:
+`inbox/2026-08-29-eng022-p0-incident.md` (`gate: incident`). Ran
+`departments/engineering/lib/eng-notify.sh raise` on it — **exit 0, but
+confirmed via `traces/eng-notify-2026-08-29.log` that this is the
+already-known, already-proposed no-op** (`proposals.md`, 2026-08-25 row:
+`SLACK_WEBHOOK_URL` unset, and this instance's own `config/config.yaml`
+sets `approver.notify: telegram`, which the script has no branch for
+regardless). The item is on disk in `inbox/` and will surface via the
+control center and the next daily brief/weekly report even though the push
+did not fire — noted here rather than silently trusted, same practice this
+board used the first time this exact gap was caught (2026-08-25). Did not
+attempt a fix — that script's channel-dispatch logic is already a queued
+proposal and touching its core dispatch path outside that review felt like
+larger scope than this pass should take unilaterally.
+
+**Then completed the assigned intake work.** Ran the full request-readback
+(`skills/request-readback/SKILL.md`): this PM's own reading plus a blind
+architect reading (subagent, `opus`, raw request +
+`knowledge/business-profile.md` only, no repo access, no exposure to this
+PM's own reading, no exposure to the `ENG-022` investigation either — kept
+genuinely blind). **Strong convergence on the core** — both independently
+landed on "each feedback item needs a status and an internal note,"
+unprompted. **One material divergence**: the architect's reading treated
+"is this frequent" / "bottomline issues" as asking for a built cross-item
+aggregation/analytics layer (counts, recurring-issue detection, possibly
+AI-assisted categorization); this PM's own reading leaned toward "a
+restaurant can judge that for itself once notes exist," a materially
+smaller build. Per the skill's divergence table this is genuine — different
+scope, not different wording — so not resolved internally.
+
+**Did not hold the ticket for it**, same shape as `ENG-013`'s
+presignup-leads question → `ENG-017`: the confirmed core (status + notes)
+ships regardless, and the divergence became its own non-blocking question,
+`inbox/2026-08-29-eng023-frequency-question.md` (`gate: intake-question`) —
+"yes" becomes its own ticket once scoped; "no" just closes it. Ran
+`lib/eng-notify.sh raise` on it too (same known no-op logged above).
+
+**Filed `ENG-023`** (`type: feature`, `size: S`, `project:
+restaurant-portal`). PRD:
+`agents/product-manager/specs/ENG-023-feedback-status-and-notes.md`.
+**Cross-referenced both new tickets explicitly**: `ENG-023`'s new write path
+touches the same file as `ENG-022`'s fix
+(`brand-portal/feedback.ts`) — flagged on both that the new
+`update_feedback` handler must be modeled on `catering.ts`'s confirmed-
+correct `update_catering_request`, not on this file's own (until `ENG-022`
+lands) broken `getFeedback`. Not a formal `depends_on` — sequencing between
+them is the EM's call at `ready`.
+
+**Held `ENG-023` at `shaped`, not advanced to `awaiting-scope`** —
+approver-facing WIP 2/2 per the fresh check above. G1 content fully drafted
+in the PRD's Decision section, ready to raise the moment a slot clears.
+**Consequence for both tickets:** no cap numbers change — `shaped` counts
+toward neither approver-facing WIP nor machine WIP (still 6/6). **2
+transitions total** (`ENG-022` and `ENG-023` each `intake → shaped`), well
+under the per-ticket cap of 4.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract beyond the fresh cap-verification above. `ENG-007` through
+`ENG-021` otherwise untouched.
+
+**Observations filed** (`observations.md`): none beyond what both new
+tickets already carry directly — the `ENG-014`/`ENG-015`
+answered-but-unprocessed backlog is now six consecutive passes old without
+a `decision` event picking it up, re-flagged again; added one line noting
+`eng-notify.sh`'s channel-dispatch gap (`proposals.md`, 2026-08-25) was
+confirmed a second time this pass, this time on a P0's own incident notice,
+strengthening rather than duplicating that existing proposal.
+
+`chained: ENG-022` — `shaped`, owned by `architect`, an agent-owned state;
+fired `lib/eng-trigger.sh continue ENG-022` before this pass exits given the
+severity, rather than waiting for a scheduled sweep. Confirmed via
+`traces/.pending` and `traces/eng-loop-2026-08-29.log` that this queued
+correctly rather than launching immediately — this session has held
+`traces/.loop.lock` since this pass's own start (09:46:13; the log's last
+entry, 10:11:36, already shows two `watch` fires and one `continue` fire
+queuing behind it rather than stealing it, "PID 89985 is alive"), so
+`continue ENG-022` joined 15 other fires already queued behind the same
+lock. Not a stuck lock — it releases the moment this pass exits, and
+whatever fires next drains the queue oldest-first; several of the queued
+`decision` items look, from their own filenames, like they'll resolve as the
+same already-consumed-before-the-fire-arrived no-ops this board has logged
+twice already today. Left alone rather than manually drained — outside this
+event's scope and not this pass's concurrency state to hand-edit. `chained:
+none` for
+`ENG-023` — `shaped`, held by the approver-facing WIP cap, not genuinely
+blocked for this ticket specifically; re-check once a
+`decision`/`watch`/`scheduled` pass clears `ENG-014` or `ENG-015`. Full
+detail on each ticket's own log
+(`agents/eng-manager/board/ENG-022-brand-portal-tenant-isolation-broken.md`,
+`agents/eng-manager/board/ENG-023-feedback-status-and-notes.md`). Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-022`,
+`ENG-023`) and whole-board: all three exit 0, clean.
+
+## 2026-08-29 — intake: website chat-bar engagement gap shaped to ENG-021 — customer-questions view plus brand-portal FAQ editor, held at `shaped`
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-the-search-chat-bar-engagement-on-website-is-not-displayed-v.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end rather than sweeping the
+board — two other unshaped `agents/product-manager/inbox/` requests
+untouched (`fix-the-location-bug-on-foodswipe`,
+`the-feedback-board-on-the-brand-portal-does-not-have-status-`), each with
+its own `intake` event presumably already queued or pending. Mode check
+clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+`mode:` empty). No genuine pre-pass gate-check this time either — same gap
+`ENG-019`'s own archived entry already named: this session started
+directly rather than through `lib/eng-trigger.sh`'s own pre-pass injection.
+Ran `departments/engineering/lib/eng-gate-check.sh` for real after
+finishing this ticket's edits instead (below) — the only verdict this entry
+can honestly report.
+
+**Caps checked fresh from `inbox/` directly, not the cached header.** Found
+`ENG-014`'s and `ENG-015`'s G1s both now `decision: approved` (decided
+15:54:50 and 16:12:24) — a genuine change since the header was last
+written, which claimed both "unanswered." Neither ticket's own frontmatter
+has moved past `state: awaiting-scope, owner: approver` yet, so both
+mechanically still hold their approver-facing WIP slot until a `decision`
+pass processes them — treated conservatively as still 2/2, at cap, for
+this pass's own G1 decision below. Processing those two decisions is out of
+this event's scope (a `decision` event's job, apparently already in flight
+independently for each); corrected the board header and the "Waiting on
+the approver" section to say so plainly instead of repeating the
+now-stale "both unanswered," and filed an observation
+(`observations.md`) rather than acting on them directly.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading, grounded in live code across `config-site-builder`,
+`aiorders-api`, `aiorders-admin-hub`, and `restaurant-portal` (all four
+worktrees already present on this host at `$ENG_WORKTREES`, no creation
+needed this pass), plus a blind architect reading (subagent, `opus`, raw
+request + `knowledge/business-profile.md` only, no repo access, no exposure
+to this PM's own reading). **No material divergence** — both independently
+converged on the same core shape: capture real customer questions from the
+chat bar, surface them to the owner, and let the owner act on them via
+FAQs, as one closed loop on the brand portal. The architect's blind
+reading, reasoning with no code access, correctly flagged as open questions
+several things this PM's code-grounded reading confirmed directly instead:
+whether queries are even captured today (yes, durably), whether the owner
+already has backend read access to that data (yes, via an existing but
+entirely unused RLS policy), and who authors the FAQ content today (staff
+only, in the internal admin tool). None of these changed the shape of the
+request, only its cost. The architect's PII and "answered vs. unanswered"
+signal concerns were carried into the PRD's Risks/Non-goals rather than the
+acceptance criteria, since neither is what the literal request asks for.
+
+**Investigated all four repos before proposing anything.** Traced the
+"search/chat bar" to `config-site-builder`'s `AISearchBar`/`ChatPanel`,
+rendered site-wide via `Layout.tsx` behind a per-restaurant `showAIChat`
+flag — live today, not hypothetical. Every turn is written by
+`aiorders-api`'s `ai-search-openrouter` edge function to `ai_conversations`
+(`session_id`, `restaurant_id`, `messages` jsonb, timestamps) — confirmed
+this table already carries an RLS policy titled "Restaurant managers can
+view their restaurant conversations" (`restaurant-portal` migration
+`20250903152559_...sql`), granting the exact access this request needs,
+entirely unused by any UI in either `restaurant-portal` or
+`aiorders-admin-hub` (grepped both for `ai_conversations` usage beyond
+generated types — zero hits). The bot's FAQ source is
+`restaurant_website.faqs`, editable today only in `aiorders-admin-hub`'s
+`RestaurantAIWebsite.tsx` via direct Supabase calls, no edge function in
+the path. Confirmed `restaurant-portal` has a same-named but **unrelated**
+FAQ list (`CateringFaq`, catering-page-specific) that does not touch this
+data — flagged in the ticket so the next agent doesn't wire the new editor
+to the wrong field. Confirmed `restaurant-portal` already reads/writes
+`restaurant_website` directly today for a different section
+(`src/pages/hiring/Index.tsx`, careers content) — the precedent pattern for
+the new editor, and evidence (not proof — the literal RLS policy text on
+`restaurant_website` was not read) that the owner's account can likely
+already write to this table.
+
+**Filed `ENG-021`** (project `restaurant-portal`; size `M` — two coordinated
+frontend pieces in one repo, reusing existing tables/RLS on both sides, no
+new backend endpoint anticipated; severity `P2`, same "real capability gap,
+real manual workaround" calibration as `ENG-020` earlier today). PRD:
+`agents/product-manager/specs/ENG-021-chat-bar-engagement-and-faq-self-service.md`.
+Scoped as a real-questions log plus a working FAQ write path, not a
+quality/gap-analysis dashboard: "answered vs. unanswered" scoring and
+cross-session question clustering are named Non-goals/follow-on work, same
+"ship the coherent core, name the harder measurement layer as follow-on"
+shape `ENG-016`/`ENG-019`/`ENG-020` already used on this board. A
+staff-facing (admin-hub) mirror of the same view is named a Non-goal too —
+plausible future value, not what was asked.
+
+**Held at `shaped`, not advanced to `awaiting-scope`.** Approver-facing WIP
+reads 2/2 per the fresh-but-conservative check above. G1 content (readback,
+both readings' comparison, non-goals, recommendation) is fully drafted in
+the PRD's own Decision section and ready to raise the moment a slot
+actually clears. **1 transition** (`intake → shaped`), well under the cap
+of 4. **Consequence:** no cap numbers change — `shaped` counts toward
+neither approver-facing WIP nor machine WIP (still 6/6).
+
+No `inbox/` item raised this pass (no G1 to notify on yet), so no
+`lib/eng-notify.sh` call.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract beyond the fresh cap-verification above. `ENG-007` through
+`ENG-020` otherwise untouched.
+
+**Observations filed** (`observations.md`): the `ENG-014`/`ENG-015`
+answered-but-unprocessed finding above; a pre-existing dangling
+`"scheduled sweep below"` cross-reference in this file's `ENG-012`
+narrative, left unfixed as out of this event's scope.
+
+`chained: none` — `ENG-021` sits at `shaped`, held by the approver-facing
+WIP cap, not genuinely blocked or waiting on a human for this ticket
+specifically; firing `continue ENG-021` now would only re-discover the same
+cap with no new work to do. Re-check once a `decision`/`watch`/`scheduled`
+pass actually clears `ENG-014` or `ENG-015`. Full detail on the ticket's
+own log
+(`agents/eng-manager/board/ENG-021-chat-bar-engagement-and-faq-self-service.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-021`) and whole-board: both exit 0, clean.
+
+## 2026-08-29 — decision ENG-008 (G1 scope): the predicted twin no-op — arrived after the fact was already consumed
+
+`decision` event pass, context `inbox/_handled/2026-08-29-eng008-g1-scope.md`
+— this is the exact item the immediately preceding entry's own
+`observations.md` note predicted would be the same no-op. Per this event's
+own narrower contract (act on the answered gate item, advance only the
+ticket it belongs to), scoped to `ENG-008` only — no board-wide sweep. Mode
+check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, no
+output — clean, including for `ENG-008` specifically (grepped the output
+for it directly rather than trusting a clean exit code alone).
+
+**Confirmed the prediction rather than trusting it.** This item's fact —
+the approver's G1 approval of the admin-side scope — was already fully
+consumed by the `intake` pass that raised it: shaped, journaled
+(`decision-journal.md` row 23, "ENG-008 | G1 scope | approved"), moved to
+`inbox/_handled/` with its own processed footer, and `ENG-008` itself
+carried `awaiting-scope → designed → ready` in that same pass. Checked
+fresh rather than assumed: this item's own frontmatter (`decision:
+approved`, `decided: 2026-08-29T09:12:46.283064+00:00`) and processed
+footer; the journal row; `ENG-008`'s own frontmatter (`state: ready`) and
+log. All agree — nothing left for this event to act on. Same
+duplicate-queued-event race as its sibling (the engagement-source
+question, immediately above): both this G1 and that question were answered
+and consumed inside the same live `intake` pass, and the two standalone
+`decision` events each independently queued arrived afterward to find
+their own facts already closed.
+
+**0 transitions.** No cap affected — this item was already off every count
+before this pass (per this file's own header, which already excludes it
+from "Waiting on the approver" and the approval cap).
+
+**Dead-end sweep (scoped to this event):** `ENG-008` already carries a
+correct, reasoned chain decision from the preceding `scheduled` sweep
+(re-fired `continue ENG-008`) — confirmed still queued and undrained in
+`traces/.pending` as of this pass, so nothing to resume or fix.
+
+**Notify sweep:** nothing to raise (no new gate item); nothing to nudge
+(this item's `notified:`/`decision:` cycle closed same-day, hours before
+this pass).
+
+`chained: none` — no state change. `continue ENG-008` remains queued in
+`traces/.pending` from the earlier `scheduled` sweep; firing it again would
+only collapse into that existing copy at pop time, per the queue's own
+dedup rule. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+## 2026-08-29 — decision ENG-008 (engagement-source question): arrived after the fact was already consumed — no-op
+
+`decision` event pass, context
+`inbox/_handled/2026-08-29-eng008-engagement-source-question.md`. Per this
+event's own narrower contract (act on the answered gate item, advance only
+the ticket it belongs to), scoped to `ENG-008`/`ENG-009` only — no
+board-wide sweep. Mode check clean (business-os `.env` → `MODE=` empty;
+instance `config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+whole-board: both exit 0, clean.
+
+**Nothing to act on.** This item's fact — the approver's "both readings"
+answer — was already fully consumed by the `intake` pass that raised it,
+reading the hand-edit live while still running: shaped into `ENG-009`,
+journaled (`decision-journal.md`, "intake-question (engagement source)"
+row), moved to `inbox/_handled/`, and `ENG-009` itself carried all the way
+to `ready` by the `scheduled` sweep archived immediately above this entry.
+Re-confirmed fresh rather than trusted: this item's own frontmatter/footer,
+`ENG-009`'s ticket file, `ENG-008`'s own log, and the journal row all
+agree.
+
+**Fits the instance's well-documented duplicate-queued-event race
+exactly** — confirmed directly from `traces/eng-loop-2026-08-29.log`
+(`08:45:06 queue: collapsed 1 duplicate event(s)` immediately before
+draining this one): two copies of the same event were legitimately queued
+for the same underlying fact, and the live `intake` pass reached it first.
+Contrast the `continue ENG-006` no-op (2026-08-28, archived), which did
+*not* fit this pattern — that one came from a fire outside the chain
+mechanism entirely; this one is the ordinary race.
+
+**0 transitions.** No cap affected — this item was already off every count
+before this pass.
+
+**Observation filed** (`observations.md`): the next item in
+`traces/.pending` (`decision 2026-08-29-eng008-g1-scope.md`) is the same
+shape and will likely be the same no-op — that G1 was also already closed
+in the same pass that advanced `ENG-008` to `ready`.
+
+`chained: none` — no state change on either ticket; `continue ENG-008` is
+already queued from the preceding `scheduled` sweep, and firing it again
+here would only collapse into that existing copy at pop time. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+whole-board: both exit 0, clean.
+
+## 2026-08-29 — intake: "AI SEO has no ROI tracking" shaped to ENG-020 — traffic-source/revenue attribution report, Clarity named out of scope
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-ai-seo-no-way-to-track-if-its-useful-or-working-on-brand-das.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end rather than sweeping the
+board — three other unshaped `agents/product-manager/inbox/` requests
+untouched, each with its own `intake` event already queued or pending. Mode
+check clean (business-os `.env` → `MODE=` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (no ticket yet
+to scope to): exit 0, clean.
+
+**Caps checked fresh from `inbox/` directly, not the cached header, twice —
+once before starting and again immediately before deciding whether to raise
+G1.** Both checks agreed: `ENG-014`'s and `ENG-015`'s G1s both still read
+`decision:` empty — approver-facing WIP substantively 2/2, at cap,
+unchanged from the header going into this pass.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading, grounded in live code read across
+`aiorders-admin-hub`, `config-site-builder` (created this host's missing
+worktree to do so — the same per-host worktree gap this board has flagged
+repeatedly this session, now also hit for this project), `aiorders-api`,
+and `restaurant-portal`, plus a blind architect reading (subagent, `opus`,
+raw request + `knowledge/business-profile.md` only, no repo access, no
+exposure to this PM's own reading). **No material divergence** — both
+independently converged on the same core shape: a per-restaurant view on
+the brand portal joining traffic source to order/revenue outcomes, with
+Microsoft Clarity named as the wrong tool for the actual question being
+asked (behavioural analytics, not attribution or revenue). The architect's
+blind reading additionally, unprompted, caught a real ambiguity in the raw
+text itself — "but can demostrate" reads as missing a negation ("but
+[cannot] demonstrate") — resolved without a standing question since both
+readings independently landed on the same resolution, and raised several
+risks folded into the PRD's Risks section: attribution honesty (a
+last-touch number will overstate what SEO specifically did), cross-domain
+cookie-stitching coverage, PIPEDA/Quebec Law 25 exposure from session
+recording, no historical baseline for existing customers, small-restaurant
+traffic noise, and tenant isolation.
+
+**Investigated all four touched repos before proposing anything.** Traced
+"AI SEO" to a real, specific, already-shipped feature — not a vague
+marketing term: `aiorders-admin-hub`'s `RestaurantAIWebsite.tsx`/
+`BrandAIWebsite.tsx` has a staff-only "SEO Settings" tab with a "Generate
+with AI" button that writes `seo.title`/`description`/`keywords`/OG tags,
+consumed by `config-site-builder`'s `buildSeo.ts` when building each
+restaurant's public site. The restaurant owner never sees this feature or
+its output's performance anywhere today. Confirmed Microsoft Clarity
+appears nowhere in any of the five repos (case-insensitive search, zero
+hits) — not a first-class integration; if installed at all, it's via the
+generic custom-code head/body injection (`config-site-builder`'s
+`useCustomCode.ts`) or entirely outside AIOrders. **The core finding that
+shapes this ticket's low cost:** this is a reporting gap, not a capture
+gap. Every customer-signup path this platform has — online order, email
+signup, catering form, and a dedicated cross-subdomain tracking script
+(`config-site-builder/public/tracking/user-tracking.js`) — already writes
+`utm_source`/`utm_medium`/`utm_campaign`/`first_touch_source`/
+`last_touch_source`/`first_referrer` onto the `customers` row
+(`website-submissions/customer-signup.ts`, `email-signup.ts`,
+`update-customer-tracking.ts`, `catering-request/index.ts`,
+`crm/customers.ts`), and `autopilot/marketing/welcome.ts` already branches
+its own logic on `first_touch_source` — real, wired, already-populated
+columns that nothing reads back out to an owner. Confirmed the extension
+point: `aiorders-api`'s `analytics` edge function
+(`supabase/functions/analytics/database.ts`) already queries both `orders`
+and `customers` for a restaurant, so the join this needs already exists at
+that seam. Also confirmed `restaurant-portal`'s existing "Analytics" nav
+item (`pages/analytics/Index.tsx`) is entirely mock data about
+influencer-campaign performance — unrelated to website traffic, and
+flagged in the PRD/ticket so it isn't confused with or reused for this
+ticket.
+
+**Filed `ENG-020`** (project `restaurant-portal` — primary; `aiorders-api`
+also touched and named explicitly in the PRD, same multi-repo/singular-
+`project:`-field precedent this board has used since `ENG-003`; size `M`
+— no new data model, extends an already-wired edge function plus a new
+report view; severity `P2`, calibrated against this board's now-standard
+"real capability gap, real manual workaround" shape). PRD:
+`agents/product-manager/specs/ENG-020-marketing-roi-attribution-reporting.md`.
+Scoped deliberately smaller than the raw request's full framing: ships
+revenue-by-channel, not a true ROI ratio (no billing-cost data exists to
+weigh against), and organic-traffic revenue as the proxy for "is AI SEO
+working" rather than a dedicated AI-SEO-specific attribution flag (nothing
+records which restaurants have AI-generated vs. manual SEO applied today)
+— both named as Non-goals/follow-on work rather than built now, same
+"ship the coherent core, name the harder measurement layer as follow-on"
+shape `ENG-016`/`ENG-019` already used on this board. Microsoft Clarity
+integration itself is a Non-goal, with the reasoning stated plainly in the
+PRD rather than quietly dropped.
+
+**Held at `shaped`, not advanced to `awaiting-scope`.** Approver-facing WIP
+is substantively 2/2 (`ENG-014`, `ENG-015`) — per `eng_build_loop.md`'s
+Guards, same move this instance's four immediately preceding intake passes
+all made. G1 content (readback, both readings' comparison, non-goals,
+recommendation) is fully drafted in the PRD's own Decision section and
+ready to raise the moment a slot frees. **1 transition**
+(`intake → shaped`), well under the cap of 4. **Consequence:** no cap
+numbers change — `shaped` counts toward neither approver-facing WIP nor
+machine WIP (still 4/6).
+
+No `inbox/` item raised this pass (no G1 to notify on yet), so no
+`lib/eng-notify.sh` call.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the fresh cap-verification above. `ENG-007`
+through `ENG-019` otherwise untouched.
+
+**Observations filed** (`observations.md`): the confirmed staff-only
+scope of the "AI SEO" feature and the restaurant owner's total lack of
+visibility into it; the confirmed-real attribution data already captured
+and wired across five different entry points with nothing reading it back
+out; the existing `analytics` edge function as the natural extension
+point; the confirmed-mock-data state of the existing "Analytics" nav item,
+worth a look in its own right since it presents as live to an owner who
+has no way to know otherwise; the confirmed absence of Microsoft Clarity
+anywhere in code; the fourth occurrence of this host's stale-worktree-
+registry gap, this time for `config-site-builder`.
+
+`chained: none` — `ENG-020` sits at `shaped`, held by the approver-facing
+WIP cap rather than genuinely blocked or waiting on a human for this ticket
+specifically; firing `continue ENG-020` now would only re-discover the same
+cap with no new work to do. Re-check once a `decision`/`watch`/`scheduled`
+pass clears `ENG-014` or `ENG-015`, or via a dedicated `continue ENG-020`
+once either does. Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-020-marketing-roi-attribution-reporting.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-020`) and whole-board: both exit 0, clean.
+
+## 2026-08-29 — intake: brand-portal autopilot campaign gap shaped to ENG-019 (mass send + drip, ROI via coupon redemption), held at `shaped` — approver-facing WIP cap still full
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-client-brand-page-portal-autopilot-on-brand-portal-does-not-.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end rather than sweeping the
+board — four other unshaped `agents/product-manager/inbox/` requests
+untouched, each with its own `intake` event already queued or pending. Mode
+check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). No genuine pre-pass gate-check this
+time either — this session also started directly rather than through
+`lib/eng-trigger.sh`'s own pre-pass injection, same gap the immediately
+preceding `ENG-016` entry already flagged; ran
+`departments/engineering/lib/eng-gate-check.sh` for real after finishing
+this ticket's edits instead (see below), the only verdict this entry can
+honestly report.
+
+**Caps checked fresh from `inbox/` directly, not the cached header, twice —
+once before starting and again immediately before deciding whether to
+raise G1.** Both checks agreed: `ENG-014`'s and `ENG-015`'s G1s both still
+read `decision:` empty — approver-facing WIP substantively 2/2, at cap,
+unchanged from the header going into this pass. The
+`ENG-009`/`ENG-010`/`ENG-012`/`ENG-013`-question backlog remains answered
+but unprocessed (unchanged, still off the count per this board's
+established convention) — a further consecutive pass without a `decision`
+event or dead-end sweep clearing it; re-flagged in `observations.md`, not
+fixed here, out of scope for this `intake` event.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading, grounded in live code read across `restaurant-portal`
+and `aiorders-api` (created this host's missing `restaurant-portal`
+worktree to do it — see below), plus a blind architect reading (subagent,
+`opus`, raw request + `knowledge/business-profile.md` only, no repo access,
+no exposure to this PM's own reading). **No material divergence** — both
+independently converged on the same core shape: a self-service send
+capability layered beside the existing reactive `Automations` engine, a new
+campaign/audience/scheduling data model, and an ROI mechanism that doesn't
+exist today. The architect's blind reading additionally, unprompted, raised
+CASL consent exposure, cross-tenant scoping, durable scheduling
+infrastructure, and whether a restaurant-initiated send needs its own
+approval step — the last resolved as a non-issue (this repo's own
+human-approval constitution governs business-os's own outbound content, not
+a feature the AIOrders product exposes to its own paying customers) rather
+than a real fork. Full comparison in the PRD's own Readback section.
+
+**Investigated both touched repos before proposing anything.** This host's
+`$ENG_WORKTREES` held `aiorders-api` and `aiorders-admin-hub` but not
+`restaurant-portal` — third occurrence of the gap the architect first
+flagged 2026-08-29 for `aiorders-api` (`config/projects.md`'s "all five
+already exist" is a stale, Mac-only verification); created it with the same
+`git worktree add -b eng/base` command `lib/eng-setup.sh` runs, one project
+rather than the full script, same as that occurrence. Confirmed a real,
+load-bearing naming collision before writing anything: the brand portal
+already has a nav item called "Campaigns" (`pages/campaigns/*`,
+`services/campaignService.ts`, the `influencer_campaigns` table) that is
+entirely about inviting influencers to visit and post — unrelated to this
+request, and this PRD proposes a different label ("Broadcasts") for the new
+capability specifically to avoid it. Confirmed the brand portal's
+`Automations` page (`pages/autopilot/Automations.tsx`) is real,
+restaurant-facing self-service already, but every one of its trigger types
+(`TriggerType` in `types/autopilot.ts`) is reactive — tied to a customer
+lifecycle event — with no manual, scheduled, mass, or drip concept
+anywhere. Confirmed `offers.coupon_code` is already wired into three
+existing offer-based automations, the reuse target this PRD's proposed ROI
+mechanism (acceptance criterion 4) is built on rather than new tracking.
+Confirmed `outgoing-communications/actors/brands.ts`'s own
+`sendPerformanceReport`/`sendMonthlySummary` actions are unimplemented
+`TODO` stubs — the platform already intended owner-facing reporting once
+and never finished it, worth knowing before assuming either function does
+anything today. Also confirmed `pg_cron` is already live in this database
+(`platform_analytics_cron`), useful precedent for the scheduled-send/drip
+dispatch mechanism this ticket's architect will need to design.
+
+**Filed `ENG-019`** (project `restaurant-portal` — primary; `aiorders-api`
+also touched and named explicitly in the PRD, same multi-repo/singular-
+`project:`-field precedent `ENG-003`/`ENG-016` set; size `L`; severity
+`P2`, calibrated against `ENG-013`/`ENG-016`/`ENG-017`'s same "real
+capability gap, real manual workaround" shape). PRD:
+`agents/product-manager/specs/ENG-019-restaurant-marketing-broadcasts.md`.
+Scoped deliberately smaller than the raw request's full ask: ROI ships as
+coupon-redemption tracking only (reusing existing `offers` plumbing), with
+open/click attribution and richer segmentation named as Non-goals /
+proposed later work rather than built now — same "ship the coherent core,
+name the harder measurement layer as follow-on" shape `ENG-014`'s two-item
+split and `ENG-016`'s deferred deeper-autopilot item both already used on
+this board.
+
+**Held at `shaped`, not advanced to `awaiting-scope`.** Approver-facing WIP
+is substantively 2/2 (`ENG-014`, `ENG-015`) — per `eng_build_loop.md`'s
+Guards, same move this instance's three immediately preceding intake passes
+all made. G1 content (readback, both readings' comparison, non-goals,
+recommendation) is fully drafted in the PRD's own Decision section and
+ready to raise the moment a slot frees. **1 transition**
+(`intake → shaped`), well under the cap of 4. **Consequence:** no cap
+numbers change — `shaped` counts toward neither approver-facing WIP nor
+machine WIP (still 4/6).
+
+No `inbox/` item raised this pass (no G1 to notify on yet), so no
+`lib/eng-notify.sh` call.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the fresh cap-verification above. `ENG-007`
+through `ENG-018` otherwise untouched.
+
+**Observations filed** (`observations.md`): the confirmed "Campaigns"
+naming collision (influencer outreach, not customer messaging) and the
+label chosen to avoid it; the confirmed reactive-only shape of every
+existing `Automations` trigger type; the reusable `offers.coupon_code` and
+`pg_cron` prior art; the unimplemented brand performance-report/monthly-
+summary stubs; the third occurrence of this host's stale-worktree-registry
+gap.
+
+`chained: none` — `ENG-019` sits at `shaped`, held by the approver-facing
+WIP cap rather than genuinely blocked or waiting on a human for this ticket
+specifically; firing `continue ENG-019` now would only re-discover the same
+cap with no new work to do. Re-check once a `decision`/`watch`/`scheduled`
+pass clears `ENG-014` or `ENG-015`, or via a dedicated `continue ENG-019`
+once either does. Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-019-restaurant-marketing-broadcasts.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-019`) and whole-board: both exit 0, clean.
+
+## 2026-08-29 — scheduled: whole-board safety-net sweep clears the four-item answered-gate backlog, finds and re-fires ENG-008's broken chain
+
+`scheduled` event pass, context `schtasks` — the four-times-daily safety
+net, not a single-ticket event, so this entry covers the whole board
+rather than one request. Mode check clean (business-os `.env` → `MODE=`
+empty); pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board: exit 0, clean.
+
+**Cleared the answered-but-unprocessed backlog this board's own header had
+flagged for five consecutive passes.** `ENG-009` and `ENG-010`'s G1s
+(approved), `ENG-012`'s G1 (rejected), and `ENG-013`'s presignup-leads
+standing question (approved) were each read fresh from `inbox/`, acted on,
+journaled, and moved to `_handled/`:
+- `ENG-009` — design work corrected the ticket's own premise before
+  writing it (`followers`/`engagement`/growth fields already exist and are
+  already displayed, same edit-capability-gap shape `ENG-008` already
+  found for region/campaign-type — the note `ENG-008`'s design doc claimed
+  it had left here didn't actually exist; caught and corrected, see
+  `observations.md`). No one-way door. `awaiting-scope → designed →
+  ready`.
+- `ENG-010` — new `influencer_notes` table and a dedicated handler with a
+  narrower authorization check than `admin-portal`'s shared gate (excludes
+  `partner-admin`/`partner-user`, matching this ticket's own G1 default).
+  Also corrects an unverified citation in the ticket's own risk section
+  (see `observations.md`). No one-way door. `awaiting-scope → designed →
+  ready`.
+- `ENG-012` — G1 read as a plain rejection ("later"), not the
+  reading-under-rejection shape `ENG-011`'s tickets-question had.
+  `awaiting-scope → dropped`.
+- `ENG-013`'s presignup question — "yes" (Reading B) already had its own
+  ticket: an independent `intake` pass the same day had already filed
+  `ENG-017` from a different raw request and cited this same answer as
+  grounding. Closed against `ENG-017` rather than filed twice.
+
+Full reasoning on each ticket's own log; design docs at
+`agents/architect/designs/ENG-009-influencer-engagement-info.md` and
+`agents/architect/designs/ENG-010-influencer-relationship-notes.md`. Both
+G1s not previously journaled now are (`decision-journal.md`); `ENG-009`'s
+own G1 was already journaled at approval time.
+
+**Dead-end sweep found a broken chain, not just a slow queue.** `ENG-008`'s
+own log claims `chained: ENG-008` with the trigger fired, but no
+`continue (ENG-008)` pass ever ran — absent from `traces/.pending` and
+from every `pass start:` line in today's full loop log; no branch exists
+in either worktree. Re-fired `/bin/sh
+departments/engineering/lib/eng-trigger.sh continue ENG-008` this pass
+(queued cleanly behind this pass's own held lock — confirmed via the
+trigger's own "pass in flight" log line, no race). Full reasoning on
+`ENG-008`'s own log and `observations.md`. `ENG-009` and `ENG-010` are
+deliberately **not** chained yet — both extend/reuse code `ENG-008` builds
+first, and three tickets' own notes all flagged the same same-file
+concurrent-edit risk; re-check once `ENG-008` reaches `in-review` or
+later.
+
+**Merge detection:** no ticket sits at `blocked` — nothing to reconcile
+against git ancestry this pass.
+
+**No new gate item raised this pass** (only closures), so no
+`lib/eng-notify.sh raise` call. Approval cap and approver-facing WIP are
+now mechanically clean, not just substantively — both counts agree with
+`inbox/`'s actual contents for the first time in six passes; see the
+header above.
+
+**Consequence:** machine WIP 4/6 → 6/6 (**at cap** — `ENG-007`
+ready-to-ship; `ENG-008`/`ENG-009`/`ENG-010`/`ENG-011`/`ENG-013` ready;
+nothing further can enter `ready` until one clears). Approver-facing WIP
+and approval cap unchanged in substance (still `ENG-014`+`ENG-015` only)
+but now mechanically exact.
+
+**Observations filed** (`observations.md`, six rows this pass): the
+backlog clearing itself; two unverified-citation catches in the same
+design pass; the partner-admin/partner-user authorization question left
+open on `ENG-008`/`ENG-009`; `ENG-008`'s broken-chain finding; the
+machine-WIP-at-cap note above.
+
+`chained: none` for this entry itself — a whole-board sweep, not a
+single-ticket `continue`; each ticket's own chain decision is recorded on
+its own log (`ENG-008` re-fired; `ENG-009`/`ENG-010` deliberately held;
+`ENG-007`/`ENG-011`/`ENG-013` already correctly chained and untouched;
+`ENG-014`–`ENG-020` genuinely waiting on the approver or the
+approver-facing WIP cap, also untouched). Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean.
+
+## 2026-08-29 — intake: "no autopilot for sales staff/resellers" split into ENG-017 (presignup lead nurture) and ENG-018 (demo account), both held at `shaped` — approver-facing WIP cap still full
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-no-autopilot-on-admin-panel-for-our-sales-staff-resellers-to.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own
+narrower contract, worked only this one request end to end rather than
+sweeping the board — five other unshaped `agents/product-manager/inbox/`
+requests untouched, each with its own `intake` event already queued or
+pending. Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (no ticket yet
+to scope to): exit 0, clean.
+
+**Caps checked fresh from `inbox/` directly, not the cached header.**
+`ENG-014`'s and `ENG-015`'s G1s both still sit in `inbox/`, unanswered —
+approver-facing WIP substantively 2/2, at cap, exactly as the header
+already read. The `ENG-009`/`ENG-010`/`ENG-012`/`ENG-013`-question backlog
+remains answered but unprocessed (unchanged, still off the count per this
+board's established convention) — now a further consecutive pass without a
+`decision` event or dead-end sweep clearing it; re-flagged in
+`observations.md`, not fixed here, out of scope for this `intake` event.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading, grounded in a live search across all five repos,
+plus a blind architect reading (subagent, `opus`, raw request +
+`knowledge/business-profile.md` only, no repo access, no exposure to
+this PM's own reading). **No material divergence** — both independently
+read the raw request as **two** bundled asks (a demonstration account; and
+stage-triggered nurture automation for the sales/admin lead pipeline), both
+independently named "autopilot" as the existing customer-marketing engine
+redirected at a second audience, and both independently flagged
+reseller-vs-internal-staff scoping as a real, load-bearing prerequisite
+rather than a detail. The architect's blind reading additionally,
+unprompted, raised CASL-style consent exposure for cold-lead messaging and
+demo-data isolation from real sends/analytics — both checked against live
+code (see below) and confirmed real, not speculative.
+
+**A significant cross-reference surfaced during investigation, used as
+evidence but deliberately not acted on beyond that.** This request
+substantially restates `ENG-013`'s own presignup-leads standing question
+(`inbox/2026-08-29-eng013-presignup-leads-question.md`), already
+`decision: approved` with explicit verbatim direction — "autopilot built
+to nurture these leads to next stages autpmatically and send them
+emails/sms to nurture" — but still sitting unprocessed, part of the same
+backlog flagged every pass this session. Treated as **confirmed** grounding
+evidence for `ENG-017`'s core mechanism rather than re-derived from
+scratch; that gate item itself was **not** touched, moved, or journaled by
+this pass — it belongs to `ENG-013`'s own lifecycle, out of scope for an
+`intake` event about a different request. Flagged plainly in both tickets'
+Notes and in `observations.md` so a future `decision`/dead-end-sweep pass
+points that item at `ENG-017` instead of shaping a duplicate.
+
+**Investigated all five repos before proposing anything.** Confirmed the
+`leads` (website "become a client") table has no stage column and no
+consent flag at all, unlike the catering-request flow's explicit
+`consent_sms`/`consent_email`. Confirmed the existing `autopilot`/
+`outgoing-communications` engine's `communication_templates`/`trigger_type`
+model is hard-scoped to `restaurant_id` and a closed set of
+customer-lifecycle triggers — a presignup lead fits neither, so a
+lead-nurture engine reuses the underlying send services but needs a
+parallel trigger/template layer, not a drop-in extension; the router's
+`actor: 'admin'` path exists but all three of its handlers are
+unimplemented `TODO` stubs. Confirmed no mechanism anywhere attributes a
+website lead to a specific reseller (no referral code, no `partner_id` on
+`leads`). Separately, searched all five repos for any existing demo/sandbox
+concept: the only hit, `config-site-builder/public/config/
+demo-restaurant.json`, is a static SEO/config fixture, not a working
+account — confirmed genuinely net-new, and, combined with `ENG-011`'s
+prior finding of a live platform-wide analytics rollup
+(`platform_analytics_cron`), grounds why demo-activity isolation is written
+as an acceptance criterion rather than an implementation detail.
+
+**Filed two tickets, not one** — the raw request bundles two independently
+shippable pieces with different acceptance criteria and different primary
+surfaces, same split precedent this instance has applied all session
+(`ENG-009`/`ENG-010`, `ENG-011`/`ENG-012`, `ENG-014`'s two-item split):
+- `ENG-017` — Autopilot nurture for the presignup sales lead pipeline
+  (project `aiorders-api`; `aiorders-admin-hub` touched; size `L`;
+  severity `P2`). PRD:
+  `agents/product-manager/specs/ENG-017-presignup-lead-nurture-autopilot.md`.
+  Reseller access, and extending nurture to the Brands-page/Foodswipe-
+  funnel stage fields, both proposed as non-goals/follow-on work rather
+  than assumed in.
+- `ENG-018` — Sales demonstration account (project `aiorders-admin-hub`;
+  `restaurant-portal`, `config-site-builder`, `aiorders-api` touched; size
+  `L`; severity `P2`). PRD:
+  `agents/product-manager/specs/ENG-018-sales-demonstration-account.md`.
+  Reseller-branded demo clones proposed as a non-goal/follow-on; one
+  shared, neutrally-branded demo tenant proposed as the buildable-now
+  default.
+
+**Both held at `shaped`, not advanced to `awaiting-scope`.**
+Approver-facing WIP is substantively 2/2 (`ENG-014`, `ENG-015`) — per
+`eng_build_loop.md`'s Guards ("Approver WIP limit (2)... at the limit,
+nothing new starts that will need them"), same move this instance's own
+immediately preceding pass made for `ENG-016`. Both PRDs' G1 content
+(readback, non-goals, recommendation) is fully drafted and ready to raise
+the moment a slot frees. **1 transition each** (`intake → shaped`), well
+under the cap of 4. **Consequence:** no cap numbers change — `shaped`
+counts toward neither approver-facing WIP nor machine WIP (still 4/6).
+
+No `inbox/` item raised this pass (no G1 to notify on yet), so no
+`lib/eng-notify.sh` call.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the fresh cap-verification above. `ENG-007`
+through `ENG-016` otherwise untouched.
+
+**Observations filed** (`observations.md`): the `ENG-013`
+standing-question cross-reference and the recommendation against
+duplicating it; the confirmed-absent stage/consent concepts and the
+restaurant-scoped shape of the existing autopilot data model; the
+confirmed-absent demo/sandbox concept across all five repos and the live
+analytics rollup that makes isolation load-bearing.
+
+`chained: none` — both `ENG-017` and `ENG-018` sit at `shaped`, held by the
+approver-facing WIP cap rather than genuinely blocked or waiting on a human
+for either ticket specifically; firing `continue` on either now would only
+re-discover the same cap with no new work to do. Re-check once a
+`decision`/`watch`/`scheduled` pass clears `ENG-014` or `ENG-015`, or via a
+dedicated `continue ENG-017`/`continue ENG-018` once either does. Full
+detail on each ticket's own log
+(`agents/eng-manager/board/ENG-017-presignup-lead-nurture-autopilot.md`,
+`agents/eng-manager/board/ENG-018-sales-demonstration-account.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-017`, `ENG-018`) and whole-board: all three exit 0, clean.
+
+## 2026-08-29 — intake: catering page self-serve quote generator shaped to ENG-016, held at `shaped` — approver-facing WIP cap full
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-for-catering-page-need-next-step-quote-generator-page-which-.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end rather than sweeping the
+board — six other unshaped `agents/product-manager/inbox/` requests
+untouched, each with its own `intake` event already queued or pending. Mode
+check clean (business-os `.env` → `MODE=` empty). **No genuine pre-pass
+gate-check this time** — this session started directly rather than through
+`lib/eng-trigger.sh`'s own pre-pass injection, so there is no baseline
+verdict from before this pass's edits began; noted plainly rather than
+claimed. Ran `departments/engineering/lib/eng-gate-check.sh` for real after
+finishing this ticket's edits instead (see below), which is the only
+verdict this entry can honestly report.
+
+**Caps checked fresh from `inbox/` directly, not the cached header, before
+deciding how far to carry this ticket.** `ENG-014`'s and `ENG-015`'s G1s
+both still sit in `inbox/`, unanswered — approver-facing WIP substantively
+2/2, at cap, exactly as the header already read. `ENG-009`/`ENG-010`/
+`ENG-012`'s G1s and `ENG-013`'s standing question remain answered but
+unprocessed (unchanged, still off the count per this board's established
+convention) — now six consecutive passes without a dead-end sweep or
+`decision` event clearing them; re-flagged in `observations.md`, not fixed
+here, out of scope for this `intake` event.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading, grounded in live code read across all three repos
+this touches, plus a blind architect reading (subagent, `opus`, raw
+request + `knowledge/business-profile.md` only, no repo access, no
+exposure to this PM's own reading). **No material divergence on the core
+shape** — both independently converged on: a catering lead flow that
+dead-ends today without an automated path to a price; a self-serve quote
+builder with menu selection delivered as an SMS/email link; an
+owner-configurable toggle between real pricing and a generic
+acknowledgement; automatic stage progression; and owner edit/resend plus
+deeper `autopilot` use as separable, later work. **Two real forks
+surfaced**, neither assumed away: (1) whether the "generic message"
+fallback is the restaurant owner's site-wide setting or the customer's own
+per-visit choice — resolved by proposing both, the same "cheap either way"
+resolution the approver preferred at `ENG-008`; (2) whether "menu
+selection" reuses the existing menu's own per-item prices or implies a new
+catering-specific pricing model — resolved by proposing reuse, correctable
+at G1. Both bundled into the PRD as G1 riders rather than a separate
+blocking standing question, the same bar `ENG-015`'s G1 used for its own
+small fork.
+
+**Investigated all three touched repos before proposing anything.**
+Confirmed in `config-site-builder`: a live public `Catering.tsx` page whose
+own "How It Works" copy already promises a step ("Customize Your Menu")
+that doesn't exist anywhere in the code; its `CateringForm.tsx` posts to
+`aiorders-api`'s `catering-request` function, which inserts into the
+`catering` table, creates a CRM customer record, and notifies the
+**restaurant owner only** — nothing is ever sent back to the customer
+beyond an on-page "we'll contact you" message, confirming the exact gap
+named in the request. Confirmed in `restaurant-portal`: a real, shipped
+5-status kanban (`CateringKanban`/`StatusUpdateModal`/
+`CateringDetailModal`) with all five status strings hardcoded across three
+files and no server-side enum, so a sixth ("Quote Sent"-style) value is
+additive, not a migration. Confirmed in `aiorders-api`: a mature, already-
+shipped `autopilot`/`outgoing-communications` engine (DB-trigger-initiated,
+queued, per-restaurant customizable templates, already sending customer
+email/SMS) that today only fires on customer-lifecycle events, never
+catering — the concrete system the request's own "autopilot" mention
+names, and the natural target for the deeper-automation item named as
+future work rather than built now. Also confirmed `restaurant-marketplace`
+and the CloudWaitress popup widget each have their own, separate catering-
+submission code paths — grounding the PRD's scoping to `config-site-
+builder`'s own catering page only, the one surface the raw text actually
+names.
+
+**Filed `ENG-016`** (project `config-site-builder` — primary; `aiorders-api`
+and `restaurant-portal` also touched and named explicitly in the PRD,
+following the multi-repo/singular-`project:`-field precedent `ENG-003`
+set; size `L`; severity `P2`, calibrated against `ENG-013`'s same
+"real capability gap, real manual workaround" shape rather than `ENG-011`'s
+lighter `P3`). PRD:
+`agents/product-manager/specs/ENG-016-catering-quote-generator.md`.
+
+**Held at `shaped`, not advanced to `awaiting-scope`.** Approver-facing WIP
+is substantively 2/2 (`ENG-014`, `ENG-015`) — per `eng_build_loop.md`'s
+Guards ("Approver WIP limit (2)... at the limit, nothing new starts that
+will need them"), this ticket was carried through readback and PRD-writing
+(agent-owned work, costs the approver's queue nothing) but not advanced
+into a state that would raise a third open G1 against a cap of two. The
+PRD's G1 content (readback, both forks named as riders, recommendation) is
+fully drafted and ready to raise the moment a slot frees — nothing further
+to shape. **1 transition** (`intake → shaped`), well under the cap of 4.
+**Consequence:** no cap numbers change — `shaped` counts toward neither
+approver-facing WIP nor machine WIP. Machine WIP unaffected (4/6).
+
+No `inbox/` item raised this pass (no G1 to notify on yet), so no
+`lib/eng-notify.sh` call.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the fresh cap-verification above. `ENG-007`
+through `ENG-015` otherwise untouched.
+
+**Observations filed** (`observations.md`): the confirmed customer-side
+notification gap on catering submission; the additive (no-migration)
+shape of the existing hardcoded status lists; the already-shipped
+`autopilot`/`outgoing-communications` engine as the concrete target for
+the request's own deeper-automation ask; the answered-but-unprocessed
+inbox backlog, still unresolved, now six consecutive passes old.
+
+`chained: none` — `ENG-016` sits at `shaped`, an agent-owned state, but
+held there by the approver-facing WIP cap rather than genuinely blocked or
+waiting on a human for this ticket specifically; firing `continue
+ENG-016` now would only re-discover the same cap with no new work to do.
+Re-check once a `decision`/`watch`/`scheduled` pass clears `ENG-014` or
+`ENG-015`, or via a dedicated `continue ENG-016` once either does. Full
+detail on the ticket's own log
+(`agents/eng-manager/board/ENG-016-catering-quote-generator.md`). Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-016`) and
+whole-board: both exit 0, clean.
+
+## 2026-08-29 — intake: agency/reseller brand-scoping shaped to ENG-015 — two of four reported symptoms confirmed and traced to exact code, two found already fixed
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-admin-portal-is-not-optimized-for-new-agency-users-resellers.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end rather than sweeping the
+board — seven other unshaped `agents/product-manager/inbox/` requests
+untouched, each with its own `intake` event already queued or pending. Mode
+check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (no ticket yet
+to scope to): exit 0, clean.
+
+**Caps verified fresh from `inbox/` directly before raising**, same practice
+every pass today has used: `ENG-009`'s and `ENG-010`'s G1s and `ENG-013`'s
+standing question all read `decision: approved` but sit unprocessed;
+`ENG-012`'s G1 reads `decision: rejected`, also unprocessed — all four
+treated as closed for cap arithmetic per this board's established
+convention. Only `ENG-014`'s G1 was genuinely open before this pass:
+approver-facing WIP 1/2, approval cap 1/3, one WIP slot and two approval
+slots free.
+
+**This request carried real severity, flagged in advance.** A `watch`
+pass earlier today (`observations.md`, 2026-08-29) had already read the raw
+request closely enough to note it reads as "a cross-tenant authorization
+boundary gap... not a UI polish item" and to ask whoever shaped it to give
+it real severity rather than routine `P3`. Treated that as a pointer to
+verify, not a conclusion to inherit untested — see Investigation below.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading plus a blind architect reading (subagent, `opus`, raw
+request + `knowledge/business-profile.md` only, no repo access, no exposure
+to this PM's own reading). **No material divergence on intent** — both
+converged on a systemic, data-layer tenancy-scoping gap rather than
+isolated page bugs, and the architect's reading independently guessed that
+an agency→brand→location ownership relationship would have to already
+exist for the request to make sense — confirmed true against the live
+schema before writing anything (see below).
+
+**Investigated both live repos in depth before proposing anything**, same
+practice every ticket today has used, deeper here because the raw request
+names four separate symptoms across four pages. Confirmed the
+`partner-admin`/`partner-user` role pair already exists and already has a
+real brand-ownership relationship (`brands.partner_id`, backing a working
+`/partners/:id/assign-brands` screen) — this is a propagation gap in an
+existing model, not a greenfield access-control build. Traced the two
+symptoms that are genuinely real to exact code: `admin-portal/handlers/
+restaurants.ts`'s `getRestaurants()` always uses the service-role client
+with no role check at all (unlike its sibling `brands.ts`, which already
+branches service-role-only-for-`admin`), and the `restaurants` table's only
+`INSERT`-capable RLS policy names `admin`/`sub-admin` only, which is why the
+existing "Add Restaurant" modal's direct client-side insert silently fails
+for a partner caller. Also traced the other two named symptoms
+(Dashboard, Influencers) to exact code and found them **already blocked
+outright** for partner roles today — not leaking, not scoped, just denied
+— and resolved the raw text's ambiguous "or user" by checking `/users`
+directly rather than asking the approver to pick a reading: also already
+admin-only, both frontend and backend. Caught and corrected one of my own
+mid-investigation misreads before it reached the PRD (an `AppSidebar.tsx`
+conditional read in isolation, which looked like partner access but on
+reading its actual branch body and `ProtectedRoute.tsx` in full turned out
+to be a hide/deny) — logged in the ticket rather than silently fixed, same
+practice this instance applies to any other artifact's claim.
+
+**Filed `ENG-015`** (`awaiting-scope`, size `M`, project
+`aiorders-admin-hub`, `type: security`, severity `P1` — real, live,
+code-confirmed cross-tenant data exposure on a reachable admin page, for
+real onboarded users, today; short of P0 since this is a latent access-control
+gap rather than an active incident). PRD:
+`agents/product-manager/specs/ENG-015-agency-reseller-brand-scoping.md`. G1:
+`inbox/2026-08-29-eng015-g1-scope.md` — raised despite `security` being on
+`definition-of-done.md`'s G1-auto-skip list, a deliberate departure logged
+in the ticket's own Notes: a real (if small) policy fork exists that the
+raw request doesn't address (should a partner-created restaurant
+auto-approve like an admin-created one, or hold for review — proposed
+default: hold), and two of the four reported symptoms don't reproduce on
+this branch, both worth a one-tap confirm-or-correct rather than silently
+deciding either way. No separate standing-question item this time, unlike
+`ENG-011`/`ENG-013` — the auto-approve fork is a single default, not a
+scope fork that could roughly 10x the ticket's cost, so it's bundled into
+this same G1 rather than given its own gate.
+
+**2 transitions** (`intake → shaped → awaiting-scope`), well under the cap
+of 4 — the next state needs the approver, so this pass stops here by
+design. **Consequence:** approver-facing WIP 1/2 → 2/2 (at cap, not over);
+approval cap 1/3 → 2/3 (one slot free); machine WIP unaffected (4/6).
+
+Ran `departments/engineering/lib/eng-notify.sh raise` on the new `inbox/`
+item — logged the already-open `SLACK_WEBHOOK_URL unset` failure
+(`traces/eng-notify-2026-08-29.log`, 13:26:06 local), consistent with every
+gate raised on this instance today; `notified:` hand-stamped per
+established practice (the field was first written with a stale timestamp
+copied from `ENG-014`'s own example by mistake, caught and corrected before
+the raise, not after). No dissent section on the G1 — `agents/critic/
+agent.md` still doesn't exist (open proposal, `proposals.md` 2026-08-25
+row), confirmed absent again rather than assumed.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the fresh cap-verification above. `ENG-007`
+through `ENG-014` otherwise untouched. The answered-but-unprocessed backlog
+(`ENG-009`/`ENG-010`/`ENG-012`/`ENG-013`-question) is now five consecutive
+`intake` passes old without a `decision` event or dead-end sweep picking
+any of them up — re-flagged in `observations.md`, not fixed here, same as
+every pass before this one.
+
+**Observations filed** (`observations.md`): the precise root-cause trace for
+both confirmed defects; the page-by-page "deny outright rather than scope"
+pattern the three already-blocked pages share; the corrected mid-investigation
+misread.
+
+**Board:** rolled the oldest of three live dated entries (`intake: foodswipe
+funnel page shaped...`) into `_index-archive.md`, newest-first per that
+file's own convention, before adding this entry — net three entries live
+after this one, matching the keep-three rule. Extracted and moved
+programmatically (exact line range, not retyped) to avoid transcription
+drift on a ~150-line entry.
+
+`chained: none` — `ENG-015` sits at `awaiting-scope`, owned by the
+approver; the chaining guard never fires on a ticket waiting on a human.
+Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-015-agency-reseller-brand-scoping.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-015`) and whole-board: see pass notes.
+
+## 2026-08-29 — continue ENG-007: recovered an unrecorded build already through security, real ready-to-ship devops work done fresh
+
+`continue` event pass, context `ENG-007`. Per this event's own narrower
+contract, resumed only this ticket from its current state — no board-wide
+sweep. Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
+whole-board: both exit 0, clean.
+
+**Found the ticket's own board file still reading `ready` while four
+complete, dated, mutually-consistent gate receipts already sat on disk**
+(migration, code review, QA, security — all citing commit `2aec86f` on
+`loyalty-system`). Verified fresh rather than trusted: confirmed the commit
+is real, pushed, and unmerged (`git merge-base --is-ancestor` → not an
+ancestor of `origin/main`); confirmed no PR is open yet (`gh pr list --head
+loyalty-system --state all` shows only `ENG-006`'s already-merged one);
+independently re-ran `deno test`/`check`/`lint` against the live worktree
+rather than trusting the receipts' own claims — 44/44 passing, clean check,
+clean lint, matching every receipt exactly. Recorded the recovered state
+machine (`ready → building → in-review → in-security`, 3 transitions) and
+then did the genuinely new work `ready-to-ship` still owed — release plan,
+rollback, observability, and a $0/month cost delta, none of which any prior
+receipt covered — reaching `ready-to-ship` (4th transition, at this pass's
+cap). Release window checked fresh and found closed (Saturday,
+`block_weekends`) but deliberately left for the next hop to act on, same
+split `ENG-006` used at this identical boundary. Full detail, every command
+run, and every citation on the ticket's own log
+(`agents/eng-manager/board/ENG-007-per-restaurant-loyalty-configuration.md`).
+
+**Consequence:** `machine_wip` unaffected (`ENG-007` was already inside the
+counted `ready..ready-to-ship` range at `ready`, stays inside it at
+`ready-to-ship`, still 4/6). Approver-facing WIP and approval cap both
+unaffected — no gate raised this pass; opening the PR (the merge request) is
+the next hop's distinct work.
+
+**Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+valid, accounted-for state with the chain record below. No sweep of the rest
+of the board — out of scope for a `continue` event naming this ticket
+specifically.
+
+**Board:** rolled the `ENG-011` dated entry (the oldest of the four this
+pass's own new entry would otherwise leave live) into `_index-archive.md`,
+newest-first per that file's own convention — net three entries live after
+this one, matching the keep-three rule.
+
+**Observations filed** (`observations.md`): the recovered-unrecorded-build
+shape, a third and furthest-progressed data point in the
+partially-updated-artifact family `ENG-006` first named; `deno` now working
+for real on this Windows host, closing the migration doc's own open fallback
+attempt; Docker Desktop still not coming up within a bounded wait, second
+occurrence.
+
+`chained: ENG-007` — `ready-to-ship` is a devops-owned state, not the
+approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-007`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-007`) and whole-board: both run clean.
+
+## 2026-08-29 — intake: brand-portal restaurant self-service (QR codes & marketing media) shaped to ENG-014, website-settings half named for later
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-on-the-brand-portal-restaurant-is-not-able-to-see-or-generea.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own narrower
+contract, worked only this one request end to end rather than sweeping the
+board — the other unshaped `agents/product-manager/inbox/` requests
+untouched, each with its own `intake` event already queued or pending. Mode
+check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Caps re-verified fresh from ground truth, not the cached header —
+and the ground truth had moved.** All four items the header carried as
+"open" or "answered-but-unprocessed" turned out, on a fresh read of
+`inbox/`, to be **answered**: `ENG-009`'s and `ENG-010`'s G1s (unchanged from
+prior passes, still unprocessed), `ENG-012`'s G1 (**rejected**), and
+`ENG-013`'s presignup-leads question (approved) — the latter two newly
+answered since the immediately preceding pass. Read as closed, not open,
+for this pass's own cap arithmetic per this board's established convention
+(an answered gate item is off the count immediately rather than waiting on
+the mechanical `state:` field). Approver-facing WIP and approval cap both
+fully free (0/2, 0/3) before this ticket's own G1 — not "one slot free" as
+the pre-pass header read.
+
+**Identified the exact repos before proposing anything.** "Brand portal" is
+`restaurant-portal` (confirmed via its own `brandPortalApi.ts`), not
+`aiorders-admin-hub` (the staff-only "admin portal" the request explicitly
+names as inaccessible to owners). Read `restaurant-portal`'s `Website` and
+`Settings` pages (only `catering`/`careers` content and an unimplemented
+stub, respectively — zero QR/media/hours surface anywhere), `aiorders-admin-hub`'s
+`Activation.tsx` (a "Share Bag Insert & QR with Owner" step names today's
+manual workaround exactly) and `RestaurantAIWebsite.tsx` (where hours
+actually live, staff-only), and `aiorders-api`'s `url-shortener` function —
+confirmed it checks `profile.role === 'admin'` exactly, so the gap is a real
+backend authorization boundary, not only a missing frontend screen. QR
+images come from a free public API (`api.qrserver.com`) — $0/month.
+
+**Split the request into a two-item shape, filed the first, named the
+second** — same pattern `ENG-006`/`ENG-007`/`ENG-008` established.
+`ENG-014` (this pass, `awaiting-scope`, project `restaurant-portal`, size
+`M`) covers QR codes and marketing-media downloads only — the more tightly
+bounded half (two already-live generators, restricted to the caller's own
+restaurant). Item 2 (website settings, including hours) is named in the PRD
+as proposed, to be filed once `ENG-014` verifies; its own scoping question
+(how far "anythings related to their website" extends) is deferred to when
+item 2 is actually shaped, since it doesn't gate this ticket. No separate
+standing-question inbox item this time — unlike `ENG-008`/`ENG-011`/
+`ENG-013`, the open gap lives entirely inside item 2's future scope and
+doesn't need an approver answer to move `ENG-014` forward.
+
+**2 transitions** (`intake → shaped → awaiting-scope`), well under the cap
+of 4 — the next state needs the approver, so this pass stops here by
+design. Consequence: approver-facing WIP 0/2 → 1/2; approval cap 0/3 → 1/3.
+Machine WIP unaffected.
+
+Ran `departments/engineering/lib/eng-notify.sh raise` on the new `inbox/`
+item — logged the already-open `SLACK_WEBHOOK_URL unset` failure
+(`traces/eng-notify-2026-08-29.log`, 05:08:45 local / 12:08:45 UTC),
+consistent with every gate raised on this instance recently; `notified:`
+hand-stamped per established practice. No dissent section on the G1 —
+`agents/critic/agent.md` still doesn't exist (open proposal,
+`proposals.md` 2026-08-25 row), confirmed absent again rather than assumed.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the fresh cap-verification above. `ENG-007`
+through `ENG-013` otherwise untouched.
+
+**Observations filed** (`observations.md`): the confirmed admin-only
+`url-shortener` gate and the free-QR-provider cost finding grounding this
+PRD; and — flagged more pointedly this time — the answered-but-unprocessed
+inbox backlog is now **four items deep and four consecutive passes old**
+(`ENG-009`, `ENG-010`, `ENG-012`, `ENG-013`'s question), with no pass yet
+picking it up. Worth a dead-end sweep or a `decision` event rather than a
+fifth re-verification.
+
+`chained: none` — `ENG-014` sits at `awaiting-scope`, owned by the approver;
+the chaining guard never fires on a ticket waiting on a human. Full detail
+on the ticket's own log
+(`agents/eng-manager/board/ENG-014-restaurant-qr-media-self-service.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-014`) and whole-board: see pass notes.
+
+---
+
+## 2026-08-29 — decision ENG-010 (G1 scope): the predicted twin no-op — arrived after the fact was already consumed
+
+`decision` event pass, context `inbox/_handled/2026-08-29-eng010-g1-scope.md`
+— the same duplicate-queued-event shape already logged three times on this
+board today (`ENG-008`'s two gate items, then `ENG-009`'s G1, all now
+archived). Per this event's own narrower contract (act on the answered gate
+item, advance only the ticket it belongs to), scoped to `ENG-010` only — no
+board-wide sweep. Mode check clean (business-os `.env` → `MODE=` empty;
+instance `config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+whole-board: both exit 0, clean.
+
+**Confirmed rather than assumed.** This item's own frontmatter
+(`decision: approved`, `decided: 2026-08-29T10:49:55.456343+00:00`) already
+carries a processed footer — "Processed 2026-08-29 (`scheduled` event pass,
+context `schtasks`)" — naming the exact pass that consumed it: design work
+done (new `influencer_notes` table, dedicated handler), the ticket moved
+`awaiting-scope → designed → ready`, journaled
+(`agents/eng-manager/config/decision-journal.md`), and the gate item itself
+already relocated to `inbox/_handled/`. Checked fresh rather than trusted:
+the ticket's own frontmatter (`state: ready`, `owner: eng-manager`) and its
+own log entry for that same pass agree with the footer. Nothing left for
+this event to act on.
+
+**0 transitions.** No cap affected — this ticket was already inside the
+counted `ready`..`ready-to-ship` machine-WIP range (6/6, at cap) before this
+pass, and this G1 was already off both the approver-facing WIP and
+approval-cap counts.
+
+**Dead-end sweep (scoped to this event):** `ENG-008` — the ticket this
+one's own sequencing hold depends on — still sits at `ready` with no branch
+or build started. This ticket's existing sequencing hold (re-check once
+`ENG-008` reaches `in-review` or later) therefore still applies unchanged.
+Nothing to resume.
+
+**Notify sweep:** nothing to raise (no new gate item); nothing to nudge
+(this item's `notified:`/`decision:` cycle closed same-day, hours before
+this pass).
+
+`chained: none` — no state change; `ENG-010` remains held at `ready`
+pending `ENG-008`. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-010`) and whole-board: both exit 0, clean. Full detail on the
+ticket's own log
+(`agents/eng-manager/board/ENG-010-influencer-relationship-notes.md`).
+
+---
+
+## 2026-08-29 — intake: foodswipe funnel page shaped, designed and readied same-pass after a mid-flight G1 approval; a pre-signup-leads question raised separately
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-for-the-foodswipe-sales-funnel-page-we-are-not-able-to-or-th.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own
+narrower contract, worked only this one request end to end rather than
+sweeping the board — nine other unshaped `agents/product-manager/inbox/`
+requests untouched, each with its own `intake` event already queued or
+pending. Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (no ticket yet
+to scope to): exit 0, clean.
+
+**Caps verified fresh from ground truth before raising.** `ENG-009`'s and
+`ENG-010`'s G1s (`inbox/2026-08-29-eng009-g1-scope.md`,
+`inbox/2026-08-29-eng010-g1-scope.md`) still sit answered-but-unprocessed —
+the same pair the immediately preceding `ENG-011` pass found (see
+`observations.md`, 2026-08-29). Treated as closed for cap arithmetic per
+this board's established convention. Only `ENG-012`'s G1 was genuinely
+open before this pass: approver-facing WIP 1/2, approval cap 1/3, both
+with room for one more.
+
+**Identified the exact page before writing anything.** "Funnel" as a
+keyword matches exactly one file in `aiorders-admin-hub`:
+`src/pages/FoodswipeListings.tsx` ("Foodswipe Listings" — a six-column
+kanban already tracking "restaurant onboarding progress across stages,"
+plus a funnel-conversion summary). Read it and its backend handler
+(`aiorders-api`'s `admin-portal/handlers/foodswipe.ts`) in full before
+proposing anything: **confirmed zero write path anywhere** — no
+click/drag/edit affordance in the frontend, no mutation branch in the
+handler despite it technically accepting `POST`, `classifyStage()` a pure
+function over existing columns. Searched the whole API repo for any
+staff-assignable status concept (`assigned_to`, `lead_status`,
+`crm_stage`, `sales_stage`, `contact_status`, `owner_id`) — none exist;
+confirmed net-new, same shape `ENG-011` found for "tickets." Ruled out
+`Leads.tsx` (real edit UI, but for an unrelated record type — website-
+interest-form leads, not Foodswipe profiles) and found `claim_status`
+(the one plausible existing status field) is dead — written once to a
+constant, read nowhere.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading plus a blind architect reading (subagent, `opus`,
+raw request + `knowledge/business-profile.md` only, no repo access, no
+exposure to this PM's own reading). **No material divergence on
+direction** — both converged on an existing, currently non-functional
+admin page that should let staff act on a pipeline; both independently
+flagged "update" as ambiguous between move-stage and edit-details. The
+architect's reading went one step further, unprompted: it guessed "sales"
+and "onboarding" might need two different stage vocabularies for two
+different phases, and that the current stages might only cover one.
+Checked against the code rather than accepted or dismissed on guess
+alone — **true**: all six existing stages are post-signup; nothing in
+this system tracks a restaurant before it signs up. That turned a
+speculative guess into a confirmed, live fork worth asking about, not
+something to silently build either way.
+
+**Filed `ENG-013`** (`awaiting-scope`, size `M`, project
+`aiorders-admin-hub`, severity `P2` — calibrated against `ENG-011`'s
+`P3`: this is missing *all* interactivity, confirmed in code, versus
+`ENG-011`'s missing visibility+filter; still non-emergency with a
+workaround, so short of P1). PRD:
+`agents/product-manager/specs/ENG-013-foodswipe-funnel-stage-control.md`.
+G1: `inbox/2026-08-29-eng013-g1-scope.md`. Standing question (pre-signup
+leads): `inbox/2026-08-29-eng013-presignup-leads-question.md`. Both
+raised via `lib/eng-notify.sh raise`, both logged the already-open
+`SLACK_WEBHOOK_URL unset` failure (`traces/eng-notify-2026-08-29.log`,
+04:39:39 and 04:39:45 local), `notified:` hand-stamped on both (converted
+to UTC) per established practice.
+
+**2 transitions** (`intake → shaped → awaiting-scope`), well under the cap
+of 4 — the next state needs the approver, so this pass stopped here by
+design, momentarily. **Consequence at that point:** approver-facing WIP
+1/2 → 2/2; approval cap 1/3 → 3/3 (at cap) — this pass's own G1 plus
+standing question, counted conservatively, same convention
+`ENG-008`/`ENG-011` used. Machine WIP unaffected (3/6). Superseded within
+the same pass — see "Continued" below.
+
+**Board:** found `_index.md` sitting at exactly three dated entries before
+this pass's own — at the keep-three limit already. Rolled the oldest
+(`2026-08-29 — watch (schtasks): no ticket touched...`) into
+`_index-archive.md`, newest-first per that file's own convention. Checked
+for the already-documented duplicate-archive failure mode
+(`observations.md`, 2026-08-29) before touching anything — not present
+this time, a clean roll.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the cap verification above. `ENG-007`,
+`ENG-008`, `ENG-009`, `ENG-010`, `ENG-011`, `ENG-012` otherwise untouched.
+`ENG-009`/`ENG-010` still due a sweep — found and correctly left again
+this pass (see `observations.md`, 2026-08-29, and `ENG-011`'s own board
+entry).
+
+**Notify sweep:** both of this pass's own items raised and stamped above.
+Nothing else to nudge. Approval cap briefly touched 3/3 (full) at this
+point in the pass — see "Continued" below for where it settled; no
+`lib/eng-notify.sh stall` fired either way, since the cap was reached (and
+then relieved) by this pass's own work rather than discovered stuck.
+
+**Observations filed** (`observations.md`): the confirmed-zero write path
+and the confirmed-absent staff-status concept grounding this PRD's
+defaults; the "foodswipe" brand-name overload between this ticket's
+restaurant-onboarding funnel and `ENG-006`'s already-shipped
+cross-restaurant consumer loyalty identity; the architect's blind-reading
+guess about a pre-signup sales layer turning out to be live once checked
+against code.
+
+**Continued, same pass — `ENG-013`'s own G1 came back answered by
+hand-edit while this pass was still running.** Processed inline rather
+than left for a separately-queued `decision` event, per this instance's
+established practice (`ENG-007`, `ENG-008`, `ENG-011` all set the same
+precedent earlier today). **G1: approved, bare, no rider.** Real design
+work done against the live repos before advancing: searched every
+migration in `aiorders-api` for `profiles` before proposing to alter it —
+none is its `CREATE TABLE`, corroborating the 2026-08-26 finding that this
+repo's schema history was reconstructed after the fact and evidently still
+doesn't cover `profiles`' own origin (not blocking; an `ALTER TABLE`
+doesn't need it). Checked `admin-portal/index.ts`'s routing and
+`leads.ts`'s existing `updateWebsiteLead` write path so the design reuses
+a pattern already proven in this codebase. Design:
+`agents/architect/designs/ENG-013-foodswipe-funnel-stage-control.md` — one
+nullable override column on `profiles` (the only entity present at every
+one of the six stages), taking precedence over the existing
+`classifyStage()` derivation; new write action reuses the handler's
+already-present admin/sub-admin gate. **No one-way door** — additive
+column, `null` default, no backfill, no new authorization surface. Moved
+straight through `designed → ready`, no G2. Moved the G1 to
+`inbox/_handled/`; journaled.
+
+**2 more transitions on `ENG-013`** (`awaiting-scope → designed → ready`),
+4 total this pass on that one ticket — at the cap of 4, stopping here by
+design (`building` is new implementation work, a different owning role).
+**Final consequence this pass:** machine WIP 3/6 → 4/6 (`ENG-007`,
+`ENG-008`, `ENG-011` unaffected, `ENG-013` newly in range); approver-facing
+WIP 2/2 → 1/2 (`ENG-013`'s own path no longer runs through the approver —
+its still-open standing question doesn't hold a WIP slot, since it doesn't
+block the ticket); approval cap 3/3 → 2/3 (`ENG-013`'s G1 closed; its
+standing question stays open, `ENG-012`'s G1 unaffected) — one slot free
+again, not full.
+
+**Observations filed** (`observations.md`): the corroborating
+`profiles`-untracked-migration finding.
+
+`chained: ENG-013` — `ready` is eng-manager-owned (a backend/database
+engineer builds next), not the approver, not blocked, not terminal, not
+held by a cap. Fired
+`/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: see pass notes.
+
+## 2026-08-29 — intake: ENG-011 shaped, designed and readied same-pass after a mid-flight G1 approval; its tickets question answered and filed as ENG-012
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-on-the-admin-panel-we-are-unable-to-see-if-the-restaurant-is.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own
+narrower contract, worked only this one request end to end rather than
+sweeping the board. Mode check clean (business-os `.env` → `MODE=` empty).
+Pre-pass `departments/engineering/lib/eng-gate-check.sh`, whole-board (no
+ticket yet to scope to): exit 0, clean.
+
+**Caps verified fresh from ground truth, not the (stale) cached header** —
+found `inbox/2026-08-29-eng009-g1-scope.md` and
+`inbox/2026-08-29-eng010-g1-scope.md` both answered (`decision: approved`,
+09:20:42 and 10:49:55) but still sitting in `inbox/`, unprocessed; their
+tickets still read `state: awaiting-scope` on disk. Left both untouched
+(dead-end-sweep/decision-event work, out of scope for an `intake` event on
+an unrelated request) but read as closed, not open, for this pass's own
+cap arithmetic — see the header note above and `observations.md` for the
+full reasoning. Approver-facing WIP and approval cap both fully free by
+that reading (0/2, 0/3) before this pass's own G1.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading plus a blind architect reading (subagent, `opus`,
+raw request + `knowledge/business-profile.md` only). **No material
+divergence** — both converged on the same shape: a missing stage/client
+concept on the Brands page, an explicit filter requirement, undefined
+health, undefined tickets. Checked both live repos before proposing
+defaults, same practice `ENG-005`/`ENG-008` established: `Brands.tsx`
+exists with no stage/health/ticket concept today; `onboarding_step` and
+`is_active` already exist as raw, unsurfaced signals to ground a proposed
+stage taxonomy; no ticket/support system exists anywhere in either repo.
+Turned what could have been three guesses into two evidence-grounded
+`[proposed]` defaults (stage taxonomy, minimal health signal) plus one
+genuine standing question (tickets) — same move `ENG-008` made for its own
+"engagement" item.
+
+**Filed `ENG-011`** (`awaiting-scope`, size `M`, project
+`aiorders-admin-hub`). PRD:
+`agents/product-manager/specs/ENG-011-client-stage-health-visibility.md`.
+G1: `inbox/2026-08-29-eng011-g1-scope.md`. Standing question:
+`inbox/2026-08-29-eng011-tickets-source-question.md`. Both raised via
+`lib/eng-notify.sh raise` — both logged the already-open
+`SLACK_WEBHOOK_URL unset` failure (`traces/eng-notify-2026-08-29.log`),
+`notified:` hand-stamped on both per established practice.
+
+**2 transitions** (`intake → shaped → awaiting-scope`), well under the cap
+of 4 — the next state needs the approver, so this pass stops here by
+design. Consequence: approver-facing WIP 0/2 → 1/2; approval cap 0/3 → 2/3
+(this pass's own reading — see header for the mechanical count, which
+reads over-cap if `ENG-009`/`ENG-010` are counted literally by their
+on-disk state instead).
+
+**Board:** found `_index.md` already four dated entries deep (one over the
+keep-three limit) even before this pass's own entry — and found the oldest
+of those four **already duplicated verbatim in `_index-archive.md`**,
+apparently left behind by an earlier roll that completed the copy but never
+removed the source. Verified by direct text comparison before touching
+anything, not assumed from the matching headings alone. Same general
+failure family as the single already-documented "partially-updated,
+self-contradictory artifact" occurrence (`observations.md`, 2026-08-28 — a
+pass crashing mid-sequence between writes), though a different specific
+artifact (a board roll, not a PRD/ticket edit) — noted as corroborating,
+not identical. Fixed here: moved the next-oldest entry (`ENG-007`'s G2
+answered) into the archive for real, and dropped the already-archived
+duplicate from the live file rather than archiving it a second time. Net:
+three entries now live (this one plus the two next-newest), matching the
+rule.
+
+**Dead-end sweep:** out of scope for this `intake` event's own narrower
+contract — not run beyond the cap verification and the board-duplicate fix
+above. `ENG-007`, `ENG-008`, `ENG-009`, `ENG-010` otherwise untouched.
+
+**Notify sweep:** both of this pass's own items raised and stamped above.
+Nothing else to nudge. Approval cap 2/3 (this pass's own reading), not
+full — no stall.
+
+**Observations filed** (`observations.md`): the confirmed-absent
+stage/health/ticket concepts and the evidence grounding the proposed
+taxonomy; the `ENG-009`/`ENG-010` answered-but-unprocessed gate items; the
+duplicated archive entry.
+
+`chained: none` — `ENG-011` sits at `awaiting-scope`, owned by the
+approver; the chaining guard never fires on a ticket waiting on a human.
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-011`) and whole-board: both exit 0, clean.
+
+**Continued, same pass — both of `ENG-011`'s own gate items came back
+answered by hand-edit while this pass was still running.** Processed both
+rather than leaving them for a separately-queued `decision` event, per
+this instance's established practice.
+
+**G1: approved, bare, no rider.** Did real architect-hat design work
+against the live repos before advancing: checked whether cheap internal
+order data actually exists for the health signal (it does — a real
+internal `orders` table plus an existing hourly
+`calculate_platform_analytics()` cron already aggregating per-restaurant
+order totals into Cloudflare KV, `20260217000001_platform_analytics_cron.sql` —
+checking paid off by confirming feasibility this time, not by finding a
+landmine). Design: `agents/architect/designs/ENG-011-client-stage-health-visibility.md` —
+`stage` and `health` both derived at read time from columns/pipelines that
+already exist, no new table, no new vendor. **No one-way door** — moved
+straight through `designed → ready`. Moved the gate item to
+`inbox/_handled/`; journaled.
+
+**Standing "tickets" question: `decision: rejected`, free-text "Reading
+A."** Read together rather than the field alone — a flat rejection
+doesn't usually come with a specific named option underneath it; taken as
+"build Reading A" (a minimal from-scratch ticket system), not as killing
+the idea. Flagged as an interpretation, not a certainty, on the gate
+item's own processed footer and in `decision-journal.md` — first
+occurrence of a `decision:`/free-text mismatch on this instance, worth
+asking the approver directly if it recurs rather than continuing to
+infer. **Filed `ENG-012`** (`awaiting-scope`, size `L` — a genuine new
+data model/CRUD surface, materially bigger than `ENG-011`'s derived-field
+approach) directly from the selected reading, no fresh blind-readback
+subagent run (the question itself already fully specified both options —
+same light treatment `ENG-009` used answering `ENG-008`'s "engagement"
+question). PRD: `agents/product-manager/specs/ENG-012-restaurant-support-tickets.md`.
+G1 raised and notified: `inbox/2026-08-29-eng012-g1-scope.md`.
+
+**2 more transitions on `ENG-011`** (`awaiting-scope → designed → ready`),
+4 total this pass on that one ticket — at the cap of 4, stopping here by
+design (`building` is new implementation work, a different owning role).
+`ENG-012` adds its own 2 (`intake → shaped → awaiting-scope`), well under
+its own cap. **Final consequence this pass:** machine WIP 1/6 → 3/6
+(`ENG-007` unaffected, `ENG-008` unaffected, `ENG-011` newly in range);
+approver-facing WIP and approval cap both net to substantively 1/2 and
+1/3 (`ENG-012` alone) — see header for the full mechanical-vs-substantive
+figures and the still-open `ENG-009`/`ENG-010` gap this pass did not
+touch.
+
+**Observations filed** (`observations.md`): the confirmed-live internal
+orders/analytics pipeline `ENG-011`'s health signal now reuses; the
+`decision:`-vs-free-text mismatch on the tickets question.
+
+`chained: ENG-011` — `ready` is eng-manager-owned (a
+backend/frontend/database engineer builds next), not the approver, not
+blocked, not terminal, not held by a cap. Fired
+`/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-011`
+before exiting. `chained: none` for `ENG-012` — `awaiting-scope`, owned by
+the approver. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-011`), scoped (`ENG-012`), and whole-board: all exit 0,
+clean.
+
+## 2026-08-29 — intake: influencer-board admin-management request shaped to ENG-008, one non-blocking question raised separately
+
+`intake` event pass, context the product-manager inbox request itself
+(`agents/product-manager/inbox/2026-08-29-for-the-influencer-board-on-admin-panel-we-are-unable-to-see.md`,
+now `agents/product-manager/inbox/_handled/`). Per this event's own
+narrower contract, worked only this one request end to end rather than
+sweeping the board — `ENG-007` and the other pending product-manager-inbox
+requests untouched. Mode check clean (business-os `.env` → `MODE=` empty).
+Caps checked fresh before raising: approver-facing WIP 0/2, approval cap
+0/3, both fully free.
+
+**Ran the full request-readback** (`skills/request-readback/SKILL.md`):
+this PM's own reading plus a blind architect reading (subagent, `opus`,
+raw request + `knowledge/business-profile.md` only). One material
+divergence — whether an influencer-facing surface already exists at all —
+resolved by checking `aiorders-api`'s live `origin/main` rather than by
+guessing or asking: it already has `restaurant-influencer-campaigns`
+(invitation-based), an `outgoing-communications` actor for influencers, and
+`migrate-influencer-images`, so this extends a real existing concept.
+Both readings independently flagged "engagement" as unresolvable from the
+text — a joint gap, not a disagreement — and that's the one thing sent to
+the approver as a question.
+
+**Split the request into a two-item shape, filed the first, named the
+second.** `ENG-008` (this pass, `awaiting-scope`) covers the admin-side
+data only — region/campaign-type preference view+edit, rating,
+collaboration count, project `aiorders-admin-hub`, size `M`. Item 2
+(influencer-facing opportunity visibility gated by region/campaign-type)
+depends on `ENG-008`'s fields and is named in the PRD as proposed, to be
+filed once `ENG-008` verifies, per the `ENG-006`/`ENG-007`
+sequence-continuation precedent (`skills/acceptance-check/SKILL.md` step
+6b) — this is the same request's other half, not agent-invented work.
+"Engagement" is deliberately in neither ticket: a standing, non-blocking
+question is with the approver instead
+(`inbox/2026-08-29-eng008-engagement-source-question.md`), since its
+answer swings scope roughly an order of magnitude (a display field vs. a
+paid third-party social-platform integration) and neither reading could
+settle it from the text.
+
+**2 transitions** (`intake → shaped → awaiting-scope`), well under the cap
+of 4 — the next state needs the approver, so this pass stops here by
+design. Consequence: approver-facing WIP 0/2 → 1/2; approval cap 0/3 → 2/3
+(the G1 plus the standing question, the latter counted conservatively per
+the header note above). Machine WIP unaffected.
+
+Ran `departments/engineering/lib/eng-notify.sh raise` on both new `inbox/`
+items — both logged the already-open `SLACK_WEBHOOK_URL unset` failure
+(`traces/eng-notify-2026-08-29.log`), consistent with every gate raised on
+this instance recently; `notified:` hand-stamped on both per established
+practice. No dissent section on the G1 — `agents/critic/agent.md` still
+doesn't exist (open proposal, `proposals.md` 2026-08-25 row), confirmed
+absent again rather than assumed.
+
+**Dead-end sweep:** out of scope for `intake`'s own narrower contract — not
+run; `ENG-007` untouched. **Observations filed** (`observations.md`): the
+confirmed-live influencer/campaign backend and its invitation-shaped
+implication for item 2.
+
+`chained: none` — `ENG-008` sits at `awaiting-scope`, owned by the
+approver; the chaining guard never fires on a ticket waiting on a human.
+Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-008-influencer-profile-admin-management.md`).
+
+## 2026-08-29 — watch (schtasks): no ticket touched — resolved the standing events-dropped incident, deferred a sixth new business request
+
+`watch` event pass, context `schtasks` — day 5/40 charged, drained immediately
+behind the `watch (schtasks)` pass below (`pass end: watch (exit 0, 973s)` at
+01:25:17 → `queue: collapsed 3 duplicate event(s)` → `draining queued event:
+watch (schtasks)` at 01:25:33), the 5-minute poll cadence backlogging while
+that long pass held the lock, already-confirmed-working design (2026-08-28
+Windows-port observations), not a bug. Mode check clean (business-os `.env`
+→ `MODE=` empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (no ticket to
+scope to): exit 0, clean.
+
+**Swept all three watched inboxes fresh rather than trusting the pass
+below's own read.** `agents/eng-manager/inbox/` holds only `.gitkeep`.
+`inbox/requests/` empty. `ENG-007` unchanged at `ready`, its own log still
+ending in a valid `chained: ENG-007` — nothing broken to resume. The five
+`agents/product-manager/inbox/` items the immediately preceding pass found
+and correctly deferred are all still exactly that: unshaped, their dedicated
+`intake` events still sitting in `traces/.pending` — re-confirmed rather than
+assumed, since shaping any of them is `intake`'s job under this event's
+narrower contract, not `watch`'s, same reasoning the last two passes already
+established. **Four more landed mid-sweep, checked at the end of this pass
+rather than assumed unchanged from the top of it** — catering/quote-generator
+(08:32:55), AI SEO ROI tracking (08:39:27), brand-portal drip/mass campaigns
+(08:37:36), and admin-panel autopilot/demo account for resellers (08:35:46),
+all `via: control-center`, nine total now landed 08:14–08:39. Read all four
+before leaving them: routine feature requests, no security or urgency
+language in any. Left untouched for their own `intake` events, same as the
+first five; not worth a further `observations.md` entry, it's the same
+batch-arrival pattern already recorded there, just a larger batch than first
+seen.
+
+**`inbox/2026-08-28-eng-events-dropped.md` came back answered since the last
+pass to read it** — `decision: approved`, `decided:
+2026-08-29T08:27:47.038600+00:00`, a hand-edit, not a reply through
+`lib/eng-notify.sh` (unsurprising: this item was never successfully notified
+in the first place, the known `MODE`-collision bug, `proposals.md`
+2026-08-25 row — the approver found it by reading `inbox/` directly).
+Verbatim: "recheck the request and report back how to fix. fix if you can."
+This is exactly the class of thing `watch`'s own contract exists to catch (a
+gate item edited by hand), and unlike the five business requests above,
+answering it doesn't require `intake`-style PRD shaping — it required an
+investigation, which this pass did rather than deferring further (this item
+had already sat unanswered through several earlier passes; deferring an
+*answered* incident again would just repeat that).
+
+**Investigated as far as this instance's architecture allows, and said so
+plainly rather than guessing at a false confirmation.** `traces/` is
+`.gitignore`d and host-local; this instance now runs on two hosts (the Mac
+that raised this incident at 10:42:17 that morning, and Windows since
+`168cb89`); this Windows checkout's own trace history starts at 23:33:59
+that night. The actual failure log is on the Mac's disk and unreachable from
+here — full detail and the reasoned-not-confirmed TCC/EPERM-over-spend-limit
+hypothesis (from `observations.md`'s same-day entries, since the log itself
+isn't available) on the item's own file. Filed a proposal
+(`agents/eng-manager/proposals.md`, 2026-08-29 row) for the fixable half:
+dropped-event items should carry their own failure excerpt instead of a
+`traces/` pointer that only resolves on the host that failed. Moved to
+`inbox/_handled/`; journaled in
+`agents/eng-manager/config/decision-journal.md` as a new data point (an
+incident response, not a ticket gate) rather than skipped for not fitting
+the G1/G2/G3 shape.
+
+**No ticket transition** — `ticket: unknown` on the incident, and nothing
+else was new. WIP/approval-cap figures unchanged (machine 1/6, approver
+0/2, approval cap 0/3) — the incident was never counted against the approval
+cap (not a G1/G2/G3 or merge request), so resolving it doesn't move any of
+the three numbers.
+
+**Dead-end sweep:** `ENG-007` is the only ticket in flight; its chain is
+valid, nothing to resume. **Notify sweep:** nothing raised this pass (the
+proposal rides the weekly report, not `lib/eng-notify.sh`); nothing to
+nudge; approval cap 0/3, not full — no stall. **Observations filed**
+(`observations.md`): sharpened, not overturned, the prior pass's "all
+non-emergency" read of the five-item batch — the admin-portal/agency-reseller
+item is the approver's own words, "security issue," a cross-tenant data
+exposure on a registered **L1** project, worth real severity when its
+`intake` event shapes it rather than routine `P3`.
+
+`chained: none` — no ticket was touched this pass (the incident carries no
+ticket to advance), so there is no hop of its own to fire. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+## 2026-08-29 — watch (schtasks): ENG-007's G2 came back answered — Walletly is retiring, ticket advanced to ready and chained
+
+`watch` event pass, context `schtasks` — a second, distinct fire from the one
+immediately below, queued behind (and launched right after) an unrelated
+`decision` pass that drained first and correctly no-op'd on this ticket's
+already-processed G1. Mode check clean (business-os `.env` → `MODE=` empty;
+instance `config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
+whole-board: both exit 0, clean.
+
+**Swept all three watched inboxes fresh; found `ENG-007`'s G2 answered**
+since the previous pass raised it — `decision: approved`, verbatim
+"Walletly is being retired/replaced," a hand-edit to
+`inbox/2026-08-29-eng007-g2-walletly-conflict.md` rather than a reply through
+`lib/eng-notify.sh`. Re-verified fresh rather than trusted (re-read the file,
+checked `traces/.pending` for a live race) before acting. Picks option 1 of
+the three the gate offered: the native loyalty sequence is Walletly's
+intended replacement, proceed exactly as scoped — settling the boundary
+question before ticket 3 (the points ledger) is ever filed.
+
+**Processed here rather than left for a `decision` event already queued
+behind this one for the same file** — the mirror image of this ticket's own
+G1 a few minutes earlier, where `decision` drained first and `watch` found
+nothing left to do; whichever event reaches a fact first does the real work,
+per this instance's established practice. Moved the gate item to
+`inbox/_handled/` with a processed footer; journaled in
+`agents/eng-manager/config/decision-journal.md`. Architect's design doc left
+unedited, same precedent `ENG-006`'s own G2 resolution set.
+
+**1 transition** (`awaiting-decision → ready`), well under the cap of 4 —
+`building` needs a different owning role (backend/database) actually writing
+code, which is new implementation work and this pass's stop point by design.
+Approver-facing WIP 1/2 → 0/2; approval cap 1/3 → 0/3 (now empty); machine WIP
+0/6 → 1/6 — the first ticket into that range on this host.
+
+**Dead-end sweep:** no other ticket in flight. **Not a clean sweep on the
+inboxes, corrected here rather than left standing:** five new files landed in
+`agents/product-manager/inbox/` mid-pass (`source: approver`, `via:
+control-center`, received 08:14–08:22), after this pass's own initial sweep
+had found that directory empty. Read all five before deciding not to act:
+UX/functionality gaps on the admin panel (influencer board, brand
+stage/health filtering), the FoodSwipe sales-funnel pipeline stages, the
+brand portal (QR codes, media downloads, site-timing self-service), and
+admin-portal readiness for agency/reseller users — none meets the P0 bar
+(production down, data loss, active security incident), so none interrupts.
+Left untouched for their own dedicated `intake` events, already visible
+queued in `traces/.pending` for four of the five (the fifth landed after that
+read and will get its own `watch` or `intake` fire) — shaping five requests'
+worth of readback and G1s is `intake`'s own job per this event's narrower
+contract, not this `watch` pass's. Observation filed. **Notify sweep:**
+nothing to raise or nudge; cap just cleared to 0/3 — no stall.
+
+`chained: ENG-007` — `ready` is agent-owned (eng-manager sequenced it; a
+backend/database engineer builds next), not the approver, not blocked, not
+terminal, not capped. Fired
+`/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-007` before
+exiting. Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-007-per-restaurant-loyalty-configuration.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`)
+and whole-board: both run clean.
+
 ## 2026-08-29 — watch (schtasks): ENG-007's G1 came back approved — designed, then a new G2 raised over an unplanned Walletly finding
 
 `watch` event pass, context `schtasks`. Per the event's own narrower

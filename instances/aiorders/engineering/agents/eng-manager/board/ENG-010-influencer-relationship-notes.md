@@ -6,8 +6,8 @@ type: feature
 size: S
 severity: P3
 priority:
-state: awaiting-scope
-owner: approver
+state: ready
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
@@ -20,7 +20,7 @@ blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-010-influencer-relationship-notes.md
-  design:
+  design: agents/architect/designs/ENG-010-influencer-relationship-notes.md
   adrs: []
   review:
   test_plan:
@@ -167,3 +167,107 @@ Append-only. One line per state transition, newest last.
 
   `chained: none` — `awaiting-scope`, owned by the approver; the chaining
   guard never fires on a ticket waiting on a human.
+
+- `2026-08-29` `awaiting-scope → designed → ready` (architect, then
+  eng-manager — `scheduled` event pass, context `schtasks`). Found this
+  ticket's own G1 (`inbox/2026-08-29-eng010-g1-scope.md`) answered
+  `decision: approved`, `decided: 2026-08-29T10:49:55.456343+00:00`,
+  sitting unprocessed — part of the four-item answered-but-unprocessed
+  backlog this board's header had flagged for five consecutive passes.
+  Mode check clean (`MODE=` empty); pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean.
+
+  **Real design work done against the live repos. Also corrects an
+  unverified citation in this ticket's own `## Notes`**, found while
+  checking it rather than repeating it: the "one risk this ticket cannot
+  get wrong" cited "`user_id` on the influencer record, per `ENG-008`'s
+  own design evidence" — `ENG-008`'s design doc never says that. The risk
+  is real regardless, confirmed by different, checked evidence: influencers
+  authenticate as `profiles` rows with `role: 'influencer'`
+  (`20250729143357_initial_restaurant_rls.sql`), and `admin-portal`'s own
+  router-level `authenticate()` already excludes that role from every route
+  under it — the new handler adds one further, narrower check on top
+  (`admin`/`sub-admin` only, excluding `partner-admin`/`partner-user`,
+  since this ticket's own G1 already defaulted brand/agency/reseller
+  visibility to no). Full detail: `agents/architect/designs/
+  ENG-010-influencer-relationship-notes.md`.
+
+  **New table (`influencer_notes`), new dedicated handler** — not an
+  extension of `ENG-008`/`ENG-009`'s shared `influencers.ts`, since notes
+  are their own list/append sub-resource with a narrower authorization
+  boundary than that file's base gate. No existing notes concept found
+  anywhere in the repo (checked before designing one from scratch).
+
+  **No one-way door** — a new, isolated table with no existing reader and
+  no data migrated into it; reversible by `DROP TABLE` with zero blast
+  radius elsewhere. No change to any existing table or to the shared
+  router gate (the narrower check lives inside the new handler only).
+  Moved straight through `designed` without a G2.
+
+  Moved `inbox/2026-08-29-eng010-g1-scope.md` → `inbox/_handled/` with a
+  processed footer. **Journaled** in `agents/eng-manager/config/
+  decision-journal.md` (not previously recorded — unlike `ENG-009`'s G1,
+  this one had not yet been journaled).
+
+  **2 transitions** (`awaiting-scope → designed → ready`), well under the
+  cap of 4. **Consequence:** machine WIP 5/6 → 6/6 (this ticket now inside
+  the counted `ready`..`ready-to-ship` range, alongside `ENG-007`/
+  `ENG-008`/`ENG-009`/`ENG-011`/`ENG-013` — **at cap, not over**; nothing
+  further should start into this band until one clears); approver-facing
+  WIP and approval cap unaffected (this G1 was already off both counts
+  before this pass).
+
+  **Dead-end sweep:** this ticket's own resolution is this entry; see the
+  board index and `observations.md` for this pass's whole-board findings.
+
+  `chained: none — held for sequencing.` Same reasoning as `ENG-009`,
+  one step further down the same queue: this ticket's own G1 named it
+  "last of the three influencer tickets," and its design reuses the same
+  admin-auth pattern `ENG-008`/`ENG-009` establish first. `ENG-008`'s
+  chain is being re-fired this same pass; re-check `ENG-009` and `ENG-010`
+  once it's built. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+  whole-board: see board index.
+
+- `2026-08-29` **the predicted twin no-op: G1 scope decision event arrived
+  after its own fact was already consumed** (eng-manager, `decision` event
+  pass, context `inbox/_handled/2026-08-29-eng010-g1-scope.md`). Per this
+  event's own narrower contract, scoped to `ENG-010` only — no board-wide
+  sweep. Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+  whole-board: both exit 0, clean.
+
+  **Confirmed rather than assumed.** This item's own frontmatter carries a
+  processed footer naming the exact pass that consumed it — "Processed
+  2026-08-29 (`scheduled` event pass, context `schtasks`)": design work
+  done (new `influencer_notes` table, dedicated handler), the ticket moved
+  `awaiting-scope → designed → ready` in the log entry directly above,
+  journaled (`agents/eng-manager/config/decision-journal.md`), and the gate
+  item itself already moved to `inbox/_handled/`. Checked fresh rather than
+  trusted: this ticket's own frontmatter (`state: ready`, `owner:
+  eng-manager`) agrees with the footer. Nothing left for this event to act
+  on.
+
+  **0 transitions.** No cap affected — this ticket was already inside the
+  counted `ready`..`ready-to-ship` machine-WIP range (6/6, at cap) before
+  this pass, and this G1 was already off both the approver-facing WIP and
+  approval-cap counts.
+
+  **Dead-end sweep (scoped to this event):** `ENG-008` — the ticket this
+  one's own sequencing hold depends on — still sits at `ready` with no
+  branch or build started in either worktree. This ticket's existing
+  sequencing hold (re-check once `ENG-008` reaches `in-review` or later)
+  therefore still applies unchanged. Nothing to resume or fix.
+
+  **Notify sweep:** nothing to raise (no new gate item); nothing to nudge
+  (this item's `notified:`/`decision:` cycle closed same-day, hours before
+  this pass).
+
+  `chained: none` — no state change; this ticket remains deliberately held
+  at `ready` pending `ENG-008` reaching `in-review` or later, per the
+  reasoning already recorded above. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+  whole-board: both exit 0, clean. Also recorded on the board index
+  (`_index.md`, matching dated entry).

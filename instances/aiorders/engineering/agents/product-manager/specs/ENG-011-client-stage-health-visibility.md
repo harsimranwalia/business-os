@@ -1,11 +1,11 @@
 ---
 ticket: ENG-011
 project: aiorders-admin-hub
-status: awaiting-scope
+status: designed
 size: M
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-08-29T11:14:54.862156+00:00
 ---
 
 # Client stage & health visibility on the Brands admin page — plus stage filtering

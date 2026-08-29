@@ -287,3 +287,170 @@ Append-only. One line per state transition, newest last.
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-008`) and whole-board: both run clean.
+
+- `2026-08-29` **broken chain found and re-fired, no state change**
+  (eng-manager, `scheduled` event pass, context `schtasks` — whole-board
+  dead-end sweep). This ticket's own prior log entry above records
+  `chained: ENG-008` and a fired trigger, but no `continue (ENG-008)` pass
+  ever ran: absent from `traces/.pending` (neither queued nor mid-retry),
+  and absent from every `pass start:` line in
+  `traces/eng-loop-2026-08-29.log` (grepped the full day). Independently
+  confirmed no build was ever started: no `eng/ENG-008` branch (or any
+  ENG-008 work) in either `_eng/aiorders-admin-hub` or `_eng/aiorders-api`,
+  both clean. Not the same shape as this board's three prior
+  design-without-a-log-entry crash-recoveries (`ENG-006`, `ENG-007`, this
+  ticket's own earlier entry) — those left real work unrecorded; this one
+  left a recorded chain that produced no pass at all. Fourth occurrence of
+  a related but distinct crash-recovery gap; logged as its own pattern in
+  `observations.md` rather than folded into the earlier three.
+
+  **No plausible innocent explanation found** — considered and ruled out:
+  queue de-duplication (nothing else in the queue duplicates this event,
+  so nothing to collapse); the documented "never-started" refund path
+  (that still logs a `pass start:` line before classifying itself, and
+  none exists here). Most likely the immediate drain-on-append (the
+  trigger call this ticket's own pass made) raced the concurrent
+  `continue (ENG-007)` session already running at that moment — this same
+  log shows a second `continue (ENG-007)` pass detecting a live concurrent
+  session at 05:50:38, independent evidence something was contending for
+  the lock in this exact window. Reasoned, not confirmed; the trigger
+  script's own stdout for that moment isn't captured anywhere this session
+  can read.
+
+  **Re-fired**: `/bin/sh departments/engineering/lib/eng-trigger.sh
+  continue ENG-008`. No ticket state change — `ready` is exactly right
+  until a build actually starts. `ENG-009` and `ENG-010` remain
+  deliberately un-chained behind this one (see their own logs) until this
+  build reaches `in-review` or later.
+
+  `chained: ENG-008` (re-fired). Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: see board index.
+
+- `2026-08-29` **decision event arrived after its own fact was already
+  consumed — no-op, re-confirmed** (eng-manager, `decision` event pass,
+  context `inbox/_handled/2026-08-29-eng008-engagement-source-question.md`).
+  Per this event's own narrower contract ("act on the answered gate item in
+  `inbox/` and advance only the ticket it belongs to"), scoped to this item
+  and this ticket only — no board-wide sweep. Mode check clean (business-os
+  `.env` → `MODE=` empty; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-008`) and whole-board: both exit 0, clean.
+
+  **This fire fits the instance's well-documented duplicate-queued-event
+  race exactly** (`observations.md`, eleven-plus prior rows; contrast the
+  `continue ENG-006` no-op, 2026-08-28, archived, which explicitly did
+  *not* fit it). Confirmed directly from
+  `traces/eng-loop-2026-08-29.log`: `08:45:06 queue: collapsed 1 duplicate
+  event(s)` fires immediately before this exact event drains. Two copies of
+  `decision (2026-08-29-eng008-engagement-source-question.md)` were
+  legitimately queued for the same underlying fact — this item's own footer
+  already named the mechanism ("the approver answered by hand-edit while
+  this pass was still running, ahead of the decision event this answer will
+  also independently queue"). The live `intake` pass reached the fact
+  first: shaped `ENG-009`, journaled the decision
+  (`decision-journal.md`, "intake-question (engagement source)" row), and
+  moved the file to `inbox/_handled/` — all before this queued copy ever
+  reached the lock.
+
+  **Re-confirmed rather than trusted**: this item's own frontmatter
+  (`decision: approved`, `decided: 2026-08-29T09:10:52Z`) and processed
+  footer; `ENG-009`'s own ticket file (`ready`, design and G1 both closed);
+  this ticket's own log above, unchanged; `decision-journal.md` row 24. All
+  agree — nothing left for this event to act on, on either ticket.
+
+  **0 transitions.** No cap affected — this item was already off every
+  count before this pass (per the board index's established convention for
+  this exact item).
+
+  **Dead-end sweep (scoped to this event):** both `ENG-008` and `ENG-009`
+  already carry a correct, reasoned chain decision from the immediately
+  preceding `scheduled` sweep (`ENG-008` re-fired; `ENG-009` deliberately
+  held pending `ENG-008` reaching `in-review` or later) — nothing to resume
+  or fix.
+
+  **Notify sweep:** nothing to raise (no new gate item); nothing to nudge
+  (this item's own `notified:`/`decision:` cycle closed same-day, hours
+  before this pass).
+
+  **Observation filed** (`observations.md`): the next item in
+  `traces/.pending` (`decision 2026-08-29-eng008-g1-scope.md`) is the same
+  shape and will very likely be the same no-op when it fires — that G1 was
+  also already closed in the same pass that carried this ticket to `ready`.
+
+  `chained: none` — no state change on either ticket. `continue ENG-008` is
+  already queued (fired by the preceding `scheduled` sweep, sitting in
+  `traces/.pending`); firing it again here would only append a second copy
+  that collapses into the existing one at pop time, per the queue's own
+  dedup rule — no additional work would be done. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+- `2026-08-29` **same decision event, re-fired as attempt 2/2 after attempt 1
+  crashed — confirms attempt 1's own writes, no new action** (eng-manager,
+  `decision` event pass, context same file:
+  `inbox/_handled/2026-08-29-eng008-engagement-source-question.md`).
+  `traces/eng-loop-2026-08-29.log`: attempt 1 ran 541s, then the `claude`
+  process's underlying Bun runtime segfaulted (`exit 127`), so the harness
+  re-queued this event as attempt 2/2 rather than treating it as consumed —
+  the two-attempt cap `eng_build_loop.md` names ("Retry is bounded at two
+  attempts. The second failure drops the event.").
+
+  **Everything attempt 1 wrote survived the crash.** Re-read fresh rather
+  than trusted: this ticket's own log entry immediately above, the board
+  index's matching dated entry, `observations.md` (row 107), and
+  `decision-journal.md` (row 24) all already carry attempt 1's complete,
+  consistent conclusion — the crash landed after the substantive writes, at
+  or after the one step attempt 1 could not itself confirm: the post-pass
+  gate-check it reported as "exit 0, clean" with no captured result to back
+  it. Independently re-ran it for real this attempt:
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board — both exit 0, clean. Attempt 1's unconfirmed claim was
+  accurate.
+
+  **0 transitions, no new writes to either ticket, no board-index entry
+  added** — this attempt reaches no new conclusion, so a second dated entry
+  restating the same "no-op" would be exactly the noise the board's
+  keep-three-entries rule exists to prevent; the confirmation belongs here,
+  on the ticket this event is scoped to. `chained: none` — same reasoning as
+  the entry immediately above; `continue ENG-008` remains queued in
+  `traces/.pending`, untouched — firing it again would only collapse into
+  that copy at pop time.
+
+- `2026-08-29` **the predicted twin no-op: G1 scope decision event arrived
+  after its own fact was already consumed** (eng-manager, `decision` event
+  pass, context `inbox/_handled/2026-08-29-eng008-g1-scope.md`). The
+  immediately preceding `decision` event (the engagement-source question)
+  filed an observation naming this exact file as the next item in
+  `traces/.pending` and predicting the same outcome — confirmed rather than
+  trusted. Per this event's own narrower contract, scoped to `ENG-008`
+  only. Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, no
+  output; grepped it for `ENG-008` specifically — no matches, clean.
+
+  **This item's fact was already fully consumed.** The G1 approval was read
+  and acted on by the `intake` pass that raised it — journaled
+  (`decision-journal.md` row 23), the gate item moved to
+  `inbox/_handled/` with its own processed footer, and this ticket carried
+  `awaiting-scope → designed → ready` in that same pass (see this log,
+  entry two above). Checked fresh: this item's frontmatter (`decision:
+  approved`, `decided: 2026-08-29T09:12:46.283064+00:00`), the journal row,
+  and this ticket's own `state: ready` all agree. Same
+  duplicate-queued-event race as the engagement-source question's own
+  no-op (entry above) — both facts were consumed inside the same live
+  `intake` pass before either of their independently-queued `decision`
+  events reached the lock.
+
+  **0 transitions.** No cap affected — already off every count before this
+  pass. **Dead-end sweep (scoped):** confirmed `continue ENG-008` still
+  queued and undrained in `traces/.pending` — the chain from the earlier
+  `scheduled` sweep is intact, nothing to resume. **Notify sweep:** nothing
+  to raise or nudge.
+
+  `chained: none` — no state change; `continue ENG-008` remains queued from
+  the earlier `scheduled` sweep, and firing it again would only collapse
+  into that copy at pop time. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean. Also recorded on the board index
+  (`_index.md`, matching dated entry).

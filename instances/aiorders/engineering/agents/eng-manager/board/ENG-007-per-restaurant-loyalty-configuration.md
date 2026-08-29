@@ -4,17 +4,20 @@ title: Per-restaurant loyalty configuration — earn rates and redemption value
 project: aiorders-api
 type: feature
 size: S
+time_estimate: S (a few hours to half a day, per PRD Cost section)
+time_spent: not separately clocked — build, review, QA and security all completed in an unrecorded prior pass (see Log); read as most of the estimate consumed
+time_remaining: ~0 build time; PR-open, merge and verify remain as gate/administrative steps, not development work
 severity: P3
 priority:
-state: ready
-owner: eng-manager
+state: ready-to-ship
+owner: devops
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-28
 updated: 2026-08-29
-branch:
+branch: loyalty-system
 depends_on: []
 blocks: []
 parent:
@@ -22,9 +25,9 @@ links:
   prd: agents/product-manager/specs/ENG-007-per-restaurant-loyalty-configuration.md
   design: agents/architect/designs/ENG-007-per-restaurant-loyalty-configuration.md
   adrs: []
-  review:
-  test_plan:
-  security_review:
+  review: agents/principal-engineer/reviews/ENG-007.md
+  test_plan: agents/qa/test-plans/ENG-007.md
+  security_review: agents/security/reviews/ENG-007.md
   release:
   pr:
 ---
@@ -456,6 +459,126 @@ Append-only. One line per state transition, newest last.
 
   `chained: ENG-007` — `ready` is an agent-owned state (eng-manager sequenced
   it; the next hop is a backend/database engineer actually building), not the
+  approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-007`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-007`) and whole-board: both run clean.
+
+- `2026-08-29` `ready → building → in-review → in-security → ready-to-ship`
+  (backend/database, then principal-engineer + qa combined, then security,
+  then devops — `continue` event pass, context `ENG-007`). Narrow scope per
+  the event's own contract (resume this ticket from its current state; no
+  board-wide sweep). Mode check clean (business-os `.env` → `MODE=` empty;
+  instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
+  whole-board: both exit 0, clean.
+
+  **Recovered a fully unrecorded build — the same failure family `ENG-006`
+  named first, one step further along.** This ticket's own frontmatter and
+  log still read `ready` at pass start, but four complete, dated,
+  cross-consistent gate artifacts already existed on disk, all referencing
+  the same commit:
+  `agents/database/migrations/ENG-007-per-restaurant-loyalty-configuration.md`
+  (verdict: pass, named gap),
+  `agents/principal-engineer/reviews/ENG-007.md` (verdict: PASS, `diff:
+  loyalty-system (2aec86f) vs origin/main`), `agents/qa/test-plans/ENG-007.md`
+  (verdict: pass, 44/44), `agents/security/reviews/ENG-007.md` (verdict:
+  PASS, same diff reference). Unlike `ENG-006`'s own recovery (uncommitted
+  code, no receipts written yet), here the code was committed, pushed, and
+  every downstream gate had already run to completion and written its
+  receipt — only this ticket's own state/log bookkeeping hadn't caught up.
+  Consistent with a pass that did the real work and crashed or was cut off
+  after the last receipt write but before touching the board file.
+
+  **Verified fresh rather than trusted, before recording anything.** `git
+  branch -vv` in the `aiorders-api` worktree: `loyalty-system` at `2aec86f`,
+  `[origin/loyalty-system]`, tree clean — matches every receipt's own
+  `diff:` line exactly. `git merge-base --is-ancestor 2aec86f origin/main` →
+  not an ancestor: not yet merged. `gh pr list --head loyalty-system --state
+  all` (run inside the `aiorders-api` worktree) → only `ENG-006`'s own
+  already-merged PR #2; nothing open for this commit — confirms no L1 merge
+  request has been raised yet, so `ready-to-ship` (not `blocked`) is
+  genuinely where this pass stops. Independently re-ran the verification the
+  receipts claim rather than taking the documents' word for it: `deno test
+  --allow-env loyalty-config.test.ts` → 44 passed, 0 failed; `deno check
+  loyalty-config.ts loyalty-config.test.ts` → clean; `deno lint` → clean, 0
+  problems — matches both the code review's and the QA plan's own claimed
+  results exactly, a third independent reproduction of the same result.
+  `deno` itself is now real on this host (`2.9.6`, `npm`-installed) — the
+  database doc's own "attempted `npm install -g deno` as a fallback...
+  outcome recorded alongside whatever it produced" resolved successfully;
+  observation filed below. Docker Desktop still does not come up (`docker
+  info`, bounded 8s wait, timed out) — the same gap the migration doc
+  already named, not re-litigated, no further budget spent chasing it.
+
+  **State recorded to match the verified reality**, `building → in-review`
+  folding in `in-qa` per `config.yaml`'s own `combined_hop: [code_review,
+  quality]` (no separate sit-state, same as `ENG-005`/`ENG-006`): `branch:
+  loyalty-system`; `links.review`, `links.test_plan`, `links.security_review`
+  all set to the receipts above.
+
+  **`ready-to-ship` (devops role) — genuine new work this pass, not just
+  bookkeeping**, since none of the four existing receipts is release-readiness
+  itself:
+  - **Migration gate**: already cleared — the database doc's own verdict
+    ("pass, with a named verification gap") stands, re-confirmed above rather
+    than re-derived.
+  - **Release plan**: purely additive — one new table, one new `admin-portal`
+    route. No frontend anywhere in this sequence calls it (explicit PRD
+    non-goal, same as `ENG-006`), so merging and deploying has no live
+    behavioral effect until a caller exists — the same "zero blast radius
+    until something calls it" shape `ENG-006`'s own `ready-to-ship` used.
+  - **Rollback**: migration rollback SQL written and reasoned through (not
+    live-tested — the named gap, carried forward, not closed here); the route
+    itself reverts trivially — the 2-line `index.ts` addition and the new
+    handler/test files, nothing else touched.
+  - **Observability**: every unexpected-error branch logs server-side via
+    `console.error` before responding (confirmed directly in the code
+    review's automatic-failure #2 disposition), surfaced through Supabase's
+    existing function logs — no new observability mechanism needed, same one
+    every other function in this repo already relies on.
+  - **Cost**: **$0/month delta** — same Supabase project, one new empty
+    table, no new service, no new vendor.
+  - **Release window checked for completeness, deliberately not acted on
+    this pass** — the same split `ENG-006` used at this identical boundary
+    ("re-checked fresh by whichever session actually opens the PR, since
+    that's a later hop"): `date` → Saturday 2026-08-29, 05:56 local, inside
+    `releases.block_weekends`; no `ENG_RELEASE_FREEZE` in business-os
+    `.env`; instance `config/config.yaml` carries no override. Flagged here
+    so the next hop doesn't have to rediscover it, not decided here —
+    opening the PR is real, distinct devops work for that hop, same as
+    `ENG-006`'s own precedent at this exact boundary.
+
+  **4 transitions this pass** (`ready→building`, `building→in-review`,
+  `in-review→in-security`, `in-security→ready-to-ship`), at the cap of 4 —
+  same count, same stopping point as `ENG-006`'s own recovery pass through
+  this identical sequence. `machine_wip` unaffected — `ENG-007` was already
+  inside the counted `ready..ready-to-ship` range at `ready`, stays inside it
+  at `ready-to-ship` (still 4/6). Approver-facing WIP and approval cap both
+  unaffected — no gate raised this pass; the merge request is the next hop's
+  work.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+  valid, accounted-for state with the chain record below. No sweep of the
+  rest of the board — out of scope for a `continue` event naming this ticket
+  specifically.
+
+  **Notify sweep:** nothing raised this pass — a state recorded to match
+  already-completed work doesn't get its own notification, and the merge
+  request (next hop) is what will actually need the approver's attention.
+
+  **Observations filed** (`observations.md`): (1) this recovery's own
+  shape — a full receipt set (build, review, QA, security) written and
+  internally consistent while only the board ticket's own state/log lagged,
+  a further-along variant of the partially-updated-artifact family `ENG-006`
+  first named; (2) `deno` is now genuinely installed and working on this
+  Windows host (`2.9.6`, via `npm install -g deno`), closing a gap the
+  database migration doc left open as an in-progress attempt — future passes
+  on this host can use it directly rather than reaching for Docker first;
+  (3) Docker Desktop still does not come up within a bounded wait, second
+  occurrence.
+
+  `chained: ENG-007` — `ready-to-ship` is a devops-owned state, not the
   approver, not blocked, not terminal, not held by a cap. Fired
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-007`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,

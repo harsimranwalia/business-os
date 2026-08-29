@@ -100,3 +100,24 @@ unknown` — this is an incident report, not a ticket gate, so nothing on the
 board moved; the investigation above and the proposal it filed are the
 complete response to "recheck the request and report back how to fix. fix if
 you can." Journaled in `agents/eng-manager/config/decision-journal.md`.
+
+---
+
+**Re-checked 2026-08-29 (`decision` event pass, context this file).** This
+event's own queued line (`decision 2026-08-28-eng-events-dropped.md` in
+`traces/.pending`) was appended behind the `watch schtasks` line above, so by
+the time it reached the front and this pass launched, the `watch` pass had
+already done the complete job — investigation, the `proposals.md` row, and
+the decision-journal entry all already on disk. Mirror image of `ENG-007`'s
+G2 (`decision-journal.md`, 2026-08-29 row): there the dedicated `decision`
+event drained first and a trailing `watch` found nothing left; here it's the
+other way around. Mode check clean (`MODE=` empty); pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+Re-read this file end to end and confirmed no content past the "Processed"
+footer above, and `proposals.md` / `decision-journal.md` both already carry
+their 2026-08-29 rows for this incident — nothing left to do.
+
+`chained: none` — `ticket: unknown`; this is an incident report, not a
+ticket, so there is nothing in an agent-owned state to fire a next hop for.
+Full reasoning in `agents/eng-manager/observations.md`, 2026-08-29 (last
+row).

@@ -5,29 +5,31 @@ project: aiorders-admin-hub
 type: feature
 size: M
 time_estimate: half a day to a couple of days
-time_spent:
-time_remaining:
+time_spent: not separately clocked — build, review, QA, security and the
+  database gate all completed in an unrecorded prior pass (see Log); read as
+  most of the estimate consumed
+time_remaining: ~0 build time; PR-open (two repos), merge and verify remain
 severity: P3
 priority:
-state: awaiting-scope
-owner: approver
+state: ready-to-ship
+owner: devops
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
 updated: 2026-08-29
-branch:
+branch: feat/ENG-011-client-stage-health-visibility (same name, both repos)
 depends_on: []
 blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-011-client-stage-health-visibility.md
-  design:
+  design: agents/architect/designs/ENG-011-client-stage-health-visibility.md
   adrs: []
-  review:
-  test_plan:
-  security_review:
+  review: agents/principal-engineer/reviews/ENG-011.md
+  test_plan: agents/qa/test-plans/ENG-011.md
+  security_review: agents/security/reviews/ENG-011.md
   release:
   pr:
 ---
@@ -197,4 +199,319 @@ Append-only. One line per state transition, newest last.
   `chained: none` — `awaiting-scope`, owned by the approver; the chaining
   guard never fires on a ticket waiting on a human. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
-  whole-board: see pass notes.
+  whole-board: exit 0, clean.
+
+- `2026-08-29` `awaiting-scope → designed → ready` (architect, then
+  eng-manager — same `intake` event pass, continued). The approver
+  answered this ticket's own G1 by hand-edit (`decision: approved`,
+  `decided: 2026-08-29T11:14:54.862156+00:00`, bare approval, no rider)
+  while this pass was still running. Per this instance's established
+  practice (whichever event reaches a fact first does the real work — see
+  `ENG-007`'s and `ENG-008`'s own G1 log entries), processed it here rather
+  than leaving it for a separately-queued `decision` event to rediscover
+  as a no-op. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-011`) and whole-board: both exit 0, clean.
+
+  **Real design work done against the live repos**, same practice
+  `ENG-005`/`ENG-007`/`ENG-008` established. Checked `aiorders-api`'s
+  order data before assuming the PRD's "no new cost" health claim would
+  hold: `get-online-orders` proxies live to a third-party vendor
+  (CloudWaitress, `cw_api_key`/`cw_restaurant_id`) for some paths, which
+  could have meant no cheap internal order history existed — but
+  `20260217000001_platform_analytics_cron.sql` confirmed a real internal
+  `orders` table (`restaurant_id`, `total_amount`) and an existing hourly
+  cron (`calculate_platform_analytics()`) already aggregating
+  `total_orders`/`total_order_value` per restaurant into Cloudflare KV.
+  Checking paid off by confirming feasibility rather than finding a
+  landmine this time (unlike `ENG-007`'s Walletly discovery) — health can
+  reuse this existing pipeline with one added column
+  (`last_order_at`) rather than a new query path or job.
+
+  **Design**: `agents/architect/designs/ENG-011-client-stage-health-visibility.md`.
+  `stage` and `health` both derived at read time (from `is_active`/
+  `onboarding_step`, and from the extended analytics aggregate,
+  respectively) rather than new stored fields — this is what closes the
+  drift-risk the G1 readback itself flagged for a separately-set "client"
+  column. No new table, no new vendor, no new datastore; one additive
+  column in an existing aggregate function's output is the only schema
+  change. **No one-way door** — moved straight through `designed`, no G2.
+
+  Moved the G1 gate item to `inbox/_handled/` with a processed footer;
+  journaled in `agents/eng-manager/config/decision-journal.md`.
+
+  **2 transitions this pass** (`awaiting-scope → designed → ready`) on top
+  of the 2 already spent shaping the ticket earlier in this same pass — 4
+  total, at the cap of 4, stopping here by design: `building` needs a
+  backend/frontend/database engineer actually writing code, new
+  implementation work this pass does not do. **Consequence:**
+  approver-facing WIP 1/2 → 0/2 (substantively; see board index for the
+  `ENG-009`/`ENG-010` mechanical-vs-substantive note, unaffected by this
+  ticket's own move either way); approval cap 2/3 → 1/3 (this ticket's G1
+  closed; its standing "tickets" question also closed this same pass, see
+  below); machine WIP 2/6 → 3/6 (`ENG-011` now inside the counted
+  `ready`..`ready-to-ship` range alongside `ENG-007`/`ENG-008`).
+
+  **The standing "tickets" question was also answered this same pass** —
+  `decision: rejected` with free-text "Reading A," read together as
+  "build Reading A" rather than a flat no (full reasoning on the gate
+  item's own processed footer, `inbox/_handled/2026-08-29-eng011-tickets-source-question.md`).
+  Shaped directly into `ENG-012` (own board file, PRD, and G1) in this
+  same pass, per the same sequence-continuation reasoning
+  `ENG-006`/`ENG-007`/`ENG-008` established — this item itself already
+  named filing the next ticket as its own next step once answered.
+
+  **Dead-end sweep:** scoped to this event's own lineage — `ENG-007`,
+  `ENG-008`, `ENG-009`, `ENG-010` untouched. **Notify sweep:** nothing new
+  to raise for this ticket (a gate closing doesn't get re-notified);
+  `ENG-012`'s own G1 raised separately, see its own log. **Observations
+  filed** (`observations.md`): the confirmed-live internal orders/analytics
+  pipeline; the ambiguous `rejected`+free-text answer shape.
+
+  `chained: ENG-011` — `ready` is eng-manager-owned (a
+  backend/frontend/database engineer builds next), not the approver, not
+  blocked, not terminal, not held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-011`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-011`) and whole-board: see pass notes.
+
+- `2026-08-29` **the predicted twin no-op: G1 scope decision event arrived
+  after its own fact was already consumed** (eng-manager, `decision` event
+  pass, context `inbox/_handled/2026-08-29-eng011-g1-scope.md`). Same
+  duplicate-queued-event shape already logged for `ENG-008`'s two gate
+  items, `ENG-009`'s G1, and `ENG-010`'s G1. Per this event's own narrower
+  contract, scoped to `ENG-011` only — no board-wide sweep. Mode check
+  clean (business-os `.env` → `MODE=` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+  whole-board: both exit 0, clean.
+
+  **Confirmed rather than assumed.** `traces/eng-loop-2026-08-29.log`:
+  `10:59:40 queue: collapsed 2 duplicate event(s)` fires immediately before
+  `10:59:40 draining queued event: decision (2026-08-29-eng011-g1-scope.md)`
+  — duplicate copies of this event collapsed to the oldest, which is this
+  pass. This item's frontmatter carries a processed footer naming the exact
+  pass that consumed it — the same `intake` pass that raised it, which
+  caught the approver's hand-edit (`decision: approved`, `decided:
+  2026-08-29T11:14:54.862156+00:00`) while still running: architect design
+  work done (`stage`/`health` both derived at read time from existing
+  columns/pipelines, no new stored fields — closing the drift-risk the
+  readback itself flagged), the ticket carried `awaiting-scope → designed →
+  ready` in the log entry directly above, journaled
+  (`agents/eng-manager/config/decision-journal.md`, row 26), and the gate
+  item itself already moved to `inbox/_handled/`. Checked fresh rather than
+  trusted: this ticket's own frontmatter (`state: ready`, `owner:
+  eng-manager`) and the journal row both agree with the footer. Nothing
+  left for this event to act on.
+
+  **0 transitions.** No cap affected — this ticket was already inside the
+  counted `ready`..`ready-to-ship` machine-WIP range (6/6, at cap) before
+  this pass, and this G1 was already off both the approver-facing WIP and
+  approval-cap counts.
+
+  **Dead-end sweep (scoped to this event):** confirmed `continue ENG-011` —
+  fired by the pass directly above — still sitting in `traces/.pending`,
+  undrained, behind several older not-yet-drained fires; not a broken
+  chain, just not yet its turn in the FIFO queue. Unlike `ENG-009`/
+  `ENG-010`, this ticket carries no documented sequencing hold against a
+  sibling ticket — nothing else in flight on `aiorders-admin-hub` touches
+  `Brands.tsx` — so once that fire reaches the front it should proceed
+  straight into `building` rather than parking again.
+
+  **Notify sweep:** nothing to raise (no new gate item); nothing to nudge
+  (this item's `notified:`/`decision:` cycle closed same-day, hours before
+  this pass).
+
+  `chained: none` — no state change; this ticket's existing chain
+  (`continue ENG-011`) is already queued and will run on its own turn.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-011`) and whole-board: both exit 0, clean. Also recorded on the
+  board index (`_index.md`, matching dated entry).
+
+- `2026-08-29` **a second predicted twin no-op, same shape, different gate
+  item** (eng-manager, `decision` event pass, context
+  `inbox/_handled/2026-08-29-eng011-tickets-source-question.md`). This
+  ticket's standing "tickets" question was queued as its own separate
+  `decision` event, independent of the G1-scope twin logged directly
+  above — same duplicate-queued-event shape already seen five times today
+  (`ENG-008`'s two gate items, `ENG-009`'s G1, `ENG-010`'s G1, `ENG-011`'s
+  own G1). Per this event's own narrower contract (act on the answered
+  gate item, advance only the ticket it belongs to), scoped to `ENG-011`
+  only — no board-wide sweep. Mode check clean (business-os `.env` →
+  `MODE=` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-011`) and whole-board: both exit 0, clean.
+
+  **Confirmed rather than assumed.** `traces/eng-loop-2026-08-29.log`:
+  `11:13:54 queue: collapsed 3 duplicate event(s)` fires immediately before
+  `11:13:54 draining queued event: decision
+  (2026-08-29-eng011-tickets-source-question.md)`, pass start `11:13:55`,
+  claude launched `11:14:48`. By the time this pass reached the file, the
+  fact was already fully consumed — and not just consumed but carried to a
+  closed end: the same `intake` pass that raised this standing question
+  caught the approver's hand-edit (`decision: rejected`, free text "Reading
+  A", `decided: 2026-08-29T11:16:32.000840+00:00`) while still running,
+  read the two together as a selection of Reading A rather than a flat
+  rejection (full reasoning on the gate item's own processed footer),
+  shaped it directly into `ENG-012` in that same pass (own PRD, own G1),
+  and journaled the read (`decision-journal.md` row 27). Checked fresh
+  rather than trusted: the gate item's frontmatter and footer, the journal
+  row, and `ENG-012`'s own board file all agree — and `ENG-012`'s own log
+  shows the thread went further still, in a later `scheduled` pass: its G1
+  came back `rejected` ("later"), and it reached terminal `state: dropped`.
+  Nothing of this remains open anywhere.
+
+  **0 transitions.** No cap affected — `ENG-011` was already inside the
+  counted `ready`..`ready-to-ship` machine-WIP range (6/6, at cap) before
+  this pass, and this standing question was already off both
+  approver-facing WIP and the approval cap (closed the same pass it was
+  raised).
+
+  **Dead-end sweep (scoped to this event):** re-confirmed `continue
+  ENG-011` still sitting in `traces/.pending`, undrained — now behind a
+  considerably longer backlog than when the G1-scope twin entry above last
+  checked (fires for `ENG-013` through `ENG-024` have since queued). Still
+  not stuck: `ENG-011` carries no documented sequencing hold against a
+  sibling ticket, so this is purely FIFO position, not a parked wait.
+
+  **Notify sweep:** nothing to raise (no new gate item); nothing to nudge
+  (this item's `notified:`/`decision:` cycle closed same-day, hours before
+  this pass).
+
+  `chained: none` — no state change; `ENG-011`'s existing chain (`continue
+  ENG-011`) is already queued and will run when it reaches the front.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-011`) and whole-board: both exit 0, clean. Also recorded on the
+  board index (`_index.md`, matching dated entry).
+
+- `2026-08-29` `ready → building → in-review → in-security → ready-to-ship`
+  (backend/database/frontend, then principal-engineer + qa combined, then
+  security — `continue` event pass, context `ENG-011`, its actual turn at
+  the front of `traces/.pending` this time). Narrow scope per the event's
+  own contract (resume this ticket from its current state; no board-wide
+  sweep). Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean.
+
+  **Recovered a fully unrecorded build — the same failure family `ENG-006`
+  named first and `ENG-007` showed one step further along, now a third
+  time.** This ticket's own frontmatter and log still read `ready` at pass
+  start, but both `_eng` worktrees (`C:/Users/jerryai/Documents/_eng/aiorders-admin-hub`,
+  `.../aiorders-api`) already carried the `feat/ENG-011-client-stage-health-visibility`
+  branch, pushed, and **all four gate receipts already existed on disk**
+  with `pass` verdicts, all referencing the same commits:
+  `agents/database/migrations/ENG-011-client-stage-health-visibility.md`,
+  `agents/principal-engineer/reviews/ENG-011.md`, `agents/qa/test-plans/ENG-011.md`,
+  `agents/security/reviews/ENG-011.md`. Unlike `ENG-007`'s recovery (where
+  the ticket's own bookkeeping was the only thing behind), this ticket's
+  board file hadn't been touched at all since it was set to `ready` two
+  passes ago — consistent with the chain firing correctly each time
+  (visible in both prior no-op log entries above) and this ticket simply
+  not having reached the front of the FIFO queue until now, at which point
+  a build pass ran to completion, wrote all four receipts, and then didn't
+  reach the board-file write. `traces/eng-loop-2026-08-29.log` confirms
+  the queue depth both prior entries flagged (`ENG-013` through `ENG-024`
+  ahead of this ticket) was real, not a stall.
+
+  **Verified fresh rather than trusted, before recording anything —**
+  same practice this board has used at every recovery so far, extended
+  one step further here:
+  - `git status`/`log`/`diff --stat` in both worktrees: `aiorders-admin-hub`
+    at `6cf5e8c` (1 commit, `Brands.tsx` only, matches the review's own
+    diff reference exactly); `aiorders-api` at `4a5eb4d` (2 commits, 6
+    files, matches exactly). Both `[origin/feat/ENG-011-client-stage-health-visibility]`,
+    pushed. One unrelated, harmless artifact noted and left alone:
+    `aiorders-admin-hub`'s `package-lock.json` carries unstaged `"peer":
+    true` metadata churn from a newer local npm reading an older lockfile
+    — no package added, removed or bumped; not part of this ticket's diff,
+    not committed.
+  - Re-ran, not trusted from the receipts: `deno test --no-check --allow-net`
+    on `brands.test.ts` — **12 passed, 0 failed**, identical to the QA
+    plan's own result. `npm run build` in `aiorders-admin-hub` — clean,
+    3340 modules, same chunk-size warning already named as pre-existing.
+  - **New verification beyond what any receipt had**: the database
+    migration doc named one real residual gap — no live Postgres reachable
+    on this host (Docker's daemon still doesn't come up, no `psql`, no
+    `supabase` CLI — the same limitation `ENG-007`'s migration doc first
+    named, now confirmed a third time). This pass had a path the prior
+    ones didn't: the Supabase MCP connection reaches the real
+    `aiorders-api` project (`bmnmnejwdxbcqinqkwko`) directly. Used it
+    **read-only, at zero cost**, to independently confirm what the
+    migration doc could only reason through: `orders.created_at` is
+    `timestamptz NOT NULL` exactly as assumed; the live
+    `calculate_platform_analytics` function body is byte-for-byte
+    identical to what the doc's rollback restores; `pg_depend`/`cron.job`
+    against the function's OID are both empty, confirming nothing in the
+    database catalog depends on it; and the migration is confirmed not yet
+    applied. Full detail and reasoning: addendum on the database migration
+    doc, dated this pass.
+
+    **Deliberately not done, named rather than quietly skipped**: creating
+    a Supabase branch to actually dry-run the DROP+CREATE statement was
+    available (`create_branch`) but gated behind `confirm_cost` — a real
+    recurring charge — and applying the migration directly to production
+    before this ticket's PR has even been opened would jump the L1
+    human-merge gate entirely. Neither is a call this pass makes
+    unilaterally; both would need the approver first. So the gap is now
+    narrower (the statement's safety is independently confirmed against
+    live catalog data) but not fully closed (the statement itself has
+    still never executed anywhere) — stated exactly, not rounded up to
+    "verified" or left at the old, wider "not verified" either.
+
+  **Third occurrence of the same host limitation, crossing the threshold
+  this board's own observations ledger set.** The 2026-08-29 observation
+  logged during `ENG-007`'s recovery named this "worth one [a proposal] if
+  a future pass needs live-Postgres verification and hits the same wall a
+  third time" — this is that third time (after `ENG-007`'s migration doc,
+  then that same day's dead-end-sweep observation). Filed as a proposal,
+  not another observation (`agents/eng-manager/proposals.md`), carrying
+  the concrete finding this pass adds: the Supabase MCP connection already
+  closes the read-only half of the gap for free today; what's missing is
+  an approved, budgeted path for the write half (a throwaway branch,
+  pre-approved up to some small monthly cap) for the rare ticket whose
+  gate genuinely needs a live dry-run.
+
+  **State recorded to match the verified reality**, `building → in-review`
+  folding in `in-qa` per `config.yaml`'s own `combined_hop: [code_review,
+  quality]` (no separate sit-state, same as `ENG-005`/`ENG-006`/`ENG-007`):
+  `branch: feat/ENG-011-client-stage-health-visibility` (both repos);
+  `links.review`, `links.test_plan`, `links.security_review` all set to
+  the receipts above.
+
+  **4 transitions this pass** (`ready→building`, `building→in-review`,
+  `in-review→in-security`, `in-security→ready-to-ship`), at the cap of 4 —
+  same count, same stopping point `ENG-007`'s recovery used earlier the
+  same day. **Consequence:** `machine_wip` unaffected — `ENG-011` was
+  already inside the counted `ready..ready-to-ship` range at `ready`,
+  stays inside it at `ready-to-ship`. Approver-facing WIP and approval cap
+  both unaffected — no gate raised this pass; the L1 merge request (both
+  repos) is the next hop's work, same split `ENG-007` used at this
+  identical boundary.
+
+  **Release window checked fresh, independently reconfirmed, deliberately
+  not acted on this pass** — same split `ENG-006`/`ENG-007` used at this
+  exact boundary: `date` → Saturday 2026-08-29, 12:51 local, inside
+  `releases.block_weekends`; `.env` → `MODE=` empty, no
+  `ENG_RELEASE_FREEZE`; instance `config/config.yaml` → `mode:` empty.
+  Flagged here so the next hop doesn't have to rediscover it, not decided
+  here — opening two PRs (first cross-repo release on this board) is real,
+  distinct devops work for that hop.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in
+  a valid, accounted-for state with the chain record below. No sweep of
+  the rest of the board — out of scope for a `continue` event naming this
+  ticket specifically.
+
+  **Notify sweep:** nothing raised this pass — a state recorded to match
+  already-completed work doesn't get its own notification; the proposal
+  filed above rides the weekly batch, not an immediate notify, same as
+  every other proposal-lane item.
+
+  **Observations filed** (`observations.md`): the Supabase MCP connection
+  as a free, zero-setup read-only path to the live `aiorders-api`
+  database, usable by any future ticket that needs to check current schema
+  or catalog state without Docker/psql.
+
+  `chained: ENG-011` — `ready-to-ship` is agent-owned (devops opens the PR
+  next), not the approver, not blocked, not terminal, not held by a cap.
+  Fired `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-011`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-011`) and whole-board: see pass notes.
