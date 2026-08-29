@@ -1,11 +1,11 @@
 ---
 ticket: ENG-005
 project: aiorders-admin-hub
-status: shaped
+status: verified
 size: S
 author: product-manager
 created: 2026-08-25
-decided:
+decided: 2026-08-27T20:08:53.367622+00:00
 ---
 
 # Decide and act on the orphaned A4PosterGenerator component
@@ -103,20 +103,19 @@ question as a choice, per `skills/request-readback/SKILL.md` step 5.
 
 ## Acceptance criteria
 
-Deliberately not written yet. Per `skills/prd-writer/SKILL.md` step 5,
-acceptance criteria must be independently verifiable — "wire it in" and
-"delete it" produce entirely different, mutually exclusive criteria, and
-writing both as if either might apply would be padding, not a criterion.
-Whichever answer comes back, the criteria are:
+Both halves of the fork are now answered — wired in, on
+`RestaurantDetails.tsx` (`inbox/_handled/2026-08-27-eng005-g1-followup-surface.md`).
+Only the wire-in branch's criteria apply; the revert branch is closed and its
+criteria are dropped rather than kept as dead weight.
 
-- **If wired in:** `[stated]` Given the admin hub after this ships, when a
-  human navigates to {the named surface}, then `A4PosterGenerator` renders
-  without error. `[stated]` Given the same, then it appears in whatever
-  navigation makes that surface discoverable, not only reachable by direct
-  URL.
-- **If reverted:** `[stated]` Given `aiorders-admin-hub` after this ships,
-  when `git log` is checked, then `bfddffe` is cleanly reverted and
-  `A4PosterGenerator.tsx` no longer exists on the default branch.
+- `[stated]` Given the admin hub after this ships, when a human navigates to
+  a restaurant's detail page (`/restaurants/:id/details`,
+  `src/pages/RestaurantDetails.tsx`), then `A4PosterGenerator` renders without
+  error in a new section on that page.
+- `[stated]` Given the same, then the poster section is reachable via the
+  page's existing navigation (a restaurant's row → Details), not only by a
+  direct URL — satisfied by placement on an already-discoverable page, no new
+  nav entry needed.
 
 ## Non-goals
 
@@ -152,12 +151,24 @@ Whichever answer comes back, the criteria are:
 
 ## Decision
 
-Filled in after G1 — not yet raised, same reason as `ENG-004` (WIP cap; see
-that ticket's log). This ticket is unusual among the three shaped this pass
-in that its G1 is not "approve this plan" but "tell us which of two things
-you want" — see Readback.
-
-- **The approver's answer:**
-- **Date:**
-- **Notes:** No `## Dissent` section yet — same `agents/critic/agent.md` gap
-  as the other two.
+- **The approver's answer (fork):** approved — "wire it in" (`inbox/_handled/2026-08-27-eng005-g1-scope.md`)
+- **Date:** 2026-08-27T18:03:50.514589+00:00
+- **The approver's answer (surface follow-up):** approved — "lets do
+  RestaurantDetails.tsx" (`inbox/_handled/2026-08-27-eng005-g1-followup-surface.md`),
+  confirming the PM's evidence-backed recommendation rather than naming a
+  different surface.
+- **Date:** 2026-08-27T20:08:53.367622+00:00
+- **Notes:** Both halves of the G1 fork are now settled — the component
+  stays, wired into `RestaurantDetails.tsx`, revert branch closed. Acceptance
+  criteria filled in above now that the surface is known. `status` moves to
+  `designed`; see the ticket log and
+  `agents/architect/designs/ENG-005-a4-poster-generator-wire-in.md` for the
+  technical design (no one-way doors — additive, reversible, no schema, no
+  new dependency — so no G2). No `## Dissent` section — same
+  `agents/critic/agent.md` gap as the other two shaped this pass.
+- **Size resolved at design: stays `S`, not resized.** Closes the open
+  question this PRD's own Risks section flagged — design confirmed no new
+  data-fetching (four of five props come from the page's existing fetch) and
+  no new dependency (the QR flow's `url-shortener` function and `jspdf` both
+  already exist/are already installed). The fifth prop, `primaryColor`, has
+  nothing to read from and is passed `null`.
