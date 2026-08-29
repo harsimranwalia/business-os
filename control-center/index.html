@@ -108,6 +108,8 @@
     .tag.p0, .tag.p1 { border-color: rgba(239,68,68,.55); color: #f87171; }
     .tag.time-impact { background: #92400e; color: #fff; border-color: transparent; }
     .meta.warn { color: #fbbf24; }
+    .now-line { font-size: 12px; color: var(--muted-mid); margin-top: 8px; line-height: 1.4;
+      padding-left: 10px; border-left: 2px solid rgba(139,92,246,.45); }
     .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
     .status-dot.dot-on { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,.7); }
     .status-dot.dot-off { background: var(--muted); }
@@ -420,10 +422,28 @@ function shortCtx(context) {
   if (!context) return '';
   return context.split(/[\\/]/).pop().replace(/\.md$/, '');
 }
+// Event type -> plain-English verb. There is no separate tracked "phase"
+// (architect / building / testing / security) — one Claude session does all
+// of that within a single pass, guided by the ticket's own state rather than
+// a labelled hand-off — so the event type plus the live transcript snippet
+// below it is the honest readout, not an invented stage label.
+const EVENT_VERBS = {
+  continue: 'Building', decision: 'Applying decision', intake: 'Shaping request',
+  scheduled: 'Running sweep', watch: 'Checking inbox', finding: 'Handling finding',
+};
+function eventLabel(a) {
+  const raw = a.current_event || '';
+  const head = raw.split(/\s/)[0];
+  const verb = EVENT_VERBS[head] || 'Working';
+  if (a.current_ticket) return `${verb} ${a.current_ticket}`;
+  const ctxMatch = raw.match(/\(([^)]+)\)/);
+  if (ctxMatch) return `${verb} — ${shortCtx(ctxMatch[1])}`;
+  return raw ? verb : 'Working — a pass';
+}
 function renderActivity(a) {
   if (!a) return '';
   const dotClass = a.running ? 'dot-on' : 'dot-off';
-  const statusText = a.running ? `Working — ${esc(a.current_event || 'a pass')}` : 'Idle';
+  const statusText = a.running ? eventLabel(a) : 'Idle';
   const bits = [];
   if (a.running && a.running_seconds != null) bits.push(`session active ${fmtDur(a.running_seconds)}`);
   bits.push(`today ${a.hops_today}${a.hops_budget ? '/' + a.hops_budget : ''} hops`);
@@ -433,6 +453,9 @@ function renderActivity(a) {
   let h = '<div class="section"><div class="h">Right now</div><div class="card activity">';
   h += `<div class="row"><span class="status-dot ${dotClass}"></span><span class="title">${statusText}</span></div>`;
   h += `<div class="meta">${esc(bits.join(' · '))}</div>`;
+  if (a.running && a.current_activity) {
+    h += `<div class="now-line">${esc(a.current_activity)}</div>`;
+  }
 
   if (a.mode) {
     h += `<div class="meta warn">MODE=${esc(a.mode)} — this instance goes silent; nothing here will notify or post until it's cleared.</div>`;

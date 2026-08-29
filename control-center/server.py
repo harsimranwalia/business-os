@@ -687,6 +687,7 @@ def eng_activity(inst):
     out = {
         "mode": os.environ.get("MODE", ""),
         "running": False, "pid": None, "running_seconds": None, "current_event": "",
+        "current_ticket": None, "current_activity": "",
         "pending_count": 0, "pending_preview": [],
         "hops_today": 0, "hops_budget": None, "refunds_today": 0,
         "backoff_active": False, "backoff_seconds": None,
@@ -762,14 +763,59 @@ def eng_activity(inst):
             timestamped = [l for l in lines if re.match(r"^\[\d{4}-\d{2}-\d{2}", l)]
             out["recent_log"] = timestamped[-6:]
             for l in reversed(timestamped):
-                m = re.search(r"pass start: (\S+)", l)
+                # 2026-08-29: was `(\S+)` — captured only the event TYPE
+                # ("continue", "decision", "scheduled"...) and silently
+                # dropped the context in parens right next to it, which is
+                # the one thing that actually names a ticket ("continue
+                # (ENG-011)") or a gate file ("decision
+                # (2026-08-29-eng008-g1-scope.md)"). Every line ends
+                # " [day N/40 charged..." (added by ENG-005's hop-accounting
+                # work), so that is the real stop point, not the first space.
+                m = re.search(r"pass start: (.+?)(?:\s*\[day\b|\s*$)", l)
                 if m:
                     out["current_event"] = m.group(1)
+                    tm = re.search(r"ENG-\d+", out["current_event"])
+                    if tm:
+                        out["current_ticket"] = tm.group(0)
                     break
         except Exception:
             pass
 
+    if out["running"] and out["pid"]:
+        out["current_activity"] = _activity_snippet(state, out["pid"])
+
     return out
+
+
+def _activity_snippet(state, pid):
+    """Last human-readable line of the currently running pass's own
+    transcript (`traces/.pass-out.<pid>`, written by `lib/run-stream.py`) —
+    the closest thing to a live "is it building, testing, reviewing..."
+    readout that exists, short of teaching the trigger a separate phase/role
+    field it does not track today: one Claude session does design, code, and
+    test verification all in the same pass, guided by the ticket's own state
+    rather than a labelled hand-off between roles. Tool-call markers
+    ("· Bash", "· Read", ...) and rate-limit markers ("·· ...") carry no
+    information on their own, so the last non-marker line of prose is what
+    gets surfaced. Wrapped like every other read in this function: a pass
+    writing this same file right now must not take the dashboard down."""
+    f = state / f".pass-out.{pid}"
+    if not f.is_file():
+        return ""
+    try:
+        with open(f, "rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            size = fh.tell()
+            fh.seek(max(0, size - 4000))
+            tail = fh.read().decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+    for line in reversed(tail.splitlines()):
+        s = line.strip()
+        if not s or s.startswith("·"):
+            continue
+        return s[:220]
+    return ""
 
 
 def _resolve_windows_bash():
