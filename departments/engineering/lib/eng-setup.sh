@@ -210,7 +210,7 @@ echo "  You send a build request in the Engineering tab   -> PM shapes it immedi
 echo "  You approve a gate (tab, or in Slack)             -> that ticket moves immediately"
 echo "  An agent files a bug / finding                    -> picked up on the inbox write"
 echo "  A pass finishes mid-flow                          -> it fires its own next hop"
-echo "  Weekdays 09:30 / 15:30                            -> safety-net sweep, every instance"
+echo "  Daily 09:30 / 15:30 / 20:30 / 02:00                -> safety-net sweep, every instance"
 echo
 echo "Watch it:  tail -f $ENG_INSTANCE/traces/eng-loop-\$(date +%Y-%m-%d).log"
 echo "Pause it:  set 'mode: sabbath' in $ENG_INSTANCE/config/config.yaml (this business only)"

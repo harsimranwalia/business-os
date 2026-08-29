@@ -11,7 +11,7 @@ that owns the state — see each agent's `skills.md`.
 ## Call graph
 
 ```
-eng_build_loop (weekdays 09:30 + 15:30)
+eng_build_loop (daily 09:30 + 15:30 + 20:30 + 02:00)
   ├── product-manager — business intake (the front door)
   │     └── agents/product-manager/inbox/ + requests filed in inbox/requests/ tagged `eng`
   │           └── prd-writer → ticket at `intake` → PRD → G1 → hands to the EM

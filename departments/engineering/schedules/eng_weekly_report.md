@@ -1,6 +1,6 @@
 # Schedule: eng_weekly_report
 
-**Status:** 📋 DESIGNED — not yet cron-wired
+**Status:** ✅ WIRED — `com.businessos.eng-report` (macOS launchd), Sundays 18:30. Runner: `lib/eng-report.sh`, installed via `lib/eng-schedule.sh --apply`.
 
 **Description:** One engineering report a week — shipped, in flight, blocked, bugs, cost, and what needs the approver.
 
@@ -164,7 +164,10 @@ The approver reads one evening's worth of reports, not seven.
 
 ## Notes
 
-Built 2026-07-27 with the engineering department. Not yet cron-wired.
+Built 2026-07-27 with the engineering department. Cron-wired 2026-08-27
+(`lib/eng-report.sh` + `lib/eng-schedule.sh`'s third job) — the batched-proposal
+review this schedule's section 3b describes had no path to actually reach the
+approver until then; see `agents/eng-manager/proposals.md`'s 2026-08-27 row.
 
 The report is terminal by design: the approver reads it or doesn't. An
 aggregator may pull a single line from it into a daily brief later, if the

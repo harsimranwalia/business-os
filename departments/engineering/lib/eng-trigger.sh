@@ -1361,7 +1361,7 @@ if [ -n "$TICKET_ID" ]; then
     halt_notice "$TICKET_ID" "\`$TICKET_ID\` used $TH of its $MAX_HOPS_PER_TICKET daily hops and has been stopped. The rest of the board is still running."
     drop_notice "$EVENT${CONTEXT:+ $CONTEXT}" \
       "\`$TICKET_ID\` has used its whole daily hop budget, so this event was refused before it was ever queued and has been discarded.
-The event has NOT been processed. The hop counter clears at midnight; whatever fired this will need to fire again, or the twice-daily scheduled pass will pick the work up."
+The event has NOT been processed. The hop counter clears at midnight; whatever fired this will need to fire again, or the next scheduled pass will pick the work up."
     exit 0
   fi
 fi
@@ -1563,7 +1563,7 @@ if [ -n "$TICKET_ID" ]; then
     # from "this event was never processed and never will be".
     drop_notice "$EVENT${CONTEXT:+ $CONTEXT}" \
       "\`$TICKET_ID\` has used its whole daily hop budget, so this queued event was skipped mid-drain and discarded.
-The event has NOT been processed. The hop counter clears at midnight; whatever fired this will need to fire again, or the twice-daily scheduled pass will pick the work up."
+The event has NOT been processed. The hop counter clears at midnight; whatever fired this will need to fire again, or the next scheduled pass will pick the work up."
     # The next iteration drains. There is exactly one drain call site now — at
     # the top of this loop — so a caller cannot forget the guard that lives
     # inside it, and cannot forget to log the drain either.
@@ -1713,7 +1713,7 @@ unblocked:
   finding   shape the new bug / incident / debt card into a ticket and place it
             on the board. Do not start it unless a WIP slot is free.
   continue  resume the named ticket from its current state.
-  scheduled the twice-daily safety-net pass. Sweep the whole board: everything a
+  scheduled the safety-net pass (four times daily). Sweep the whole board: everything a
             local event cannot see — a PR merged on github.com, a chain that
             broke, work that arrived while the machine was asleep.
   watch     a file changed in one of the watched inboxes and the change did not

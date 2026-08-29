@@ -56,7 +56,7 @@ for eng in "$BUSINESS_OS_ROOT"/instances/*/engineering; do
 done
 
 if [ "$found" -eq 0 ]; then
-  # Loud, not silent. A scheduler that fires twice a day and finds nothing to do
+  # Loud, not silent. A scheduler that fires several times a day and finds nothing to do
   # looks identical to one that is not running at all.
   log "NO INSTANCES FOUND under $BUSINESS_OS_ROOT/instances — nothing fired"
   exit 0

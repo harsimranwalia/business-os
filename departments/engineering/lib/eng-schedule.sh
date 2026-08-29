@@ -5,12 +5,18 @@
 #   ./eng-schedule.sh --apply    write the plists and (re)load them
 #   ./eng-schedule.sh --remove   unload and delete both jobs
 #
-# TWO jobs for ALL businesses, not two per business. install.sh calls this on
-# every onboard, so adding a business never means installing host wiring by hand.
+# THREE jobs for ALL businesses, not three per business. install.sh calls this
+# on every onboard, so adding a business never means installing host wiring by
+# hand.
 #
-#   com.businessos.eng-loop   weekdays 09:30 / 15:30 — the safety-net sweep.
-#                             One job; lib/eng-loop-all.sh discovers instances.
-#   com.businessos.eng-watch  an inbox changed outside the notify channel.
+#   com.businessos.eng-loop    daily 09:30 / 15:30 / 20:30 / 02:00 — the
+#                              safety-net sweep. One job; lib/eng-loop-all.sh
+#                              discovers instances.
+#   com.businessos.eng-watch   an inbox changed outside the notify channel.
+#   com.businessos.eng-report  Sundays 18:30 — schedules/eng_weekly_report.md.
+#                              Not an eng-trigger.sh event; a dedicated runner,
+#                              lib/eng-report.sh, discovers instances the same
+#                              way the other two do. See that file's header.
 #
 # Why the watch job is regenerated and the loop job is not: launchd's WatchPaths
 # is a STATIC array. It cannot glob, and it is not recursive — watching
@@ -43,11 +49,14 @@ esac
 
 LOOP_LABEL="com.businessos.eng-loop"
 WATCH_LABEL="com.businessos.eng-watch"
+REPORT_LABEL="com.businessos.eng-report"
 LOOP_PLIST="$AGENTS/$LOOP_LABEL.plist"
 WATCH_PLIST="$AGENTS/$WATCH_LABEL.plist"
+REPORT_PLIST="$AGENTS/$REPORT_LABEL.plist"
+REPORT_RUNNER="$DEPT/lib/eng-report.sh"
 
 if [ "$REMOVE" -eq 1 ]; then
-  for l in "$LOOP_LABEL" "$WATCH_LABEL"; do
+  for l in "$LOOP_LABEL" "$WATCH_LABEL" "$REPORT_LABEL"; do
     launchctl bootout "gui/$(id -u)/$l" 2>/dev/null || true
     rm -f "$AGENTS/$l.plist"
     echo "  removed $l"
@@ -72,9 +81,11 @@ echo "Engineering schedule ($([ "$APPLY" -eq 1 ] && echo APPLY || echo "dry run"
 for eng in $INSTANCES; do echo "  instance: $(basename "$(dirname "$eng")")"; done
 
 # ── The loop job ───────────────────────────────────────────────────────────
-# Weekdays 09:30 and 15:30. A safety net, not the engine: the control center
-# and the chain fire events immediately, and this catches what a local event
-# cannot see.
+# Every day — 09:30, 15:30, 20:30, and 02:00. A safety net, not the engine:
+# the control center and the chain fire events immediately, and this catches
+# what a local event cannot see. Runs weekends too; the release window
+# (config.yaml build_loop.release_window.block_weekends) is what actually
+# stops a Saturday/Sunday pass from shipping, not this schedule.
 loop_plist() {
   cat <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -98,8 +109,9 @@ loop_plist() {
 	<string>/tmp/businessos-eng-loop.log</string>
 	<key>StartCalendarInterval</key>
 	<array>
-$(for wd in 1 2 3 4 5; do for hr in 9 15; do
-printf '\t\t<dict><key>Hour</key><integer>%s</integer><key>Minute</key><integer>30</integer><key>Weekday</key><integer>%s</integer></dict>\n' "$hr" "$wd"
+$(for wd in 0 1 2 3 4 5 6; do for hm in 9:30 15:30 20:30 2:00; do
+hr="${hm%:*}"; mn="${hm#*:}"
+printf '\t\t<dict><key>Hour</key><integer>%s</integer><key>Minute</key><integer>%s</integer><key>Weekday</key><integer>%s</integer></dict>\n' "$hr" "$mn" "$wd"
 done; done)
 	</array>
 </dict>
@@ -147,6 +159,49 @@ done; done)
 PLIST
 }
 
+# ── The weekly report job ──────────────────────────────────────────────────
+# Sunday 18:30 — schedules/eng_weekly_report.md's own cron expression
+# (30 18 * * 0), thirty minutes ahead of the Marketing weekly run so the
+# approver reads one evening's worth of reports, not seven separate pings.
+#
+# Not an eng-trigger.sh event (see lib/eng-report.sh's own header), so this
+# points at a dedicated runner instead of $RUNNER with an event name —
+# eng-trigger.sh's five-event vocabulary has no "report" case, and none of its
+# per-ticket machinery (hop budget, WIP caps, chaining, retry) applies to a
+# pass that touches no ticket.
+report_plist() {
+  cat <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$REPORT_LABEL</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>$REPORT_RUNNER</string>
+	</array>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>StandardOutPath</key>
+	<string>/tmp/businessos-eng-report.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/businessos-eng-report.log</string>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>18</integer>
+		<key>Minute</key>
+		<integer>30</integer>
+		<key>Weekday</key>
+		<integer>0</integer>
+	</dict>
+</dict>
+</plist>
+PLIST
+}
+
 install_one() { # install_one <label> <plist-path> <generator>
   _label="$1"; _path="$2"; _gen="$3"
   _new="$("$_gen" 2>/dev/null || $_gen)"
@@ -168,8 +223,9 @@ install_one() { # install_one <label> <plist-path> <generator>
 }
 
 echo
-install_one "$LOOP_LABEL"  "$LOOP_PLIST"  loop_plist
-install_one "$WATCH_LABEL" "$WATCH_PLIST" watch_plist
+install_one "$LOOP_LABEL"   "$LOOP_PLIST"   loop_plist
+install_one "$WATCH_LABEL"  "$WATCH_PLIST"  watch_plist
+install_one "$REPORT_LABEL" "$REPORT_PLIST" report_plist
 
 if [ "$APPLY" -eq 0 ]; then
   echo

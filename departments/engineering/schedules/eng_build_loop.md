@@ -16,7 +16,7 @@
 | `continue` | **the pass itself** | a pass ended with the ticket in an agent-owned state |
 | `watch` | the scheduler's file-watch | an inbox file changed outside the notify channel — see the watch-event handling in `lib/eng-trigger.sh`. **The host wiring that fires it is not ported**: `lib/eng-setup.sh` refuses to run (Phase 2), so on an instance this event only arrives when something calls the trigger directly |
 
-**Schedule (human):** weekdays at 09:30 and 15:30 — a **safety net, not the engine**
+**Schedule (human):** daily at 09:30, 15:30, 20:30, and 02:00 — a **safety net, not the engine**
 
 **Scheduler.** A calendar-interval scheduler that catches a missed run on wake
 (macOS `launchd` `StartCalendarInterval`) matters for an instance hosted on a

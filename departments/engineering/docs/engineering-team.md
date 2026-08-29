@@ -361,7 +361,7 @@ level is the approver's call and only the approver's.
 
 | Routine | When | What |
 |---|---|---|
-| `eng_build_loop` | **On event**, plus weekdays 09:30 and 15:30 as a safety net | Runs every in-flight ticket forward until it hits a human or new implementation work. The engine. |
+| `eng_build_loop` | **On event**, plus daily 09:30, 15:30, 20:30, and 02:00 as a safety net | Runs every in-flight ticket forward until it hits a human or new implementation work. The engine. |
 | `eng_security_sweep` | Sun 07:00 | Dependency, secret, and control-drift scan across all registered projects. |
 | `eng_weekly_report` | Sun 18:30 | One report: shipped, in flight, blocked, what needs the approver. Folds into the Sunday cadence. |
 
