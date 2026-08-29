@@ -3,10 +3,14 @@
 
 A standalone command center for business-os, with zero dependency on
 life-os. Runs entirely off this repo: departments/, instances/, and this
-repo's own .env (TWENTY_API_KEY etc). Local-only by default — no passcode
-gate, no tunnel — because it is meant to run on Harry's business desktop,
-not be reachable from the open internet. If that changes, add the gate
-life-os's control-center already has rather than inventing a new one.
+repo's own .env (TWENTY_API_KEY etc).
+
+Gated by email+PIN — the same gate life-os's control-center already had,
+ported rather than reinvented, because this is now also reachable over the
+internet via a Cloudflare Tunnel (see control-center/cloudflare-tunnel.sh).
+Users are `email:pin` pairs in CONTROL_CENTER_USERS (repo-root .env). No
+account system, no password reset — just enough to keep this off the open
+internet's script kiddies while staying a single human's tool.
 
 Tabs:
   Marketing    Twenty CRM "Marketing Content" lifecycle — approve/edit/skip
@@ -29,21 +33,24 @@ Tabs:
                content_loop, reddit_post, eng-loop-all runs).
 """
 
+import hmac
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import threading
 import time
 import urllib.request
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 ROOT = Path(__file__).resolve().parent.parent  # business-os root
 HTML_FILE = Path(__file__).parent / "index.html"
+LOGIN_HTML_FILE = Path(__file__).parent / "login.html"
 PORT = 7777
 
 
@@ -62,6 +69,119 @@ def load_env():
 
 
 load_env()
+
+
+# ── Auth gate ────────────────────────────────────────────────────────────────
+# Email+PIN, server-side session store — no external deps, no accounts. Sized
+# for "one household, two people," not a multi-tenant login system. A session
+# token is an opaque random id (not a signed cookie): the only thing worth
+# protecting is which requests are self-authenticated, and a server-side dict
+# does that without needing HMAC signing at all. _AUTH_LOCK exists because
+# ThreadingHTTPServer runs each request on its own thread now — it did not
+# before this gate needed one — and SESSIONS/LOGIN_ATTEMPTS are shared state.
+
+SESSION_COOKIE = "cc_session"
+SESSION_TTL = 30 * 24 * 3600  # 30 days
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+_AUTH_LOCK = threading.Lock()
+SESSIONS = {}         # token -> {"email": str, "expires": float}
+LOGIN_ATTEMPTS = {}   # ip -> {"count": int, "locked_until": float}
+
+
+def _load_users():
+    """email (lowercased) -> pin, from CONTROL_CENTER_USERS in .env:
+    `CONTROL_CENTER_USERS=a@b.com:1234,c@d.com:5678`. Re-read every call
+    (env is a module-level dict already loaded once at startup, so this is
+    cheap) rather than cached, so editing .env and restarting is the only
+    step to add or change a user — no separate user store to keep in sync."""
+    raw = os.environ.get("CONTROL_CENTER_USERS", "")
+    users = {}
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if not pair or ":" not in pair:
+            continue
+        email, _, pin = pair.partition(":")
+        email, pin = email.strip().lower(), pin.strip()
+        if email and pin:
+            users[email] = pin
+    return users
+
+
+def _new_session(email):
+    token = secrets.token_urlsafe(32)
+    with _AUTH_LOCK:
+        SESSIONS[token] = {"email": email, "expires": time.time() + SESSION_TTL}
+    return token
+
+
+def _session_email(token):
+    if not token:
+        return None
+    with _AUTH_LOCK:
+        sess = SESSIONS.get(token)
+        if not sess:
+            return None
+        if sess["expires"] < time.time():
+            SESSIONS.pop(token, None)
+            return None
+        return sess["email"]
+
+
+def _drop_session(token):
+    with _AUTH_LOCK:
+        SESSIONS.pop(token, None)
+
+
+def _client_ip(handler):
+    """The real client IP, not cloudflared's own loopback socket peer.
+    cloudflared forwards it in this header for every tunneled request;
+    direct localhost access has none, so the raw socket address is the
+    honest fallback there."""
+    fwd = handler.headers.get("CF-Connecting-IP")
+    return (fwd or handler.client_address[0]).strip()
+
+
+def _login_locked(ip):
+    with _AUTH_LOCK:
+        a = LOGIN_ATTEMPTS.get(ip)
+        if not a or not a["locked_until"] or a["locked_until"] <= time.time():
+            return False, 0
+        return True, int(a["locked_until"] - time.time())
+
+
+def _login_fail(ip):
+    with _AUTH_LOCK:
+        a = LOGIN_ATTEMPTS.setdefault(ip, {"count": 0, "locked_until": 0})
+        a["count"] += 1
+        if a["count"] >= LOGIN_MAX_ATTEMPTS:
+            a["locked_until"] = time.time() + LOGIN_LOCKOUT_SECONDS
+            a["count"] = 0
+
+
+def _login_ok(ip):
+    with _AUTH_LOCK:
+        LOGIN_ATTEMPTS.pop(ip, None)
+
+
+def _parse_cookies(handler):
+    out = {}
+    for part in handler.headers.get("Cookie", "").split(";"):
+        if "=" in part:
+            k, _, v = part.strip().partition("=")
+            out[k] = v
+    return out
+
+
+def _cookie_header(token, clear=False):
+    # Secure works fine even over plain http://localhost — Chrome and
+    # Firefox both treat localhost as a secure context — and is required for
+    # the cookie to survive the trip through the Cloudflare Tunnel, where the
+    # browser only ever sees HTTPS.
+    max_age = 0 if clear else SESSION_TTL
+    return (f"{SESSION_COOKIE}={token if not clear else ''}; Path=/; HttpOnly; "
+            f"Secure; SameSite=Lax; Max-Age={max_age}")
 
 
 # ── Generic markdown/frontmatter helpers ────────────────────────────────────
@@ -1268,22 +1388,78 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
-    def send_json(self, code, data):
+    def send_json(self, code, data, extra_headers=None):
         body = json.dumps(data, indent=2).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
+        for k, v in (extra_headers or {}).items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
-    def send_html(self):
-        body = HTML_FILE.read_bytes()
+    def send_html(self, path=HTML_FILE):
+        body = path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    # ── Auth ─────────────────────────────────────────────────────────────
+    # Everything under /api/auth/ is reachable without a session (login has
+    # to be, and logout/me are harmless to ask without one); GET /login is
+    # the page that gets you one. Every other route — page or API — is
+    # gated below, in do_GET/do_POST.
+
+    def current_email(self):
+        return _session_email(_parse_cookies(self).get(SESSION_COOKIE))
+
+    def require_auth(self, is_api):
+        """True if the request may proceed. False means a response (redirect
+        for a page, 401 for an API call) has already been sent."""
+        if self.current_email():
+            return True
+        if is_api:
+            self.send_json(401, {"error": "unauthenticated"})
+        else:
+            self.send_response(302)
+            self.send_header("Location", "/login")
+            self.end_headers()
+        return False
+
+    def handle_login(self):
+        body = self.read_body()
+        ip = _client_ip(self)
+        locked, retry_after = _login_locked(ip)
+        if locked:
+            self.send_json(429, {"error": f"too many attempts — try again in {retry_after}s"})
+            return
+        email = (body.get("email") or "").strip().lower()
+        pin = (body.get("pin") or "").strip()
+        expected = _load_users().get(email)
+        # constant-time compare so a valid email can't be timed out of an
+        # invalid one — the whole point of a PIN gate is that the PIN, not
+        # the email, is the secret.
+        if not expected or not hmac.compare_digest(expected, pin):
+            _login_fail(ip)
+            time.sleep(0.4)  # a small brake on brute-forcing a 4-digit PIN
+            self.send_json(401, {"error": "wrong email or PIN"})
+            return
+        _login_ok(ip)
+        token = _new_session(email)
+        self.send_json(200, {"ok": True, "email": email},
+                       extra_headers={"Set-Cookie": _cookie_header(token)})
+
+    def handle_logout(self):
+        _drop_session(_parse_cookies(self).get(SESSION_COOKIE))
+        self.send_json(200, {"ok": True},
+                       extra_headers={"Set-Cookie": _cookie_header(None, clear=True)})
+
+    def handle_me(self):
+        email = self.current_email()
+        self.send_json(200, {"email": email})
 
     def read_body(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -1301,6 +1477,17 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         qs = parse_qs(parsed.query)
+
+        if parsed.path == "/login":
+            self.send_html(LOGIN_HTML_FILE)
+            return
+
+        if parsed.path == "/api/auth/me":
+            self.handle_me()
+            return
+
+        if not self.require_auth(is_api=parsed.path.startswith("/api/")):
+            return
 
         if parsed.path in ("/", "/index.html"):
             self.send_html()
@@ -1348,6 +1535,17 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+
+        if parsed.path == "/api/auth/login":
+            self.handle_login()
+            return
+
+        if parsed.path == "/api/auth/logout":
+            self.handle_logout()
+            return
+
+        if not self.require_auth(is_api=True):
+            return
 
         if parsed.path == "/api/eng/intake":
             body = self.read_body()
@@ -1443,7 +1641,15 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     HOST = os.environ.get("BUSINESS_OS_HOST", "127.0.0.1")
     PORT = int(os.environ.get("BUSINESS_OS_PORT", PORT))
-    server = HTTPServer((HOST, PORT), ControlCenterHandler)
+    # Threading, not the plain HTTPServer this was before the auth gate: the
+    # 0.4s brake on a failed login (see handle_login) would otherwise stall
+    # every other tab on the dashboard for whoever is mistyping their PIN,
+    # and once this is reachable over the internet concurrent requests are
+    # the normal case, not the exception.
+    server = ThreadingHTTPServer((HOST, PORT), ControlCenterHandler)
+    if not _load_users():
+        print("WARNING: CONTROL_CENTER_USERS is not set in .env — nobody can log in.")
+        print("  Add e.g.  CONTROL_CENTER_USERS=you@example.com:1234,other@example.com:5678\n")
     print(f"Business OS Control Center → http://localhost:{PORT}")
     print(f"Root              → {ROOT}")
     print(f"Instances found   → {[i['id'] for i in business_instances()] or '(none yet)'}")

@@ -19,6 +19,11 @@
 # Scheduler's LogonTrigger + InteractiveToken; launchd's per-user LaunchAgent).
 # A true boot-time service would buy nothing and cost both of those.
 #
+# This script only ever manages the local server on :7777, gated by
+# server.py's own email+PIN check. Reaching it from the internet is a
+# separate, opt-in process — cloudflare-tunnel.sh — registered the same way,
+# under its own label/task name, so removing one never touches the other.
+#
 # -- Both hosts in one file, unlike lib/eng-schedule{,-win}.sh --------------
 # That pair is split because the two schedulers shared a job LIST and nothing
 # else. Here they share the whole job — same runner, same argument, same log

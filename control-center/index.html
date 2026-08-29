@@ -267,6 +267,8 @@
   <div class="header-right">
     <div class="live-pill"><div class="live-dot"></div><span>live</span></div>
     <div class="header-date" id="date-display"></div>
+    <div class="header-date" id="user-email"></div>
+    <button class="btn" onclick="logout()">Log out</button>
   </div>
 </div>
 
@@ -401,6 +403,25 @@
 </div>
 
 <script>
+// A session that expired (or a server that restarted, dropping the in-memory
+// session store) shows up as a 401 on whatever tab happens to poll next —
+// catching it here, once, beats teaching every fetch() call site below it.
+const _fetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const r = await _fetch(...args);
+  if (r.status === 401) { window.location.href = '/login'; }
+  return r;
+};
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+fetch('/api/auth/me').then(r => r.json()).then(d => {
+  if (d && d.email) document.getElementById('user-email').textContent = d.email;
+}).catch(() => {});
+
 function esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }

@@ -1,7 +1,9 @@
 #!/bin/sh
 # Business OS Control Center — standalone, no life-os dependency.
-# Local-only: binds to 127.0.0.1, no passcode gate, no tunnel. Run this
-# directly on whichever desktop you want the command center on.
+# Binds to 127.0.0.1 by default and is gated by email+PIN (server.py,
+# CONTROL_CENTER_USERS in .env). Run this directly on whichever desktop you
+# want the command center on; see cloudflare-tunnel.sh to also reach it from
+# the internet.
 #
 #   sh start.sh              start it and open the browser at it
 #   sh start.sh --no-open    start it and leave the browser alone
