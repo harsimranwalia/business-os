@@ -5,10 +5,11 @@ this line is the counter it says lives here.)
 
 **Machine WIP 6** (`config/config.yaml` → `wip.machine_limit`) — counts states
 `ready` through `ready-to-ship`. **Currently 6/6 — at cap, not over.**
-`ENG-007` and `ENG-011` sit at `ready-to-ship`; `ENG-008`, `ENG-009`,
-`ENG-010`, and `ENG-013` sit at `ready`. Nothing further can enter `ready`
-until one of these six clears. `ENG-014` and `ENG-015` do not count here
-(`awaiting-scope`, short of the counted range).
+`ENG-007` and `ENG-011` sit at `ready-to-ship`; `ENG-008`, `ENG-009`, and
+`ENG-010` sit at `ready`; `ENG-013` moved to `building` this pass — still
+inside the same counted range, no change to the count. Nothing further can
+enter `ready` until one of these six clears. `ENG-014` and `ENG-015` do not
+count here (`awaiting-scope`, short of the counted range).
 
 **Approver-facing WIP 2 — 2/2 mechanically, at cap.** The 2026-08-29
 `intake` pass that shaped `ENG-021` checked both G1s fresh from `inbox/`
@@ -40,7 +41,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-011 | Client stage & health visibility on the Brands admin page — plus stage filtering | aiorders-admin-hub | ready-to-ship | | devops | M | 2026-08-29 |
-| ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | ready | | eng-manager | M | 2026-08-29 |
+| ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | building | | eng-manager | M | 2026-08-29 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | awaiting-scope | | approver | M | 2026-08-29 |
 | ENG-015 | Agency/reseller (partner) users — brand-scoped locations and a working add-location path | aiorders-admin-hub | awaiting-scope | | approver | M | 2026-08-29 |
 | ENG-016 | Catering page — self-serve quote generator, with automatic stage update | config-site-builder | shaped | | product-manager | L | 2026-08-29 |
@@ -90,62 +91,6 @@ backlog this section tracked for five consecutive passes
 (`ENG-009`/`ENG-010`/`ENG-012`'s G1s, `ENG-013`'s standing question) was
 cleared by an earlier 2026-08-29 `scheduled` sweep (since rolled to
 `_index-archive.md`).
-
-## 2026-08-29 — decision ENG-013 (G1 scope): another predicted twin no-op — arrived after the fact was already consumed
-
-`decision` event pass, context `inbox/_handled/2026-08-29-eng013-g1-scope.md`
-— same shape as `ENG-011`'s own G1 twin logged above (and, before that,
-`ENG-008`'s two gate items, `ENG-009`'s G1, `ENG-010`'s G1). Per this
-event's own narrower contract (act on the answered gate item, advance only
-the ticket it belongs to), scoped to `ENG-013` only — no board-wide sweep.
-Mode check clean (business-os `.env` → `MODE=` empty; instance
-`config/config.yaml` → `mode:` empty). Pre-pass
-`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
-whole-board: both exit 0, clean.
-
-**Confirmed rather than assumed.** `traces/eng-loop-2026-08-29.log`:
-`13:01:35 draining queued event: decision (2026-08-29-eng013-g1-scope.md)`
-— no `queue: collapsed` line immediately above it this time, so this is a
-single fire reaching its own turn late (raised/`notified:` 11:39:39), not a
-duplicate-collapse; a long backlog (`ENG-014`..`ENG-024` work) simply sat
-ahead of it in the FIFO. By the time it drained, the same `intake` pass
-that raised this G1 had already caught the approver's hand-edit
-(`decision: approved`, `decided: 2026-08-29T11:45:00.908943+00:00`, bare
-approval, ~6 minutes after `notified:`) while still running: the ticket
-carried `awaiting-scope → designed → ready`, journaled
-(`agents/eng-manager/config/decision-journal.md`, row 28), and the gate
-item moved to `inbox/_handled/` with its own processed footer. Checked
-fresh rather than trusted: this ticket's own frontmatter (`state: ready`,
-`owner: eng-manager`), the journal row, and the footer all agree. Nothing
-left for this event to act on.
-
-**0 transitions.** No cap affected — `ENG-013` was already inside the
-counted `ready`..`ready-to-ship` machine-WIP range before this pass, and
-this G1 was already off both the approver-facing WIP and approval-cap
-counts.
-
-**Dead-end sweep (scoped to this event):** confirmed `continue ENG-013` —
-fired by the pass that closed this ticket's G1 — still sitting in
-`traces/.pending`, undrained, third in line behind two older not-yet-drained
-fires (`ENG-013`'s own presignup-leads question, `ENG-012`'s G1). Not a
-broken chain, just not yet its turn in the FIFO queue.
-
-**Notify sweep:** nothing to raise (no new gate item this pass); nothing to
-nudge (this G1's `notified:`/`decision:` cycle closed same-day, hours
-before this pass, well inside the 24h threshold).
-
-Another corroborating occurrence of the open `proposals.md` race (2026-08-27
-row, filed by hand — `eng-trigger.sh` should skip the launch when a
-`decision` event's named gate item is already in `_handled/`); well past a
-dozen occurrences instance-wide as of today, so not re-filed or re-logged as
-its own observation — the existing proposal already covers this exactly and
-stands unimplemented, waiting on the approver.
-
-`chained: none` — no state change; `ENG-013`'s existing chain (`continue
-ENG-013`) is already queued and will run on its own turn. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
-whole-board: both exit 0, clean. Full detail on the ticket's own log
-(`agents/eng-manager/board/ENG-013-foodswipe-funnel-stage-control.md`).
 
 ## 2026-08-29 — decision ENG-013 (presignup-leads question): a third predicted twin no-op — arrived after the fact was already consumed by a scheduled sweep, not by the pass that raised it
 
@@ -274,3 +219,50 @@ terminal state. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 scoped (`ENG-012`) and whole-board: both exit 0, clean. Full detail on the
 ticket's own log
 (`agents/eng-manager/board/ENG-012-restaurant-support-tickets.md`).
+
+## 2026-08-29 — continue ENG-013: built the stage-override column, handler, and UI across both repos, ready → building
+
+`continue` event pass, context `ENG-013`, its turn at the front of
+`traces/.pending` finally reached. Narrow scope per the event's own
+contract. Mode check clean.
+
+Pre-pass gate check arrived flagged (exit 2, all of `ENG-013`..`ENG-024`
+reported "not a regular file"). Investigated rather than trusted: `stat`
+confirmed every file is a normal regular file, and a fresh re-run (scoped
+and whole-board) returned exit 0 clean. Transient — the injected report was
+captured mid-write during the prior pass's own commit
+(`1a6fe83`). Nothing to fix.
+
+Both `_eng` worktrees existed, sitting on `feat/ENG-011-...` (still owed —
+`ENG-011` hasn't opened its PR yet). `aiorders-admin-hub` carried the same
+benign `package-lock.json` `peer:true` drift `ENG-011`'s own recovery
+already named — stashed, labeled, not discarded, not committed. Branched
+both repos fresh off `origin/main` as `feat/ENG-013-foodswipe-funnel-stage-control`.
+
+Built per the design: one nullable `foodswipe_stage_override` column on
+`profiles` (six-value `CHECK`); `classifyStage()`'s caller now prefers it;
+two new gated, source-scoped write actions
+(`/foodswipe/stage/{set,reset}`) in `aiorders-api`. Per-card stage dropdown
++ dialog (styled after `Leads.tsx`) and a "Manually set" badge in
+`aiorders-admin-hub`. Self-tested: `deno check` clean, `npm run lint`
+(zero new issues — the repo's 150 pre-existing errors are all in files
+this ticket didn't touch), `npm run build` clean. Live-verified read-only
+via Supabase MCP against the real `aiorders-api` project
+(`bmnmnejwdxbcqinqkwko`): schema assumptions, table scale (528 rows, 36
+`source='foodswipe'`), and non-applied migration status all confirmed.
+Database migration doc written
+(`agents/database/migrations/ENG-013-foodswipe-funnel-stage-control.md`).
+Both branches committed and pushed; PR bodies drafted in the ticket's own
+log (no PR opened yet — that's devops's release step). Artifact-enumeration
+grep for "foodswipe" across instance+department docs found no
+instruction/map conflicts, only one harmless location-citation drift in
+`ENG-009`'s design doc, left alone.
+
+**1 transition** (`ready → building`), well under the cap — the next hop
+(review + quality, combined) is a fresh session's work by design. No cap
+change; `ENG-013` stays inside the counted `ready..ready-to-ship` range.
+
+`chained: ENG-013` — `building` is agent-owned (principal-engineer + qa
+next). Fired `continue ENG-013`. Post-pass gate check: exit 0, clean, both
+scoped and whole-board. Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-013-foodswipe-funnel-stage-control.md`).

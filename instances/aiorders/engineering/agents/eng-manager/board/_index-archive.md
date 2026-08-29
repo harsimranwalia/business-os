@@ -12,6 +12,62 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — decision ENG-013 (G1 scope): another predicted twin no-op — arrived after the fact was already consumed
+
+`decision` event pass, context `inbox/_handled/2026-08-29-eng013-g1-scope.md`
+— same shape as `ENG-011`'s own G1 twin logged above (and, before that,
+`ENG-008`'s two gate items, `ENG-009`'s G1, `ENG-010`'s G1). Per this
+event's own narrower contract (act on the answered gate item, advance only
+the ticket it belongs to), scoped to `ENG-013` only — no board-wide sweep.
+Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+whole-board: both exit 0, clean.
+
+**Confirmed rather than assumed.** `traces/eng-loop-2026-08-29.log`:
+`13:01:35 draining queued event: decision (2026-08-29-eng013-g1-scope.md)`
+— no `queue: collapsed` line immediately above it this time, so this is a
+single fire reaching its own turn late (raised/`notified:` 11:39:39), not a
+duplicate-collapse; a long backlog (`ENG-014`..`ENG-024` work) simply sat
+ahead of it in the FIFO. By the time it drained, the same `intake` pass
+that raised this G1 had already caught the approver's hand-edit
+(`decision: approved`, `decided: 2026-08-29T11:45:00.908943+00:00`, bare
+approval, ~6 minutes after `notified:`) while still running: the ticket
+carried `awaiting-scope → designed → ready`, journaled
+(`agents/eng-manager/config/decision-journal.md`, row 28), and the gate
+item moved to `inbox/_handled/` with its own processed footer. Checked
+fresh rather than trusted: this ticket's own frontmatter (`state: ready`,
+`owner: eng-manager`), the journal row, and the footer all agree. Nothing
+left for this event to act on.
+
+**0 transitions.** No cap affected — `ENG-013` was already inside the
+counted `ready`..`ready-to-ship` machine-WIP range before this pass, and
+this G1 was already off both the approver-facing WIP and approval-cap
+counts.
+
+**Dead-end sweep (scoped to this event):** confirmed `continue ENG-013` —
+fired by the pass that closed this ticket's G1 — still sitting in
+`traces/.pending`, undrained, third in line behind two older not-yet-drained
+fires (`ENG-013`'s own presignup-leads question, `ENG-012`'s G1). Not a
+broken chain, just not yet its turn in the FIFO queue.
+
+**Notify sweep:** nothing to raise (no new gate item this pass); nothing to
+nudge (this G1's `notified:`/`decision:` cycle closed same-day, hours
+before this pass, well inside the 24h threshold).
+
+Another corroborating occurrence of the open `proposals.md` race (2026-08-27
+row, filed by hand — `eng-trigger.sh` should skip the launch when a
+`decision` event's named gate item is already in `_handled/`); well past a
+dozen occurrences instance-wide as of today, so not re-filed or re-logged as
+its own observation — the existing proposal already covers this exactly and
+stands unimplemented, waiting on the approver.
+
+`chained: none` — no state change; `ENG-013`'s existing chain (`continue
+ENG-013`) is already queued and will run on its own turn. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+whole-board: both exit 0, clean. Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-013-foodswipe-funnel-stage-control.md`).
+
 ## 2026-08-29 — continue ENG-011: recovered an unrecorded build already through security, live-DB read verification closed part of the migration gap, ready → ready-to-ship
 
 `continue` event pass, context `ENG-011`, its actual turn at the front of

@@ -5,11 +5,15 @@ project: aiorders-admin-hub
 type: feature
 size: M
 time_estimate: half a day to a couple of days
-time_spent:
-time_remaining:
+time_spent: ~3h, ready → building (migration + backend handler + frontend
+  UI across both repos, self-tested, live-schema verified against
+  production, database migration doc written)
+time_remaining: ~2-4h estimated across in-review/in-qa/in-security/
+  ready-to-ship and release admin; unchanged from the PRD's original band,
+  roughly half consumed
 severity: P2
 priority:
-state: ready
+state: building
 owner: eng-manager
 lane: full
 blocked_on:
@@ -17,7 +21,7 @@ blocked_from:
 source: approver
 created: 2026-08-29
 updated: 2026-08-29
-branch:
+branch: feat/ENG-013-foodswipe-funnel-stage-control (same name, both repos)
 depends_on: []
 blocks: []
 parent:
@@ -404,3 +408,229 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
   whole-board: both exit 0, clean. Also recorded on the board index
   (`_index.md`, matching dated entry).
+
+- `2026-08-29` `ready → building` — the actual build (backend, database,
+  frontend — `continue` event pass, context `ENG-013`, its turn at the front
+  of `traces/.pending` finally reached). Narrow scope per the event's own
+  contract (resume this ticket from its current state; no board-wide sweep).
+  Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty).
+
+  **Pre-pass gate check flagged as not-clean (exit 2), investigated rather
+  than trusted or ignored.** The check injected into this pass's prompt
+  reported all twelve of `ENG-013`..`ENG-024`'s board files as "not a
+  regular file. Fail-closed." — including this ticket's own. Verified fresh:
+  `stat` on this file and a directory listing of the whole board confirmed
+  every one of the twelve is in fact an ordinary regular file (`ls -la`
+  showed normal `-rw-r--r--` entries, all modified `13:37` today).
+  Re-running `departments/engineering/lib/eng-gate-check.sh` fresh, both
+  scoped to `ENG-013` and whole-board, returned exit 0 clean with no output
+  on both. Conclusion: the injected report was captured at a moment during
+  the immediately-prior pass's own commit
+  (`1a6fe83`, "intake ENG-012..024 from approver inbox") when these files
+  were still being written to disk — a transient race in when the check ran
+  relative to that write, not a real defect in any ticket. Nothing to fix;
+  recorded here rather than silently dropped, per this pass's own
+  instruction to investigate a flagged ticket that is the one in hand.
+
+  **Worktrees.** Both `~/Documents/_eng/aiorders-api` and
+  `~/Documents/_eng/aiorders-admin-hub` already existed on this host. Both
+  were sitting on `feat/ENG-011-client-stage-health-visibility` — correct
+  and expected, since `ENG-011` is `ready-to-ship` with its own PR not yet
+  opened (devops's release step still owns that branch; not safe to delete
+  or abandon). `aiorders-admin-hub` carried one uncommitted change on top of
+  that branch: `package-lock.json`, pure `"peer": true` metadata churn on
+  existing entries (no package added, removed, or version-bumped) — the
+  exact artifact `ENG-011`'s own recovery pass already found and named as
+  "unrelated, harmless... not part of this ticket's diff, not committed."
+  Not mine to carry onto a different ticket's branch either way: stashed
+  with a labeled message (`git stash push -m "..."`, not a blind stash)
+  rather than discarded, so it stays recoverable for whoever next touches
+  that branch. Branched both repos fresh off `origin/main` (not local
+  `main`, which git refuses to check out here since the human's own
+  worktree at `~/Documents/projects/aiorders/{project}` already has it) as
+  `feat/ENG-013-foodswipe-funnel-stage-control`, same name both repos, same
+  convention `ENG-011` used.
+
+  **Built against the live repos, per the architect's design
+  (`agents/architect/designs/ENG-013-foodswipe-funnel-stage-control.md`)
+  and the PM's acceptance criteria
+  (`agents/product-manager/specs/ENG-013-foodswipe-funnel-stage-control.md`),
+  read fresh at the start of this pass:**
+
+  - **`aiorders-api`** — `supabase/migrations/20260829200000_add_foodswipe_stage_override.sql`:
+    one nullable `text` column, `profiles.foodswipe_stage_override`,
+    six-value `CHECK` constraint matching the handler's `Stage` union, no
+    default, no backfill. `admin-portal/handlers/foodswipe.ts`: the kanban
+    read now selects and returns this column per profile, and the
+    stage-assignment loop checks it before falling back to `classifyStage()`
+    unchanged; two new actions, `setStageOverride`/`resetStageOverride`,
+    routed on `POST /foodswipe/stage/set` and `POST /foodswipe/stage/reset`
+    inside the same `handleFoodswipe` entry point (mirrors `leads.ts`'s own
+    internal path-branching convention — the top-level router in `index.ts`
+    already forwards anything under `/admin-portal/foodswipe` here
+    unchanged). Both new actions reuse the handler's existing
+    admin/sub-admin gate (checked once, before any path branching) and both
+    scope their `UPDATE` to `.eq('source', 'foodswipe')` in addition to the
+    id, so neither can touch a non-Foodswipe profile even with a crafted
+    id. `stage` is validated server-side against a `VALID_STAGES` array
+    before the write, not left to the DB constraint alone.
+  - **`aiorders-admin-hub`** — `src/config/constants.ts`: two new endpoint
+    constants. `src/pages/FoodswipeListings.tsx`: each kanban card gets a
+    `DropdownMenu` ("Set stage" / conditionally "Reset to automatic") and a
+    shared `Dialog` with a `Select` of the six stages, styled directly after
+    `Leads.tsx`'s existing edit-dialog pattern per the design's own
+    instruction. A profile with an active override shows a small "Manually
+    set" `Badge`. `handleManageStage` pre-selects the dialog's value from
+    the override if one exists, else the card's current bucket — never
+    opens blank.
+  - **One implementation call made at the building stage, not pre-decided
+    by the design**: the design's Interfaces section left the read
+    response's exact shape ambiguous ("no new field needed... the frontend
+    distinguishes source separately"). Read as: the *bucketing* logic needs
+    no new field (unchanged), but *distinguishing manual vs. automatic on
+    the card* does need one — added `foodswipe_stage_override` (the raw
+    override value, `null` when automatic) to each profile object in the
+    existing kanban response, rather than a second round-trip or a
+    separately-computed boolean. Noted here since the design text alone
+    doesn't fully resolve it.
+
+  **Self-tested, per this state's own exit condition and
+  `engineering-standards.md`'s checklist:**
+  - `deno check supabase/functions/admin-portal/handlers/foodswipe.ts` —
+    clean, no errors. No `deno.json` exists in this repo yet (a separate,
+    already-named gap in `config/projects.md`), so this is a direct
+    single-file check rather than a project-wide one.
+  - `npm run lint` in `aiorders-admin-hub` — repo-wide, 150 pre-existing
+    errors / 31 warnings across files this ticket never touches (confirmed
+    by grepping the output for `FoodswipeListings.tsx` and
+    `src/config/constants.ts` specifically): one pre-existing `any` on
+    `listingData.menus` and one pre-existing missing-dependency warning on
+    `fetchListings` — both present, unchanged, before this diff (verified
+    against the file as first read this pass). Zero new lint issues
+    introduced by this change.
+  - `npm run build` in `aiorders-admin-hub` — clean, 3340 modules, same
+    pre-existing large-chunk warning `ENG-011`'s own verification already
+    named.
+  - No live Postgres reachable on this host to execute the migration
+    itself (no `docker`, `psql`, or `supabase` CLI — third occurrence of
+    the exact host limitation `ENG-007`'s and `ENG-011`'s migration docs
+    already recorded; not re-filed as a new observation). Used the
+    read-only Supabase MCP connection instead, same path `ENG-011`'s own
+    recovery pass used, against the real `aiorders-api` project
+    (`bmnmnejwdxbcqinqkwko`, confirmed `ACTIVE_HEALTHY` via
+    `list_projects` before trusting it): confirmed `profiles`' real column
+    set matches every assumption the handler code and this migration make
+    (`id uuid NOT NULL`, `source text`, no pre-existing
+    `foodswipe_stage_override`); confirmed table scale (528 rows total, 36
+    `source = 'foodswipe'`) makes the `ADD COLUMN`'s already-metadata-only
+    nature immaterial to size; confirmed via `list_migrations` that this
+    migration is not yet applied and that production is exactly where this
+    doc assumes. Full detail, reasoning, and the gate verdict:
+    `agents/database/migrations/ENG-013-foodswipe-funnel-stage-control.md`
+    (written this pass — the receipt the `database` gate's "Yes — migration
+    gate" gate authority reviews next, same artifact shape `ENG-006`,
+    `ENG-007`, and `ENG-011` each used).
+
+  **Artifact enumeration run before finishing** (step 6b): `grep -rln
+  "foodswipe" --include="*.md" --include="*.sh" --include="*.yaml"` across
+  both the instance and department roots. Two hits worth checking beyond
+  this ticket's own files: `ENG-024`'s board/spec use "FoodSwipe" only for
+  the unrelated consumer sign-up/marketplace-visibility flow (no overlap
+  with this admin funnel page); `ENG-009`'s design doc cites
+  `FoodswipeListings.tsx:207-223` as a worked example of this repo's
+  fetch-with-bearer-token pattern — a **location** reference (step 6b's own
+  classification), not an instruction or a map, and one this pass's ~9
+  added lines above that point in the file will have shifted by a few
+  lines. Left alone: fixing another ticket's already-shaped design doc for
+  a citation drift of this kind is outside this event's contract, and step
+  6b itself says a location reference is "usually fine." No instruction or
+  map conflicts found.
+
+  **Branches committed and pushed, both repos** — `feat/ENG-013-foodswipe-funnel-stage-control`:
+  `aiorders-api` (`ac4efba`, 2 files: the migration + the handler),
+  `aiorders-admin-hub` (`a1c3bdf`, 2 files: constants + the page). Both
+  `git push -u origin ...` succeeded; both now
+  `[origin/feat/ENG-013-foodswipe-funnel-stage-control]`, no PR opened yet
+  (that's devops's release-readiness step, per the pipeline — L1 autonomy
+  means a human merges, not this pass).
+
+  **PR body written, both repos** (`building`'s own exit condition, and
+  `backend/config.yaml`'s required shape: what it does / what it
+  deliberately does not / uncertainties / what to review hardest) — kept
+  here rather than in a new file, since no separate convention for this
+  artifact exists yet anywhere in this department's docs:
+
+  ***`aiorders-api`***
+  - *What it does:* Adds a nullable `foodswipe_stage_override` column to
+    `profiles` (six-value `CHECK`), and makes the kanban handler prefer it
+    over `classifyStage()`'s automatic derivation when set. Adds
+    `POST /foodswipe/stage/set` (`{profileId, stage}`) and
+    `POST /foodswipe/stage/reset` (`{profileId}`), both behind the
+    handler's existing admin/sub-admin gate, both scoped to
+    `source = 'foodswipe'`. The existing listing read now also returns the
+    override per profile.
+  - *What it deliberately does not do:* Touch `restaurants` or
+    `restaurant_listing_data`; add an audit trail of who set an override or
+    when (named as a future risk in the design, not in this ticket's
+    acceptance criteria); change the six-stage taxonomy; add a `deno.json`
+    or test harness (a separate, already-named repo gap).
+  - *Uncertainties:* The `ALTER TABLE` has not executed against any live
+    Postgres on this host — verified instead via read-only Supabase MCP
+    against the real production schema (migration doc has full detail).
+    Low risk given a single nullable column, no default, no rewrite, and a
+    528-row table.
+  - *What to review hardest:* The `.eq('source', 'foodswipe')` scoping on
+    both new write actions — it's the only thing stopping a valid
+    six-value write from landing on an arbitrary profile id, since the DB
+    constraint alone would allow it. Also: `stage` validated server-side
+    against `VALID_STAGES` rather than relying on the DB `CHECK` alone.
+
+  ***`aiorders-admin-hub`***
+  - *What it does:* Adds a "Set stage" / "Reset to automatic" dropdown to
+    each kanban card (styled after `Leads.tsx`'s edit affordance:
+    `DropdownMenu` + `Dialog` + `Select`), plus a "Manually set" badge when
+    an override is active. Both actions call the two new endpoints and
+    refetch on success.
+  - *What it deliberately does not do:* Drag-and-drop (PRD non-goal); edit
+    any other listing field; confirm before "Reset to automatic" (treated
+    as low-risk and fully reversible, per the design's "no one-way door"
+    framing — unlike the existing delete-lead flow, which does confirm).
+  - *Uncertainties:* None functional. The file's one pre-existing lint
+    error and one pre-existing lint warning (an `any` on `listingData.menus`,
+    a missing-dependency warning on `fetchListings` shared by every other
+    page in this codebase) both predate this diff and are unchanged by it.
+  - *What to review hardest:* `foodswipe_stage_override` threading from
+    `KanbanEntry` through to the dialog's pre-selected value —
+    `handleManageStage` falls back to the card's current bucket when no
+    override is set, so the dialog never opens blank.
+
+  **1 transition this pass** (`ready → building`), well under the cap of 4
+  — the next states (`in-review`, folding in `in-qa` per the combined-hop
+  convention `ENG-005`/`ENG-006`/`ENG-007`/`ENG-011` all used) are a fresh
+  session's work, not this one's, per `schedules/eng_build_loop.md`'s own
+  "a pass stops after `building` on purpose." **Consequence:** no cap
+  change — `ENG-013` was already inside the counted `ready`..`ready-to-ship`
+  machine-WIP range at `ready`; `building` is still inside that same range.
+  Approver-facing WIP and approval cap both untouched (no gate item raised
+  this pass).
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  `ENG-008`/`ENG-009`/`ENG-010` (also `ready`, also `aiorders-admin-hub`)
+  left untouched — each has or will have its own `continue` event.
+
+  **Notify sweep:** nothing to raise — `building` needs no approver gate.
+  Nothing to nudge.
+
+  **Observations:** none new. The `package-lock.json` drift and the host's
+  missing `docker`/`psql`/`supabase` CLI are both already-named, recurring
+  facts (see above); not re-logged as fresh observations a fourth/second
+  time respectively.
+
+  `chained: ENG-013` — `building` is eng-manager-owned (principal-engineer
+  + qa combined hop next), not the approver, not blocked, not terminal, not
+  held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-013`) and whole-board: both exit 0, clean (re-verified
+  immediately before this entry was written).
