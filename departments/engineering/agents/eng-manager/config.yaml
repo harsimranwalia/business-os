@@ -392,7 +392,11 @@ machine_gates:
 # Those two stay whatever the tier is. Overruling them is the approver's call
 # and should be a deliberate one, not a side effect of upgrading a plan.
 plan:
-  tier: pro                  # pro ($20) | max_5x ($100) | max_20x ($200)
+  tier: max_5x                # pro ($20) | max_5x ($100) | max_20x ($200)
+  # Corrected 2026-08-29 (approver: this Windows host runs max_5x, not pro) —
+  # was previously wrong from install and silently had no effect either way,
+  # since the read path in lib/eng-trigger.sh's read_plan_budget() pointed at
+  # the instance, not this file. Both fixed in the same pass.
   # Change this ONE value and the budgets below move with it. Every agent reads
   # from here; nothing hardcodes a ceiling.
   budgets:

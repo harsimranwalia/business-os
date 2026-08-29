@@ -12,6 +12,193 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — continue ENG-008: built the preference/rating/collaboration-count edit path across both repos, ready → building
+
+`continue` event pass, context `ENG-008`, its turn at the front of
+`traces/.pending` finally reached. Narrow scope per the event's own
+contract. Mode check clean. Pre-pass gate check: exit 0, clean, both scoped
+and whole-board.
+
+Both `_eng` worktrees existed, clean, sitting on `ENG-013`'s own
+still-in-flight branch — not touched. Fetched both; `origin/main` unchanged
+since `ENG-013` last branched. Branched both fresh as
+`feat/ENG-008-influencer-admin-management`, migration timestamp
+`20260829220000` chosen deliberately clear of `ENG-013`'s unmerged
+`20260829200000`.
+
+Built per the design: `staff_rating`/`collaboration_count` plus
+`accepts_paid`/`accepts_barter` (backfilled from `barter_visit`, which is
+left untouched) on `influencers`; new `GET`/`PATCH
+admin-portal/influencers/{id}` (admin/sub-admin gate, same narrower pattern
+`ENG-007` and `ENG-013` both use); edit form added to `aiorders-admin-hub`'s
+previously entirely-read-only influencer detail dialog. Self-tested: `deno
+check` clean on the new handler in isolation, `npm run lint` zero new
+issues (150 pre-existing, same count `ENG-013` recorded), `npm run build`
+clean.
+
+**Step 6b's artifact-enumeration grep caught a real bug before it shipped**:
+`ENG-009`'s design doc (sibling ticket, same handler, sequenced to build
+after this one) had already recorded `admin-portal/index.ts`'s CORS
+`Access-Control-Allow-Methods` as missing `PATCH` — exactly the method this
+ticket's design specifies. None of the three local self-tests would have
+caught it (a CORS failure only shows up against a real browser preflight).
+Fixed in this same hop by widening the allow-list in both files that carry
+it. Full detail, plus the separate (deliberately not acted on)
+`collaboration_count` naming-overlap flag from the same doc, on the
+ticket's own log.
+
+Both branches committed and pushed (`aiorders-api@e240767`,
+`aiorders-admin-hub@f2ea36c`); no PR opened yet — devops's step. PR bodies
+drafted on the ticket's own log. Database migration doc written
+(`agents/database/migrations/ENG-008-influencer-profile-admin-management.md`).
+
+**1 transition** (`ready → building`), well under the cap — the next hop
+(review + quality, combined) is a fresh session's work by design. No cap
+change; `ENG-008` stays inside the counted `ready..ready-to-ship` range.
+
+`chained: ENG-008` — `building` is agent-owned (code review + quality
+next). Fired `continue ENG-008`. Post-pass gate check: exit 0, clean, both
+scoped and whole-board. Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-008-influencer-profile-admin-management.md`).
+
+## 2026-08-29 — decision ENG-014: G1 already processed by an earlier `watch` pass, but its own recorded chain never fired — repaired
+
+`decision` event pass, context `2026-08-29-eng014-g1-scope.md` — this
+event's own queued fire, drained behind a `watch`/`schtasks` fire that
+reached the same gate item first. Mode check clean. Pre-pass gate check:
+exit 0, clean, scoped (`ENG-014`) and whole-board.
+
+Verified fresh rather than assumed stale: the gate item is genuinely
+already in `inbox/_handled/` with a "Processed" footer, `ENG-014` is
+genuinely at `designed`/`architect`, and `decision-journal.md` genuinely
+carries the G1 row — the earlier `watch` pass's substantive work all
+checks out. What doesn't check out is its own `chained: ENG-014` line:
+`traces/eng-loop-2026-08-29.log` shows no `continue (ENG-014)` ever ran,
+and it wasn't sitting in `traces/.pending` either. That `watch` pass's
+process (pid 36150) died before exiting cleanly (`clearing stale lock
+(2103s old, owner 36150 gone)`) — almost certainly right around writing
+that log line, before the shell fire behind it ever executed. `ENG-015`
+carries the identical shape from the same dying pass; out of scope for
+this event (named ticket is `ENG-014` only), flagged in `observations.md`
+instead.
+
+**Action:** re-fired `/bin/sh
+departments/engineering/lib/eng-trigger.sh continue ENG-014` directly.
+Confirmed on `traces/.pending` afterward and via the trigger's own stderr
+(queued correctly behind this still-running pass rather than lost again).
+No ticket state changed — the architect's actual design work stays a
+dedicated session's job, which the now-genuine chain will launch.
+
+**0 transitions**, no cap impact — this was a chain repair, not new
+gate or state movement.
+
+`chained: ENG-014` — re-fired and confirmed queued this pass (see above).
+Post-pass gate check: exit 0, clean, both scoped and whole-board. Full
+detail on the ticket's own log
+(`agents/eng-manager/board/ENG-014-restaurant-qr-media-self-service.md`).
+
+## 2026-08-29 — continue ENG-007: verified fresh, held at `ready-to-ship` — release window closed for the weekend
+
+`continue` event pass, context `ENG-007`, the chain fire from the pass that
+reached `ready-to-ship`. Narrow scope per the event's own contract. Mode
+check clean. Pre-pass gate check: exit 0, clean, both scoped and
+whole-board.
+
+Verified fresh rather than trusted, given this ticket's two prior
+unrecorded-build recoveries: the `aiorders-api` worktree confirms
+`loyalty-system` unchanged at `2aec86f`, tree clean, not merged into
+`origin/main`, and no PR open against it (`gh pr list` shows only `ENG-006`'s
+own already-merged PR #2) — genuinely still `ready-to-ship`, not a third
+unrecorded advance.
+
+Release window re-checked fresh, as the prior entry explicitly asked the
+next hop to do: Saturday 2026-08-29, 14:09 local, inside
+`releases.block_weekends`. `ENG-006` hit this identical boundary on a Friday
+before the 15:00 cutoff and proceeded to open its PR; this lands outside the
+window. Consistent with that precedent — this department treats the PR-open
+step itself, not just the eventual merge, as the release-window-gated
+action — and with this pass's own prompt, which names "a closed release
+window" as a chaining exclusion alongside the approver: no PR opened, no
+state change.
+
+**0 transitions.** No cap affected either way — what's holding this ticket
+is the release window, not WIP or approval capacity.
+
+`chained: none` — release window closed (weekend). Expected to clear on its
+own: the next scheduled safety-net pass, or a fresh `continue ENG-007` fire,
+landing once the window reopens Monday will find this same state and
+proceed to open the PR — this is the guard's first real activation on this
+instance (`observations.md`), not previously seen blocking anything. Post-pass
+gate check: exit 0, clean, both scoped and whole-board. Full detail on the
+ticket's own log
+(`agents/eng-manager/board/ENG-007-per-restaurant-loyalty-configuration.md`).
+
+## 2026-08-29 — decision ENG-013 (presignup-leads question): a third predicted twin no-op — arrived after the fact was already consumed by a scheduled sweep, not by the pass that raised it
+
+`decision` event pass, context
+`inbox/_handled/2026-08-29-eng013-presignup-leads-question.md` — same
+twin-no-op shape as `ENG-013`'s own G1 logged directly above, and
+`ENG-011`'s tickets-question twin before that. Per this event's own
+narrower contract (act on the answered gate item, advance only the ticket
+it belongs to), scoped to `ENG-013` only — no board-wide sweep. Mode check
+clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+`mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+**Confirmed rather than assumed, and a different shape from the two twins
+above.** `traces/eng-loop-2026-08-29.log`: `13:15:10 queue: collapsed 1
+duplicate event(s)` fires immediately before `13:15:10 draining queued
+event: decision (2026-08-29-eng013-presignup-leads-question.md)`, pass
+start `13:15:11`, claude launched `13:16:05`. Unlike the G1 twin directly
+above (caught live by the same pass that raised it), this question sat
+answered-but-unprocessed until a separate `scheduled` event pass (context
+`schtasks`, since rolled to `_index-archive.md`) swept it: read the answer
+fresh from `inbox/` (`decision: approved`, "Reading B" — a genuine
+pre-signup pipeline with autopilot nurture, `decided:
+2026-08-29T11:46:34.557123+00:00`), checked for an existing ticket before
+filing a new one per the item's own stated next step, and found one — an
+independent `intake` pass the same day had already reached the same
+conclusion from a different raw request (the "no autopilot for sales
+staff/resellers" card) and filed `ENG-017` (presignup lead nurture
+autopilot, `agents/eng-manager/board/ENG-017-presignup-lead-nurture-autopilot.md`,
+`state: shaped`), already citing this exact verbatim answer as grounding
+evidence in its own Notes. Checked fresh rather than trusted: the gate
+item's own processed footer, `decision-journal.md` row 31, `ENG-013`'s own
+Notes section (added by that scheduled pass), and `ENG-017`'s own Notes
+section all agree — the question is closed against `ENG-017`, not
+re-opened, and not filed twice. `ENG-013` itself was never blocked by this
+question and needed no action from it either way, then or now.
+
+**0 transitions.** No cap affected — `ENG-013` was already inside the
+counted `ready`..`ready-to-ship` machine-WIP range before this pass, and
+this standing question's approval-cap slot was already freed by the
+scheduled pass that closed it — the board header's current cap accounting
+(`ENG-014`/`ENG-015`'s G1s only) no longer carries it.
+
+**Dead-end sweep (scoped to this event):** confirmed `continue ENG-013` —
+fired when this ticket reached `ready` — still sitting in
+`traces/.pending`, undrained, behind a longer backlog than either twin
+above last saw. Not stuck — no documented sequencing hold against a
+sibling ticket, purely FIFO position.
+
+**Notify sweep:** nothing to raise (no new gate item this pass); nothing to
+nudge (this question's `notified:`/`decision:` cycle closed same-day, hours
+before this pass, well inside the 24h threshold).
+
+Another corroborating occurrence of the open `proposals.md` race
+(2026-08-27 row — `eng-trigger.sh` should skip the launch when a
+`decision` event's named gate item is already in `_handled/`); not
+re-filed or re-logged as its own observation — the existing proposal
+already covers this exactly.
+
+`chained: none` — no state change; `ENG-013`'s existing chain (`continue
+ENG-013`) is already queued and will run on its own turn; firing a second
+`continue ENG-013` now would only queue a duplicate for the collapse logic
+to clean up later. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean. Full detail on the
+ticket's own log
+(`agents/eng-manager/board/ENG-013-foodswipe-funnel-stage-control.md`).
+
 ## 2026-08-29 — decision ENG-013 (G1 scope): another predicted twin no-op — arrived after the fact was already consumed
 
 `decision` event pass, context `inbox/_handled/2026-08-29-eng013-g1-scope.md`

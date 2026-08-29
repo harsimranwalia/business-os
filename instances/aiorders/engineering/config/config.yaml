@@ -24,9 +24,9 @@ mode:
 
 # Delivery caps. Raising these is the approver's call.
 wip:
-  machine_limit: 6      # states ready..ready-to-ship
-  approver_limit: 2    # items awaiting the approver at once
-  approval_cap: 3       # gates queued across the whole board
+  machine_limit: 12     # states ready..ready-to-ship — max_5x tier value, raised 2026-08-29 (was 6, the stale pro-tier number)
+  approver_limit: 2    # items awaiting the approver at once — does not scale with plan tier, protects the approver's own attention
+  approval_cap: 3       # gates queued across the whole board — same as above
 
 # Business knowledge the PM and architect read before any scope conversation.
 # See config/conventions.yaml → knowledge.

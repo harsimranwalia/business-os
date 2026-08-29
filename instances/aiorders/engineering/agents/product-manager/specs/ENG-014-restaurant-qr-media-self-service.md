@@ -1,11 +1,11 @@
 ---
 ticket: ENG-014
 project: restaurant-portal
-status: awaiting-scope
+status: approved
 size: M
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-08-29
 ---
 
 # Brand portal self-service: restaurant QR codes and marketing media downloads

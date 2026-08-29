@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P1
 priority:
-state: awaiting-scope
-owner: approver
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
@@ -240,3 +240,99 @@ Append-only. One line per state transition, newest last.
   guard never fires on a ticket waiting on a human. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
   whole-board: see pass notes.
+
+- `2026-08-29` `awaiting-scope → designed` (product-manager → architect,
+  `watch` event pass, context `schtasks`) — swept all three watched inboxes
+  per the event's own contract; found `inbox/2026-08-29-eng015-g1-scope.md`
+  answered (**approved**, `decided: 2026-08-29T16:12:24.708073+00:00`, no
+  additional comment — bare approval of the proposed default that a
+  partner-created restaurant is held for staff review) since the last pass
+  touched it. Mode check clean. Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board (multiple
+  tickets touched this pass): exit 0, clean.
+
+  PRD `status: approved`. Gate item moved to `inbox/_handled/` with a
+  processed footer. Journaled in `agents/eng-manager/config/decision-journal.md`.
+
+  **Handed to the architect at `designed`, design work itself not started
+  this pass** — same reasoning as `ENG-014` directly above and `ENG-004`'s
+  precedent: the actual fix (a role branch in `getRestaurants()`, an RLS
+  policy change on `restaurants`' `INSERT`, plus the held-for-review default
+  on partner-created rows) is real design/implementation-adjacent work
+  against a live cross-tenant security gap, not board bookkeeping — belongs
+  in a dedicated `continue ENG-015` session, not folded into this
+  narrowly-scoped `watch` pass.
+
+  **Capacity freed, not spent on anything else this pass.** Combined with
+  `ENG-014`'s G1 clearing above, both approver-facing WIP slots (2/2 → 0/2)
+  and both of the two remaining approval-cap slots this pass found occupied
+  (→ 0/3) are now free. `ENG-023`'s own G1 (drafted, held at `shaped`
+  waiting exactly for this) is the natural next thing to raise, but per the
+  `ENG-004` precedent that is dispatching newly-freed capacity onto a
+  *different* ticket than the one this event found changed — left for the
+  next `scheduled`/`watch`/`continue` pass rather than done here.
+
+  **Dead-end sweep (scoped to this event):** no other action needed on
+  `ENG-015` itself.
+
+  `chained: ENG-015` — `designed`, owned by `architect`, an agent-owned
+  state; firing
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
+
+- `2026-08-29` `designed` (no state change), `decision` event pass, context
+  `2026-08-29-eng015-g1-scope.md` — this event's own queued fire, drained
+  from `traces/.pending` at 15:34:45, behind (after one collapsed
+  duplicate) the `decision (2026-08-29-eng014-g1-scope.md)` repair pass
+  immediately before it (`pass end: decision (exit 0, 685s)` at 15:33:53 →
+  `draining queued event: decision (2026-08-29-eng015-g1-scope.md)`,
+  15:34:45, no gap). Mode check clean (`.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: exit 0, clean.
+
+  **Verified fresh rather than trusted the entry above.**
+  `inbox/2026-08-29-eng015-g1-scope.md` is gone from `inbox/`, sits in
+  `inbox/_handled/` with its "Processed" footer intact; PRD `status:
+  approved`; `decision-journal.md` carries the matching `ENG-015` G1 row
+  with the same `decided:` timestamp. The prior `watch` pass's substantive
+  work checks out — nothing here to redo.
+
+  **What that pass did not finish: its own recorded chain never actually
+  fired** — exactly the gap the immediately-preceding `decision ENG-014`
+  pass found and repaired on the sibling ticket, and named in its own log
+  and in `observations.md` as applying identically here.
+  `traces/eng-loop-2026-08-29.log` has no `pass start: continue (ENG-015)`
+  anywhere in it, and `traces/.pending` carried no `continue ENG-015` line
+  before this pass's own edit below — the fire was never made, not merely
+  still queued. Same root cause as `ENG-014`: the `watch` pass that
+  processed both G1s (pid 36150, per `traces/.pass-out.36150`) never
+  exited cleanly — `clearing stale lock (2103s old, owner 36150 gone)`
+  shortly after — consistent with it dying before the shell invocation for
+  either ticket's next hop ever ran. The record of intent survived; the
+  action it promised did not.
+
+  **Action taken:** re-fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  directly. Confirmed rather than assumed: `traces/.pending` now carries
+  `1 continue ENG-015`; `traces/.loop.lock/pid` reads `1909`, confirmed
+  alive via `ps -W` (a live `/usr/bin/sh`, not a stale MSYS PID `tasklist`
+  fails to resolve) — it queued correctly behind this still-running pass
+  instead of being silently lost a second time.
+
+  **No state change made here, deliberately.** This pass does not attempt
+  the architect's own design work inline — `designed`'s exit condition is
+  that work's actual output, which belongs in the dedicated session the
+  now-genuinely-queued chain will launch.
+
+  **Dead-end sweep (scoped to this ticket only, per this event's own
+  contract):** complete — the one broken chain this event names is now
+  repaired. Not extended to the rest of the board.
+
+  `chained: ENG-015` — re-fired this pass and confirmed on the queue (see
+  above); this line records that fire, not a restatement of the previous
+  pass's unfulfilled one. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: exit 0, clean.

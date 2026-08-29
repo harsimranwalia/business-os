@@ -52,3 +52,19 @@ Filled in by the approver.
 **approved** — 2026-08-29T17:41:07.724420+00:00
 
 reading b, frequent is same restaurant over time
+
+---
+
+**Processed 2026-08-29**, `watch` event pass (context `schtasks`) — found
+this answered since the last pass touched it, while sweeping all three
+watched inboxes. Per this item's own stated next step, shaped into
+`ENG-025` (recurring feedback issues, per restaurant, over time) end to
+end: PRD written, ticket filed at `awaiting-scope`, G1 raised
+(`inbox/2026-08-29-eng025-g1-scope.md`). Live schema evidence gathered
+while shaping it overturned this item's own speculation that Reading B
+"likely means AI-assisted categorization" — `restaurant_feedback` already
+carries a populated `sub_type`/`nature` taxonomy, so `ENG-025` is a `GROUP
+BY` over existing data, sized `S`, not the heavier build this question
+guessed at. `ENG-023` itself is unaffected — it ships the confirmed core
+regardless of this answer, per this item's own text. Journaled in
+`decision-journal.md`.

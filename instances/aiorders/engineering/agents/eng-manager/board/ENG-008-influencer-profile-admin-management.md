@@ -6,7 +6,7 @@ type: feature
 size: M
 severity: P3
 priority:
-state: ready
+state: building
 owner: eng-manager
 lane: full
 blocked_on:
@@ -14,7 +14,7 @@ blocked_from:
 source: approver
 created: 2026-08-29
 updated: 2026-08-29
-branch:
+branch: feat/ENG-008-influencer-admin-management (aiorders-api@e240767, aiorders-admin-hub@f2ea36c)
 depends_on: []
 blocks: []
 parent:
@@ -454,3 +454,152 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
   whole-board: both exit 0, clean. Also recorded on the board index
   (`_index.md`, matching dated entry).
+
+- `2026-08-29` `ready → building`: built per the design, both repos —
+  region/campaign-type edit path, staff rating, collaboration count
+  (eng-manager, `continue` event pass, context `ENG-008`, its turn at the
+  front of `traces/.pending` finally reached). Narrow scope per the event's
+  own contract. Mode check clean (business-os `.env` → `MODE=` empty;
+  instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Both `_eng` worktrees existed** (`aiorders-api`, `aiorders-admin-hub`),
+  clean, sitting on `ENG-013`'s branch from its own still-in-flight build —
+  not touched. `git fetch` on both confirmed `origin/main` unchanged since
+  `ENG-013` last branched (`aiorders-admin-hub` at `edf6947`, `aiorders-api`
+  at `40d7c36`). Branched both fresh off `origin/main` as
+  `feat/ENG-008-influencer-admin-management`, deliberately not reusing or
+  adjacent to `ENG-013`'s `20260829200000` migration timestamp (that one is
+  still unmerged on a different branch) — chose `20260829220000`.
+
+  **Verified the live schema before writing the migration**, per the
+  design's own named risk (untracked base schema, no `CREATE TABLE` for
+  `influencers` in any migration): Supabase MCP, read-only, project
+  `bmnmnejwdxbcqinqkwko`. Confirmed none of the four new column names
+  already exist, and pulled real distribution on `barter_visit` (306 rows:
+  226 true, 29 false, 51 null) to size the backfill and confirm nulls
+  backfill to nulls on both new flags rather than a guessed value.
+
+  **Built exactly the four components the design named:**
+  `supabase/migrations/20260829220000_add_influencer_admin_fields.sql`
+  (`staff_rating smallint CHECK 1–5`, `collaboration_count integer NOT NULL
+  DEFAULT 0`, `accepts_paid`/`accepts_barter` booleans backfilled from
+  `barter_visit`, which is left untouched); new
+  `admin-portal/handlers/influencers.ts` (`GET`/`PATCH` by id, admin/
+  sub-admin gate checked in-handler — same narrower pattern `ENG-007`'s
+  `loyalty-config.ts` and `ENG-013`'s `foodswipe.ts` both already use, not
+  the shared four-role gate); routed from `index.ts`; edit form added to
+  `aiorders-admin-hub`'s existing (previously entirely read-only) influencer
+  detail dialog — region preference, independent paid/barter checkboxes
+  plus a minimum-payment field, a 1–5 rating select, a collaboration-count
+  input — plus the table's Payment Type badge now reads the two new flags
+  instead of the single `barter_visit` boolean, so "both" renders for the
+  first time.
+
+  **Artifact-enumeration grep (step 6b) caught a real cross-ticket bug
+  before it shipped.** Grepped `accepts_paid`, `accepts_barter`,
+  `staff_rating`, `collaboration_count`, and `handlers/influencers` across
+  `instances/` and `departments/`. Found `ENG-009`'s own design doc (a
+  sibling ticket touching this same handler and this same page, sequenced
+  to build after this one) had already read `admin-portal/index.ts`'s CORS
+  header and recorded `Access-Control-Allow-Methods` as `'GET, POST, PUT,
+  DELETE, OPTIONS'` — **no `PATCH`** — while this ticket's own design
+  specifies a `PATCH` endpoint. Confirmed directly against the file rather
+  than trusting the other ticket's doc: accurate. Unfixed, every browser
+  preflight for this endpoint would have failed silently (CORS rejects the
+  actual request client-side, before it's ever sent) — `deno check`,
+  `npm run lint`, and `npm run build` would all have stayed green, since
+  none of them execute an actual cross-origin request. Fixed in this same
+  hop, in both files that carry the constant (`index.ts` and this ticket's
+  own `influencers.ts`): added `PATCH` to the allow-list. `ENG-009`'s doc
+  had named the same two options (widen CORS, or use `PUT` instead) and
+  left the choice to whichever ticket lands first — took the CORS-widening
+  option to stay consistent with this ticket's own already-approved design,
+  which specifies `PATCH` explicitly.
+
+  **`ENG-009`'s design also flags a cross-ticket naming overlap on
+  `collaboration_count`** — it can derive a true collaboration signal from
+  `influencer_invitations` and recommends "drop `collaboration_count` from
+  `ENG-008`, or keep it only if explicitly relabelled an off-platform
+  tally," explicitly leaving the call to "the EM's and PM's call" and
+  touching nothing here itself (its own proposed field is named `activity`,
+  not `collaboration_count`, and it reads/writes no column this ticket
+  owns). Not acted on in this pass: this ticket's G1 and design are already
+  approved with `collaboration_count` as a manually staff-edited field
+  (PRD: "not derived from a real collaboration-history ledger" — a product
+  choice, not only a fact-gap, since a manual tally can include off-platform
+  collaborations no invitation row would ever capture), and re-opening an
+  approved scope mid-build on a sibling ticket's not-yet-approved
+  recommendation is outside this event's narrow contract. Left for
+  `ENG-009`'s own build pass or the PM to weigh in on when that ticket is
+  next picked up — already correctly flagged in `ENG-009`'s own design doc,
+  restated here only so this ticket's own log carries the same context.
+
+  **Self-tested:** `deno check` on the new/modified edge function files —
+  clean, zero errors (isolated the new handler file specifically to confirm
+  the 17 errors surfaced by a whole-tree check are 100% pre-existing, in
+  `auth.ts`/`partners.ts`/`users.ts`, none touched by this ticket, same
+  shape `ENG-013` recorded). `npm run lint` on `aiorders-admin-hub` — 150
+  pre-existing errors, same count `ENG-013` recorded, zero new; the one
+  warning inside `Influencers.tsx` (`useEffect` missing-dependency on
+  `fetchData`) predates this change, confirmed against the pre-edit file
+  rather than assumed. `npm run build` — clean, no new warnings beyond the
+  pre-existing chunk-size notice. No live/staging Postgres CLI on this
+  host, so the migration statement itself has not been executed anywhere —
+  named rather than assumed away in the migration doc, same residual gap
+  `ENG-007`/`ENG-011`/`ENG-013` each already carry.
+
+  **Database migration doc written**
+  (`agents/database/migrations/ENG-008-influencer-profile-admin-management.md`)
+  — live row counts, RLS non-issue (service-role client bypasses it, same
+  as every other admin-portal write), rollback statement, and the
+  deliberately-not-dry-run gap, same structure `ENG-007`/`ENG-011`/`ENG-013`
+  established.
+
+  **Both branches committed and pushed**
+  (`aiorders-api@e240767`, `aiorders-admin-hub@f2ea36c`); no PR opened yet
+  — that's devops's release step. PR bodies drafted here:
+
+  *aiorders-api* — title: `Add admin-editable influencer preference,
+  rating, and collaboration fields (ENG-008)`. Body: new `staff_rating`
+  (1–5) and `collaboration_count` columns on `influencers`; splits
+  `barter_visit` into independent `accepts_paid`/`accepts_barter` flags so
+  "both" is representable, backfilled additively, `barter_visit` itself
+  untouched. New `GET`/`PATCH admin-portal/influencers/{id}`, admin/
+  sub-admin gated. Widens CORS `Access-Control-Allow-Methods` to include
+  `PATCH` (previously absent — see migration doc and ticket log for how
+  this was caught). No RLS change (service-role client). Migration doc:
+  `agents/database/migrations/ENG-008-influencer-profile-admin-management.md`.
+
+  *aiorders-admin-hub* — title: `Add edit form for influencer region,
+  campaign type, rating, and collaborations (ENG-008)`. Body: the
+  Influencer Management page had no save path anywhere; adds one to the
+  existing detail dialog (region, paid/barter + min payment, rating,
+  collaboration count) via the new `aiorders-api` endpoint above. Payment
+  Type badge now reads the two new flags instead of the single
+  `barter_visit` boolean. No visual change to any other page.
+
+  **1 transition** (`ready → building`; the actual build work happened
+  inside it), well under the cap of 4 — the next hop (review + quality,
+  combined) is a fresh session's work by design, same as every other ticket
+  at this state on this board. **Consequence:**
+  machine WIP unaffected (`ENG-008` was already inside the counted
+  `ready..ready-to-ship` range at `ready`; `building` is still inside it).
+  No approver-facing or approval-cap change — this hop touches no gate.
+
+  **Dead-end sweep:** scoped to this event's own lineage per its narrower
+  contract — the rest of the board untouched, not re-verified here.
+  **Notify sweep:** nothing raised this pass (no gate item written).
+  **Observations filed** (`observations.md`): the CORS/PATCH catch above,
+  as a concrete example of step 6b's artifact-enumeration paying for itself
+  on a bug none of the three local self-tests (`deno check`, lint, build)
+  could have caught.
+
+  `chained: ENG-008` — ticket sits at `building`, agent-owned (the build
+  itself is done; the next hop is code review + quality, combined, per this
+  loop's own design for why that isn't done in the same session) — not the
+  approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: see board index.

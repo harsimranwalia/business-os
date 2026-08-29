@@ -583,3 +583,84 @@ Append-only. One line per state transition, newest last.
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-007`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-007`) and whole-board: both run clean.
+
+- `2026-08-29` (no-op — held at `ready-to-ship`) `continue ENG-007` event
+  pass, context `ENG-007` — the chain fire from the immediately preceding
+  entry. Narrow scope per the event's own contract (resume this ticket from
+  its current state; no board-wide sweep). Mode check clean (business-os
+  `.env` → `MODE=` empty; instance `config/config.yaml` → `mode:` empty,
+  both fall through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-007`) and whole-board: both exit 0, clean.
+
+  **Verified fresh rather than trusted, given this ticket's own history of
+  being further along than its log** (both prior recoveries, above). In the
+  `aiorders-api` worktree: `git fetch origin`; `git branch -vv` shows
+  `loyalty-system` at `2aec86f`, `[origin/loyalty-system]`, tree clean —
+  matches every existing gate receipt exactly, nothing moved since the last
+  entry. `git merge-base --is-ancestor origin/loyalty-system origin/main` →
+  not an ancestor: still not merged. `gh pr list --head loyalty-system
+  --state all` → only `ENG-006`'s own already-merged PR #2; nothing open
+  against this commit — no L1 merge request exists yet, confirming
+  `ready-to-ship` (not `blocked`) is genuinely still where this sits, not a
+  third unrecorded advance.
+
+  **Release window re-checked fresh, as this ticket's own prior entry
+  explicitly asked the next hop to do, same boundary `ENG-006` hit once
+  already.** `date` → **Saturday 2026-08-29, 14:09 local** —
+  `config.yaml` → `releases.block_weekends: true`. Unlike `ENG-006`'s
+  identical check (Friday, 14:40 PDT, *before* the 15:00 cutoff — inside the
+  window, proceeded), this lands squarely inside a blocked weekend. This
+  department's own established reading of this boundary, set by `ENG-006`'s
+  precedent and restated by this ticket's own preceding log entry, treats
+  **opening the PR itself** as the release-window-gated action, not just the
+  eventual merge — so the fact that `aiorders-api` has no CI/CD and a human
+  merge is required regardless does not exempt the PR-open step. This
+  pass's own prompt independently confirms the same reading, naming "a
+  closed release window" alongside "the approver" as a condition under which
+  the next hop must not be chained.
+
+  **No PR opened, no state change.** The only remaining action at
+  `ready-to-ship` — raising the L1 merge request — is exactly the action the
+  window blocks; nothing else is available to do here without either
+  crossing that guard or inventing work. Ticket holds at `ready-to-ship`,
+  `owner: devops`, unchanged.
+
+  **0 transitions.** No cap affected either way. `board/_index.md`'s cached
+  header still reads "Machine WIP 6... 6/6, at cap" (`ENG-007`/`ENG-011` at
+  `ready-to-ship`, `ENG-008`/`ENG-009`/`ENG-010` at `ready`, `ENG-013` at
+  `building`), but per this instance's own observations.md (`continue
+  ENG-013` row, same day) the real limit on disk is already `12`
+  (`instances/aiorders/engineering/config/config.yaml`'s uncommitted
+  `wip.machine_limit: 6 → 12`, matching the corrected `max_5x` tier) — so the
+  honest count is **6/12**, not at cap, though still uncommitted and not
+  this ticket's own change to make. Not load-bearing for this ticket either
+  way, since what's holding it is the release window, not machine WIP.
+  Approver-facing WIP and approval cap both unaffected — no gate raised.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+  valid, accounted-for state with the chain record below. No sweep of the
+  rest of the board — out of scope for a `continue` event naming this ticket
+  specifically.
+
+  **Notify sweep:** nothing raised this pass — a hold with nothing new to
+  decide doesn't get a notification of its own; the merge request (still
+  pending) is what will actually need the approver, once it can legally be
+  raised.
+
+  **Observation filed** (`observations.md`): this is the first time
+  `releases.block_weekends` has actually held a ticket back on this
+  instance — every prior `ready-to-ship`→PR-open on this board (`ENG-002`,
+  `ENG-004`, `ENG-005`, `ENG-006`) landed inside the window on a weekday.
+  Worth a record as the guard's first real activation, not its first
+  mention.
+
+  `chained: none` — release window closed (Saturday; `releases.block_weekends`),
+  per this pass's own instructions naming "a closed release window" as a
+  chaining exclusion alongside the approver. Resume is expected to happen
+  naturally: the next scheduled safety-net pass (or a fresh `continue
+  ENG-007` fire) that lands once the window reopens Monday will find this
+  same state and proceed to open the PR, per `eng_build_loop.md`'s own "the
+  Friday 15:30 pass therefore never releases; it advances everything else
+  and leaves the release for Monday." Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
+  whole-board: both run clean.

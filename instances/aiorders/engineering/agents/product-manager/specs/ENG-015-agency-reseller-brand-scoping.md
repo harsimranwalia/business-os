@@ -1,11 +1,11 @@
 ---
 ticket: ENG-015
 project: aiorders-admin-hub
-status: awaiting-scope
+status: approved
 size: M
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-08-29
 ---
 
 # Agency/reseller users: brand-scoped locations and a working add-location path

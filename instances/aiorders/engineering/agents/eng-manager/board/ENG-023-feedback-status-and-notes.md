@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P2
 priority:
-state: shaped
-owner: product-manager
+state: awaiting-scope
+owner: approver
 lane: full
 blocked_on:
 blocked_from:
@@ -175,3 +175,51 @@ approver asked in their own words ("any actions taken").
   `ENG-015`. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-023`) and whole-board: see pass notes in
   `agents/eng-manager/board/_index.md`.
+
+- `2026-08-29` `shaped → awaiting-scope` (product-manager → approver,
+  `scheduled` event pass, context `schtasks`) — the four-times-daily
+  safety-net sweep. Mode check clean (business-os `.env` → `MODE=` empty;
+  instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean.
+
+  **Re-check from the top, not trusted from the cached header.** Processing
+  `ENG-025`'s answered G1 this same pass (see that ticket's own log) freed
+  both the approver-facing WIP slot and the approval-cap slot this ticket's
+  own prior log entry was waiting on. `_index.md`'s own "Waiting on the
+  approver" section names this exact ticket by id as the one to raise "the
+  moment a `scheduled`/`watch`/`continue` pass picks it up" — this is that
+  pass.
+
+  **No new drafting needed** — G1 content (readback, both readings,
+  evidence, non-goals, recommendation) was already fully drafted in the
+  PRD's own Decision section at `shaped` time. Wrote
+  `inbox/2026-08-29-eng023-g1-scope.md` (`agent: product-manager`, `gate:
+  scope`, `project: restaurant-portal`, recommendation to build now) from
+  that drafted content, not written fresh. Ran
+  `departments/engineering/lib/eng-notify.sh raise` on it — logged
+  `SLACK_WEBHOOK_URL unset — cannot notify` (`traces/eng-notify-2026-08-29.log`,
+  15:55:43), same open, already-tracked notify-channel gap every gate item
+  today has hit; stamped `notified: 2026-08-29T15:55:43` into the item's
+  frontmatter directly, per this instance's established practice of
+  stamping regardless of whether the push itself succeeds.
+
+  **State:** `shaped → awaiting-scope`, `owner` moves `product-manager →
+  approver`. **Consequence:** approver-facing WIP 0/2 → 1/2 (after
+  `ENG-025`'s own G1 freed it earlier this same pass); approval cap 0/3 →
+  1/3. Two approver-facing slots and two approval-cap slots remain free —
+  `ENG-016` through `ENG-021` (also G1-drafted) deliberately left for a
+  future pass; see `ENG-025`'s own log entry for why only this one ticket's
+  freed capacity was reused rather than filling every open slot.
+
+  **Dead-end sweep:** no other action needed on `ENG-023` itself; the
+  broader whole-board sweep this event ran is recorded on `ENG-025`'s own
+  log entry and the board index, not repeated here.
+
+  **Notify sweep:** this pass's own new item raised and stamped above.
+  Nothing else to nudge.
+
+  `chained: none` — `awaiting-scope`, owned by the approver; the chaining
+  guard never fires on a ticket waiting on a human. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.

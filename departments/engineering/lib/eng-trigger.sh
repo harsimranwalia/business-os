@@ -122,8 +122,16 @@ SELF="$ENG_DEPT/lib/eng-trigger.sh"
 read_plan_budget() {
   # Shallow parse — no yq/python dependency for two integers. Reads
   # plan.budgets.<tier>.<key> out of the EM config.
+  #
+  # Department template, not $ROOT/$ENG_INSTANCE: `plan.tier` lives in
+  # $ENG_DEPT/agents/eng-manager/config.yaml (the file every instance's own
+  # config.yaml points back to via `plan_ref`) and no instance ships a copy of
+  # its own — install.sh never emits one. Reading from $ROOT here silently hit
+  # the fallback on every instance regardless of what tier was actually set,
+  # since that path never existed. Found 2026-08-29 when a tier correction
+  # (pro -> max_5x) had no effect until this line was the reason why.
   local key="$1" fallback="$2"
-  local cfg="$ROOT/agents/eng-manager/config.yaml"
+  local cfg="$ENG_DEPT/agents/eng-manager/config.yaml"
   [ -f "$cfg" ] || { echo "$fallback"; return; }
   local tier
   tier=$(grep -m1 '^  tier:' "$cfg" | sed 's/.*tier:[[:space:]]*//' | sed 's/[[:space:]]*#.*//')
