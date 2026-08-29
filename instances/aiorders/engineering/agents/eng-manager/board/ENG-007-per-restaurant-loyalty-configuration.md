@@ -6,21 +6,21 @@ type: feature
 size: S
 severity: P3
 priority:
-state: awaiting-scope
-owner: approver
+state: ready
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-29
 branch:
 depends_on: []
 blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-007-per-restaurant-loyalty-configuration.md
-  design:
+  design: agents/architect/designs/ENG-007-per-restaurant-loyalty-configuration.md
   adrs: []
   review:
   test_plan:
@@ -214,3 +214,249 @@ Append-only. One line per state transition, newest last.
   the chaining guard never fires on a ticket waiting on a human. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
   whole-board: both run clean.
+
+- `2026-08-29` `awaiting-scope → designed → awaiting-decision` (architect,
+  then eng-manager — `watch` event pass, context `schtasks`). Per the
+  event's own contract, swept all three watched inboxes fresh rather than
+  sweeping the whole board. Mode check clean (business-os `.env` → `MODE=`
+  empty; instance `config/config.yaml` → `mode:` empty, both fall through).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-007`) and whole-board: both exit 0, clean.
+
+  **Third attempt at tonight's fire, confirmed rather than assumed.**
+  `traces/eng-loop-2026-08-29.log` and `traces/.loop.lock/pid` (`1067`,
+  matching `traces/.pass-out.1067`, this session's own narration mirrored
+  live — read directly, not inferred): two earlier launches for the same
+  underlying `watch (schtasks)` event went stale and were force-cleared by
+  the trigger (pid `3199`, started 23:51 the prior day; pid `1301`, started
+  00:05:07 this morning) before this one (pid `1067`, 00:38:56) reached the
+  lock. Checked both dead attempts' own output before trusting a clean
+  slate: neither reached a `Write`/`Edit` call — both died mid-investigation
+  (`.pass-out.3199` last mid-`Grep`; `.pass-out.1301` mid-checking the first
+  attempt's own stale lock) — so nothing was silently half-written to
+  reconcile, unlike `ENG-006`'s build-recovery precedent. `.hops-2026-08-29`
+  reads `2` (this is the day's second charged launch), nowhere near the
+  40/day ceiling.
+
+  **This ticket's own G1 is what the sweep found new**: `inbox/2026-08-28-eng007-g1-scope.md`
+  carried `decision: approved`, `decided: 2026-08-29T07:15:41.687445+00:00`
+  — a hand-edit, not a reply through `lib/eng-notify.sh`'s channel (unsurprising:
+  this pass's own live call to it, raising the G2 below, logged
+  `traces/eng-notify-2026-08-29.log`: `SLACK_WEBHOOK_URL unset — cannot
+  notify` — the plain-failure face of the already-open `proposals.md`
+  2026-08-25 channel-dispatch bug, not a new finding). No rider, no
+  correction to the readback or recommendation — read as a full,
+  unconditional approval. Moved to `inbox/_handled/` with a processed
+  footer; journaled in `agents/eng-manager/config/decision-journal.md`.
+
+  **Found the PRD's own `status`/`decided` fields stale** — still `draft`/
+  empty, despite this ticket's own frontmatter and log already showing
+  `awaiting-scope` reached in the prior pass. Same class of gap `ENG-006`
+  caught once already (a crash-and-recover pass leaving on-disk artifacts
+  partially updated) — this ticket's own log records exactly that shape
+  (attempt 1 died on the account's spend limit, attempt 2 redid the work
+  from scratch) two entries up. Fixed rather than left standing: PRD
+  `status: draft → designed`, `decided:` stamped to the G1 timestamp.
+
+  **No project worktree existed on this host to design against.**
+  `agents/eng-manager/config/projects.md` states "all five worktrees
+  already exist," true only for the 2026-08-23 Mac verification — this is
+  the first pass on the Windows port to actually need one.
+  `$ENG_WORKTREES` (`C:/Users/jerryai/Documents/_eng`, per `lib/eng-env.sh`)
+  existed as a bare directory but held none of the five. Created
+  `aiorders-api`'s with the same commands `lib/eng-setup.sh` itself runs
+  (`git worktree add -b eng/base`, from the human's clean, up-to-date
+  `main` checkout — never touched that checkout directly) rather than
+  running the full setup script, since only this one project was needed
+  this pass. Observation filed.
+
+  **Design work done fresh against the live repo, not inferred from the
+  PRD alone** — same discipline `ENG-006` set at this identical state.
+  `git fetch origin`; worktree clean. Found this repo's schema is now
+  actually tracked in git (`supabase/migrations/`, 21 files) — corrects
+  `ENG-006`'s own design doc, which found none; that gap closed with
+  commit `5b3bac2` ("Consolidate remaining migrations from
+  aiorders-admin-hub"), one commit before `ENG-006`'s own, so `ENG-006`'s
+  finding was accurate when written and is now stale. Read the real
+  migrations rather than reverse-engineering from edge-function code:
+  confirmed `restaurants.id` is `uuid`, found the existing shared
+  `update_updated_at_column()` trigger and the `restaurant_activations`
+  table as the closest structural precedent (service-role-only RLS,
+  trigger-maintained `updated_at`, one index on `restaurant_id`) — this
+  design follows the same shape. Confirmed `admin-portal`'s existing
+  role-gated auth middleware and path-router as the natural home for
+  requirement 9's internal write path, avoiding new auth machinery for a
+  ticket with no frontend, same reasoning `ENG-006` used to prefer native
+  OTP over hand-rolling one.
+
+  **Significant unplanned finding: a live third-party loyalty vendor
+  (Walletly) is already integrated** — `external-integrations/handlers/walletly.ts`,
+  catalogued in the repo's own `README.md`, last touched 2026-07-07 (seven
+  weeks before this sequence was requested, not dead code). Neither the
+  approver's original request nor `knowledge/business-profile.md` mentions
+  it. Full reasoning on the design doc's own One-way doors section — in
+  short: `ENG-007` itself carries no risk from this (additive, nothing
+  calls it, trivially dropped), but ticket 3 (the points ledger) is where a
+  second real points-tracking system would start running in production
+  alongside Walletly's, and unwinding that after adoption is a data-migration
+  problem, not a schema change. Deliberately not guessed at — three
+  materially different readings (legacy/mid-deprecation, per-brand add-on
+  coexisting fine, or the thing the approver actually meant) are all
+  consistent with what's on disk, and nothing here resolves which.
+  **Escalated rather than decided**, same bar `ENG-006`'s own G2 set (real
+  stakes, no way to resolve it from the repo alone): raised
+  `inbox/2026-08-29-eng007-g2-walletly-conflict.md` (`agent: eng-manager`,
+  `gate: one-way-door`), recommending proceeding with `ENG-007` itself now
+  (no dependency on the answer) while holding ticket 3 until it's
+  answered. Ran `lib/eng-notify.sh raise` (logged the plain
+  `SLACK_WEBHOOK_URL unset` failure noted above); stamped `notified:
+  2026-08-29T07:53:00` by hand, per this instance's established practice
+  when the script can't confirm its own delivery.
+
+  **The rest of the design is fully specified and ready to build the
+  moment this is answered** — one new table
+  (`restaurant_loyalty_configs`), open-ended effective-dating (no
+  `effective_to` column, so a rate change stays a pure insert per PRD
+  requirement 6), a `before insert` trigger using a per-restaurant advisory
+  lock to enforce future-only, strictly-increasing `effective_from` values
+  — closing the PRD's own "concurrent writes" risk at the database rather
+  than the application — and a new `admin-portal/handlers/loyalty-config.ts`
+  reusing the existing admin/sub-admin auth gate. Full detail:
+  `agents/architect/designs/ENG-007-per-restaurant-loyalty-configuration.md`.
+
+  **2 transitions this pass** (`awaiting-scope → designed → awaiting-decision`),
+  well under the cap of 4 — the next state needs the approver, so this
+  pass stops here by design. `machine_wip` unaffected (neither state sits
+  in the counted `ready`..`ready-to-ship` range). Approver-facing WIP and
+  approval cap both net unchanged at 1/2 and 1/3 — this ticket's G1 closed
+  and its G2 opened in the same pass, same shape as `ENG-006`'s identical
+  transition.
+
+  **Caps checked fresh before raising the G2**, not trusted from the board
+  header: `wip.approver_limit` (2) was 1/2 (this ticket's own now-closed
+  G1); `wip.approval_cap` (3) was 1/3 (same). Raising G2 on the same
+  ticket as its G1 closes is a net-zero move on both, confirmed rather
+  than assumed.
+
+  **Dead-end sweep (scoped to this event, per its own contract):** this
+  ticket's log now ends in a valid, accounted-for state with the chain
+  record below. No other ticket is in flight to check —
+  `agents/product-manager/inbox/` and `agents/eng-manager/inbox/` held only
+  `.gitkeep`/already-`_handled/` entries; `inbox/requests/` was empty;
+  `inbox/`'s only other item (`2026-08-28-eng-events-dropped.md`) is
+  unchanged, still non-P0, still deliberately not retried per established
+  precedent.
+
+  **Notify sweep:** this pass's own G2 raised and stamped above. Nothing
+  else to nudge — the events-dropped item carries no `notified:` at all
+  (never successfully sent, same established gap) so the 24h-since-notified
+  nudge rule doesn't apply to it. Approval cap 1/3, not full — no stall.
+
+  **Observations filed** (`observations.md`): the missing Windows-host
+  worktree and the fix; the now-tracked migration history correcting
+  `ENG-006`'s design doc; the Walletly discovery, cross-referenced for
+  whoever files ticket 3 next; today's `eng-notify.sh` failure signature
+  (`SLACK_WEBHOOK_URL unset`) as the plain face of the already-open
+  channel-dispatch proposal, not a new bug.
+
+  **Correction filed** (`agents/eng-manager/config/projects.md`): the
+  "all five worktrees already exist" claim is host-specific and was going
+  stale silently; added a note rather than rewriting the table.
+
+  `chained: none` — `awaiting-decision` (G2), waiting on the approver; the
+  chaining guard never fires on a ticket waiting on a human. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
+  whole-board: both run clean.
+
+- `2026-08-29` `awaiting-decision → ready` (eng-manager, `watch` event pass,
+  context `schtasks`). A second, distinct `watch (schtasks)` fire from the one
+  that reached `designed → awaiting-decision` above — day's hop counter read
+  `4` at pass start (`traces/.hops-2026-08-29`), and `traces/eng-loop-2026-08-29.log`
+  shows this fire queued behind, and launched immediately after, a separate
+  `decision` pass (for this ticket's own G1 file, already fully processed —
+  that pass correctly no-op'd and logged itself in `observations.md`). Mode
+  check clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml`
+  → `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-007`) and whole-board: both exit 0, clean.
+
+  **Swept all three watched inboxes fresh, per the event's own contract.**
+  `agents/product-manager/inbox/`, `agents/eng-manager/inbox/`, and
+  `inbox/requests/` held nothing new. `inbox/`'s other item
+  (`2026-08-28-eng-events-dropped.md`) is unchanged, still non-P0, still the
+  established never-successfully-notified gap — not acted on, per precedent.
+
+  **`inbox/2026-08-29-eng007-g2-walletly-conflict.md` had been answered since
+  the previous pass raised it** — `decision: approved`, `decided:
+  2026-08-29T08:10:30.599034+00:00`, a hand-edit rather than a reply through
+  `lib/eng-notify.sh` (consistent with every gate answer on this instance but
+  `ENG-002`'s merge). Verified fresh rather than trusted at face value: re-read
+  the file directly during this pass rather than relying on the earlier read
+  from minutes prior, confirmed `traces/.pending` held a `decision
+  2026-08-29-eng007-g2-walletly-conflict.md` line still queued behind this
+  fire (not yet drained), and confirmed no second live process was mutating
+  the same file concurrently. Processed here, in this `watch` pass, rather
+  than left for that queued `decision` event — this is exactly the class of
+  thing this event's own contract exists to catch ("a gate item edited by
+  hand"), and per this instance's established practice the fact gets handled
+  by whichever event reaches it first; the queued `decision` event will very
+  likely no-op when it drains next, the mirror image of this same ticket's G1
+  a few minutes earlier where `decision` drained first and the trailing
+  `watch` found nothing left to do.
+
+  **Read as answering option 1 of the three the gate offered**: "Walletly is
+  being retired/replaced" — the native loyalty sequence is the intended
+  replacement, proceed exactly as originally scoped. No boundary-setting
+  reply needed (that was only called for under option 2), and no rider beyond
+  the one-line answer. This settles the question before ticket 3 (the points
+  ledger) is filed: no dual-system conflict to design around, so ticket 3
+  proceeds as `ENG-006`'s G1 already scoped it once the sequence's
+  auto-continuation (`skills/acceptance-check/SKILL.md` step 6b) files it
+  after this ticket verifies. Moved
+  `inbox/2026-08-29-eng007-g2-walletly-conflict.md` → `inbox/_handled/` with a
+  processed footer; journaled in
+  `agents/eng-manager/config/decision-journal.md`.
+
+  **Architect's design doc left as-is, deliberately** — same precedent
+  `ENG-006`'s own design doc set (its `one_way_doors` note still reads
+  "escalated rather than decided here" today, unedited after that gate
+  resolved). The design doc is a point-in-time artifact from the `designed`
+  state; the resolution lives in this ticket's own log and the decision
+  journal, which is what the next hop and any future ticket-3 design work
+  actually read.
+
+  **1 transition this pass** (`awaiting-decision → ready`), well under the cap
+  of 4 — `ready`'s own exit condition (work broken down, sequenced, assigned;
+  WIP slot available) is satisfied by this gate closing with nothing else in
+  flight to sequence against, but `building` needs a different owning role
+  (backend/database, per `definition-of-done.md`) actually writing code, which
+  is new implementation work and this pass's stopping point by design
+  (`config.yaml` → `build_loop.stop_at`). **Consequence:** approver-facing WIP
+  1/2 → 0/2; approval cap 1/3 → 0/3 (this was the cap's only open item); machine
+  WIP 0/6 → 1/6 — `ready` is the first state in the counted range, so this is
+  the first ticket to enter it on this instance's Windows host.
+
+  **Dead-end sweep:** no other ticket in flight. **Inbox sweep was not
+  actually clean, corrected here rather than left standing:** five new files
+  landed in `agents/product-manager/inbox/` mid-pass (`source: approver`,
+  `via: control-center`, received 08:14–08:22) — after this pass's own
+  initial three-inbox sweep had already found that directory empty. Read all
+  five (UX/functionality gaps: admin-panel influencer board and brand
+  stage/health filtering, the FoodSwipe sales-funnel pipeline stages, brand
+  portal QR/media/site-timing self-service, admin-portal readiness for
+  agency/reseller users) before deciding not to act — none meets the P0 bar,
+  so none interrupts. Left for their own dedicated `intake` events (four
+  already visible queued in `traces/.pending`; the fifth landed after that
+  read and will get its own fire) rather than shaped here — full PM readback
+  and G1 for five unrelated requests is `intake`'s own job under this
+  pass-type's narrower contract, not `watch`'s, and would also blow past the
+  approver-facing WIP cap of 2 if attempted in one pass regardless. Observation
+  filed (`observations.md`). **Notify sweep:** nothing raised this pass (a
+  gate closing doesn't get re-notified); nothing to nudge; approval cap just
+  cleared to 0/3 — no stall.
+
+  `chained: ENG-007` — `ready` is an agent-owned state (eng-manager sequenced
+  it; the next hop is a backend/database engineer actually building), not the
+  approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-007`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-007`) and whole-board: both run clean.

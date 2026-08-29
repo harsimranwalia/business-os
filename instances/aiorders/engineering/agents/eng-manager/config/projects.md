@@ -98,6 +98,16 @@ re-deriving this note.
 **All five worktrees already exist** under `~/Documents/projects/_eng/`, created
 at the 2026-07-28 registration. Verified present 2026-08-23.
 
+**That verification is per-host, not global.** `$ENG_WORKTREES` (`lib/eng-env.sh`)
+resolves relative to wherever `business-os` itself is checked out, so a second
+host running this instance starts with none of the five until something
+actually needs one — confirmed 2026-08-29 on this instance's Windows host,
+where only `aiorders-api`'s existed after the first ticket to design against
+a live repo there. `./lib/eng-setup.sh --apply` (idempotent) creates whatever
+is missing for the current host; a design/build pass may also create one repo
+at a time by hand with the same `git worktree add -b eng/base` command if only
+one project is needed.
+
 - The build loop refuses to run against a path that isn't under `_eng/`.
 - Before any work: `git fetch`, then create the branch in the worktree.
 - Uncommitted changes in the worktree at the start of a pass means a previous

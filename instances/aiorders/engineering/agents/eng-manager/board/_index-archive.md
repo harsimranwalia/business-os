@@ -12,6 +12,386 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — watch (schtasks): ENG-007's G1 came back approved — designed, then a new G2 raised over an unplanned Walletly finding
+
+`watch` event pass, context `schtasks`. Per the event's own narrower
+contract, swept `agents/product-manager/inbox/`, `agents/eng-manager/inbox/`,
+and `inbox/` (including `inbox/requests/`) only, acting on whatever is new.
+Mode check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty, both fall through). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
+whole-board: both exit 0, clean.
+
+**Third attempt at tonight's fire** — two earlier launches for the same
+event (pid `3199`, `1301`) went stale and were cleared by the trigger
+before this one (pid `1067`) reached the lock; both died mid-investigation
+with no write ever made, confirmed from their own output before trusting a
+clean slate. `.hops-2026-08-29` reads `2`, nowhere near the daily ceiling.
+Full detail on the ticket's own log.
+
+**Found `ENG-007`'s G1 answered** (`decision: approved`,
+`decided: 2026-08-29T07:15:41.687445+00:00`) — a hand-edit to the gate item
+directly, not a reply through `lib/eng-notify.sh`. Moved to
+`inbox/_handled/`, journaled. Also fixed the PRD's own stale
+`status`/`decided` fields, left unset by an earlier crash-and-recover pass.
+
+**No project worktree existed on this host** — `config/projects.md`'s "all
+five worktrees already exist" was true only for the earlier Mac
+verification. Created `aiorders-api`'s the same way `lib/eng-setup.sh`
+would, then did real design work against the live repo (fresh `git fetch`,
+read the now-actually-tracked migrations rather than inferring from
+edge-function code). Full design: `restaurant_loyalty_configs`, open-ended
+effective-dating, a per-restaurant-advisory-lock trigger closing the PRD's
+own concurrent-write risk at the database, and an `admin-portal` handler
+reusing the existing admin/sub-admin auth gate — complete and ready to
+build. `agents/architect/designs/ENG-007-per-restaurant-loyalty-configuration.md`.
+
+**Significant unplanned finding: a live, documented, actively-maintained
+third-party loyalty vendor (Walletly) already runs in this codebase**,
+unmentioned in the original request or either PRD. `ENG-007` itself carries
+no risk from it, but ticket 3 (the points ledger) would start a second,
+competing points system in production alongside it — expensive to unwind
+after adoption, not before. Escalated via a new G2 rather than decided
+unilaterally or silently carried forward:
+`inbox/2026-08-29-eng007-g2-walletly-conflict.md`, recommending `ENG-007`
+proceed now (no dependency on the answer) while ticket 3 waits for it.
+Raised and notified (`lib/eng-notify.sh raise` logged
+`SLACK_WEBHOOK_URL unset — cannot notify` — the plain-failure face of the
+already-open channel-dispatch proposal, not a new bug); stamped `notified:`
+by hand.
+
+**2 transitions** (`awaiting-scope → designed → awaiting-decision`), well
+under the cap of 4 — the next state needs the approver. Approver-facing WIP
+and approval cap both net unchanged at 1/2 and 1/3 (this ticket's G1 closed,
+its G2 opened). Machine WIP unaffected (0/6).
+
+**Dead-end sweep:** no other ticket in flight; nothing else new across all
+three inboxes. **Notify sweep:** this pass's own G2 raised and stamped;
+nothing else to nudge; cap 1/3, not full — no stall. **Observations filed**
+(`observations.md`): the missing Windows worktree, the now-tracked
+migration history correcting `ENG-006`'s design doc, the Walletly
+discovery, and today's plainer `eng-notify.sh` failure signature — all
+corroborating existing gaps, none new. **Correction filed**
+(`config/projects.md`): the worktree-existence claim is host-specific.
+
+`chained: none` — `awaiting-decision` (G2), waiting on the approver. Full
+detail on the ticket's own log
+(`agents/eng-manager/board/ENG-007-per-restaurant-loyalty-configuration.md`).
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-007`) and whole-board: both run clean.
+
+## 2026-08-28 — scheduled (manualtest): safety-net sweep — board fully terminal except ENG-007, nothing to act on; first pass run on Windows
+
+`scheduled` event pass, context `manualtest` — the first fire this instance
+has run through the Windows port (`168cb89`, committed 23:34:44 by the human
+operator, one minute before this pass's own drain). `traces/eng-loop-2026-08-28.log`:
+a `watch (schtasks)` fire arrived first at 23:33:59 while `MODE=quiet`, and
+the trigger's pre-lock pause switch (`eng-trigger.sh`, "the pause switch")
+queued it without launching — the quiet-mode gate firing correctly on this
+host for the first time. This pass's own fire reached the lock at 23:34:36
+once `MODE` had cleared, collapsed 3 duplicate queued event(s), and drained
+`scheduled (manualtest)` — launched 23:34:53 via
+`/c/Users/jerryai/AppData/Local/Microsoft/WinGet/Links/claude` (the
+`$ENG_CLAUDE_BIN`/PATH fallback the same commit added, resolving correctly).
+Mode check re-confirmed clean in-session (business-os `.env` → `MODE=`
+empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Business intake:** `agents/product-manager/inbox/` and `inbox/requests/`
+hold only `.gitkeep`. Nothing to shape.
+
+**Technical intake:** `agents/eng-manager/inbox/` holds only `.gitkeep`.
+Nothing to batch into `proposals.md`.
+
+**Gate returns:** `inbox/` holds the same two live items as the preceding
+pass — `2026-08-28-eng007-g1-scope.md` (`notified: 22:15:21`,
+`decision:`/`decided:` both still empty, ~1h20m old, well under the 24h
+nudge threshold) and `2026-08-28-eng-events-dropped.md` (still no
+`decision:`, still non-P0, still never successfully notified — the known
+`eng-notify.sh` `MODE`-collision bug, `proposals.md` 2026-08-25 row).
+Nothing new, nothing to act on.
+
+**Merge detection:** no ticket is `blocked` on an L1 PR — `ENG-007` sits at
+`awaiting-scope`; all six others terminal. Nothing to check.
+
+**Dispatch:** To-do is `ENG-007` alone, and it's waiting on its own G1
+answer, not free to dispatch regardless of slot. No other ticket in flight.
+Machine WIP 0/6, unaffected.
+
+**Dead-end sweep:** `ENG-007`'s own log ends `chained: none`, owner
+`approver` — a valid human-wait. All six terminal tickets' logs already end
+`chained: none` in accounted-for terminal states (confirmed on the two
+immediately preceding passes; unchanged since). No ticket without an owner.
+No broken chain.
+
+**Notify sweep:** nothing raised this pass. Nothing to nudge (`ENG-007`'s G1
+well under 24h; the events-dropped item deliberately not retried, per
+established precedent — a corroborated open proposal, not this pass's
+bug to fix). Approval cap 1/3, not full — no stall.
+
+**Observations filed** (`observations.md`) — this is the first confirmed
+end-to-end run of the Windows scheduler port: the pre-lock quiet-mode queue
+gate, duplicate-event collapse, and claude-binary resolution all worked as
+designed on this host. Also noted: further `watch (schtasks)` fires queued
+behind this pass while it held the lock (23:35:40, 23:42:05 so far — roughly
+the documented 5-minute poll cadence, not a busy loop), plus one `scheduled
+(schtasks)` fire; left for the next pass to drain, per design.
+
+**Board:** rolled the oldest dated entry (`scheduled (launchd): safety-net
+sweep`, 20:30:05) to `_index-archive.md` per the keep-three rule — this
+entry is the fourth.
+
+No ticket state changed, no gate item was written. `chained: none` — this
+pass advanced no ticket, so there is no hop of its own to fire. All
+WIP/approval-cap figures unchanged (machine 0/6, approver 1/2, approval cap
+1/3). Post-pass `departments/engineering/lib/eng-gate-check.sh`, whole-board:
+exit 0, clean.
+
+## 2026-08-28 — watch: filed ENG-007, item 2 of the approved loyalty sequence — G1 raised
+
+`watch` event pass, context `launchd`, attempt 2/2 of this fire — attempt 1
+(21:33–21:38) reached the same request and died mid-flight on the account's
+monthly spend limit right after spawning the blind architect-reading
+subagent (`traces/eng-loop-2026-08-28.log`: `pass end: watch (exit 1,
+352s)`, charged not refunded — 352s clears the 60s never-started
+threshold). No artifact from attempt 1 survived on disk or as a live
+subagent, so this pass redid the work from scratch. Mode check clean
+(business-os `.env` → `MODE=active`).
+
+**Swept all three watched inboxes fresh**, per the `watch` event's own
+contract. `agents/product-manager/inbox/` and `agents/eng-manager/inbox/`
+held only `.gitkeep` plus already-`_handled/` items; `inbox/` held one
+already-notified, non-P0 item (`2026-08-28-eng-events-dropped.md`,
+untouched, out of scope). `inbox/requests/` held exactly one new file,
+`2026-08-28-eng006-sequence-item-2.md` — the approver continuing the
+`ENG-006` loyalty sequence by hand, since `skills/acceptance-check/SKILL.md`
+step 6b (the automation meant to do this the moment a sequenced ticket
+verifies) didn't exist yet when `ENG-006` itself verified. A queued `intake`
+event for the same file sat behind this pass in `traces/.pending` —
+matches this instance's well-documented duplicate-queued-event race; that
+event will very likely no-op when it drains next, since this pass processed
+the file fully.
+
+**Ran the full request-readback** (this PM's reading plus a blind architect
+subagent, neither seeing the other) and found no material divergence — both
+converged on a per-restaurant, effective-dated config table (two earn
+rates, one redemption value), no dependency on `ENG-006`'s identity work.
+Full comparison on the ticket's own log and PRD. Sized `S`. `size: L`'s G1
+requirement doesn't apply here, but full lane always requires G1 regardless
+of size, and caps were fully free (0/2, 0/3) before raising. Wrote and
+notified `inbox/2026-08-28-eng007-g1-scope.md`. Filed the intake request to
+`inbox/_handled/`.
+
+**1 transition-worthy stop.** `ENG-007`: `intake → shaped → awaiting-scope`
+in one pass, `owner` moving `product-manager → approver`. Approver-facing
+WIP 0 → 1/2; approval cap 0 → 1/3; machine WIP unaffected (0/6).
+
+**Dead-end sweep:** no other ticket was in flight before this pass — nothing
+else to check. **Notify sweep:** this pass's own gate item raised and
+stamped; nothing else to nudge; cap 1/3, not full — no stall. **Observation
+filed** (`observations.md`) — a second monthly-spend-limit death today,
+worth watching as a pattern.
+
+`chained: none` — `ENG-007` sits at `awaiting-scope`, owned by the
+approver; the chaining guard never fires on a ticket waiting on a human.
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-007`) and whole-board: both run clean.
+
+## 2026-08-28 — watch (schtasks): swept all three inboxes, nothing new — first confirmed watch drain on the Windows port
+
+`watch` event pass, context `schtasks`. Per the event's own narrower
+contract, swept `agents/product-manager/inbox/`, `agents/eng-manager/inbox/`,
+and `inbox/` (including `inbox/requests/`) only, acting on whatever is new —
+not a board-wide sweep. `traces/eng-loop-2026-08-28.log`: drained
+immediately behind the `scheduled (manualtest)` pass directly below (`pass
+end: scheduled (exit 0, 554s)` at 23:44:08 → collapsed 2 duplicate event(s)
+→ `draining queued event: watch (schtasks)` → `pass start: watch (schtasks)`
+23:44:24, launched 23:44:38). Mode check clean (business-os `.env` →
+`MODE=` empty; instance `config/config.yaml` → `mode:` empty, both fall
+through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board (this event names no ticket to scope to): exit 0, clean.
+
+**Swept all three inboxes fresh; found nothing unprocessed.**
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
+`.gitkeep` (plus the former's already-`_handled/` entry); `inbox/requests/`
+is empty. `inbox/` holds exactly the same two live items the immediately
+preceding `scheduled (manualtest)` pass already read fresh and accounted
+for — read directly again rather than trusted from that account:
+`2026-08-28-eng007-g1-scope.md` (`notified: 22:15:21`, `decision:`/
+`decided:` both still empty, well under the 24h nudge threshold) and
+`2026-08-28-eng-events-dropped.md` (still no `decision:`, still non-P0,
+still never successfully notified — the known `eng-notify.sh`
+`MODE`-collision bug, `proposals.md` 2026-08-25 row). Nothing new anywhere.
+
+**Merge detection:** no ticket is `blocked` on an L1 PR — `ENG-007` sits at
+`awaiting-scope`; nothing else in flight. Nothing to check.
+
+**Dispatch:** To-do is `ENG-007` alone, and it's waiting on its own G1
+answer, not free to dispatch regardless of slot. Machine WIP 0/6,
+unaffected.
+
+**Dead-end sweep:** `ENG-007`'s own log ends `chained: none`, owner
+`approver` — a valid human-wait, unchanged since the preceding pass. No
+ticket without an owner. No broken chain.
+
+**Notify sweep:** nothing raised this pass. Nothing to nudge (`ENG-007`'s G1
+well under 24h; the events-dropped item deliberately not retried, per
+established precedent). Approval cap 1/3, not full — no stall.
+
+**Observation filed** (`observations.md`) — this is the first confirmed
+end-to-end completion of a `watch (schtasks)` fire on the Windows port
+(the immediately preceding pass confirmed `scheduled (manualtest)`; this is
+the first time the 5-minute poll path itself has been seen through to a
+clean finish). `traces/.pending` still holds one `scheduled schtasks` and
+one `watch schtasks` fire, queued behind this pass while it ran — left for
+the next pass to drain, per design.
+
+**Board:** rolled the oldest dated entry (`continue ENG-006: fired
+externally...`) to `_index-archive.md` per the keep-three rule — this entry
+is the fourth.
+
+No ticket state changed, no gate item was written. `chained: none` — this
+pass advanced no ticket, so there is no hop of its own to fire. All
+WIP/approval-cap figures unchanged (machine 0/6, approver 1/2, approval cap
+1/3). Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board: exit 0, clean.
+
+## 2026-08-28 — continue ENG-006: fired externally against an already-terminal ticket — no-op
+
+`continue` event pass, context `ENG-006`. Per the event's own contract
+(resume the named ticket from its current state), scoped to this ticket
+only — no board-wide sweep. Mode check clean (business-os `.env` →
+`MODE=active`; instance `config/config.yaml` → `mode:` empty, falls
+through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-006`) and whole-board: both exit 0, clean.
+
+**Nothing to resume.** `ENG-006` has been `state: verified` — terminal —
+since the `decision` pass at 20:12:38, confirmed independently twice more
+since (the `watch` and `scheduled` passes immediately below). Re-confirmed
+fresh rather than trusted from the board's own account: the ticket's own
+frontmatter and log, this file's header/In-flight table, and
+`decision-journal.md` (all three of its gates — G1, G2, L1 merge — already
+journaled) all agree. `traces/.pending` empty; all three watched inboxes
+hold only `.gitkeep` and the already-notified, non-P0
+`2026-08-28-eng-events-dropped.md`. Nothing anywhere for a machine to act on.
+
+**This fire does not fit the instance's well-documented duplicate-queued-event
+race** (`observations.md`, eleven-plus prior rows) — that pattern is always
+two events the loop itself legitimately queued for the same underlying
+change, racing each other. This one doesn't: `traces/eng-loop-2026-08-28.log`
+shows no `continue — queued as pending` line and no pass since the
+`ready-to-ship → blocked` transition (14:38:21, its own chain already
+consumed) ever recording `chained: ENG-006` — the `decision`, `watch`, and
+`scheduled` passes since all correctly logged `chained: none`. This fire
+lands at 21:02:49, 27 minutes after the `scheduled` pass's own `pass end`
+line, with nothing queued between them — meaning it reached the lock and
+drained its own freshly-appended line, not an older one left waiting. That
+shape means the fire itself came from outside the loop's own chain
+mechanism — a direct invocation of `eng-trigger.sh continue ENG-006` — not
+from two internally-queued events racing. Filed as its own,
+differently-shaped observation rather than folded into the existing race
+count.
+
+**A concrete, plausible source surfaced mid-pass, while re-checking the
+working tree.** Commit `3c3dcd0` ("ENG-006: verify against production —
+migration and function confirmed deployed") landed at
+2026-08-28T21:09:07-07:00, authored by Harsimran — inside this pass's own
+window. Its message: the approver ran `supabase db push` and `supabase
+functions deploy platform-customer-auth` directly against production,
+confirmed by CLI output, and updated the release record's `environment`/
+`health_check` frontmatter accordingly — all "outside this department's own
+L1 workflow, which still only opens PRs." That's a plausible source for an
+external trigger fire landing on this exact ticket in this exact window,
+though nothing ties the commit to the fire directly (no log line names a
+cause), so it's recorded as circumstantial, not confirmed. Checking that
+commit's diff also surfaced a second thing, unrelated to the fire itself:
+its frontmatter update to `agents/devops/releases/2026-08-28-aiorders-api-ENG-006.md`
+wasn't matched by an update to that file's own prose body, which still reads
+the opposite (`## Deploy`/`## Health note`: "not established that a live
+Supabase deploy has happened yet"). Not fixed here — see the observation
+below for why.
+
+**0 transitions.** No cap affected — machine WIP 0/6, approver WIP 0/2,
+approval cap 0/3, all unchanged; `ENG-006` sits outside every counted range.
+
+**Dead-end sweep (scoped to this event):** `ENG-006`'s own log already ended
+in a valid, terminal, accounted-for state before this pass started, and this
+pass added one line confirming that rather than reopening it. No other
+ticket is in flight to check.
+
+**Notify sweep:** nothing to raise, nothing to nudge. Approval cap 0/3 — no
+stall.
+
+**Observation filed** (`observations.md`) — this fire's shape, distinct from
+the duplicate-event race.
+
+No ticket state changed, no gate item was written. `chained: none` —
+`verified` is terminal; firing `continue ENG-006` again would just repeat
+this same no-op. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-006`) and whole-board: both exit 0, clean.
+
+## 2026-08-28 — scheduled (launchd): safety-net sweep — board fully terminal, nothing to act on
+
+`scheduled` event pass, context `launchd`, the four-times-daily safety net
+(20:30 firing). `traces/eng-loop-2026-08-28.log`: queued behind the `watch`
+pass that ended at 20:24:32 (exit 0, 714s); this fire drained at 20:30:05 —
+the scheduled calendar time itself, not an immediate queue-drain artifact.
+Mode check clean (business-os `.env` → `MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (this event
+names no ticket to scope to): exit 0, clean — run fresh myself, not taken on
+the preceding passes' own recorded claim.
+
+**Found the working tree already carrying the preceding `decision
+ENG-006` + `watch` passes' edits, uncommitted.** Verified rather than
+trusted before relying on any of it: independently re-ran the whole-board
+gate-check (above); independently grepped every board file's own
+`state`/`owner`/`blocked_on` frontmatter directly rather than reading the
+index's summary (`ENG-001`, `ENG-002`, `ENG-004`, `ENG-005`, `ENG-006` all
+`state: verified`; `ENG-003` `state: dropped`; none `blocked_on` anything);
+independently grepped every ticket log's last `chained:` line (all six read
+`chained: none`) — no broken chain anywhere on the board. `lib/eng-env.sh:14`
+confirms committing this bookkeeping repo is "a deliberate git commit
+against business-os, not something a run does," matching this instance's
+already-established convention (the immediately preceding passes' own
+entries) — left the tree uncommitted, did not commit on this pass's behalf.
+
+**Business intake:** `agents/product-manager/inbox/` and `inbox/requests/`
+hold only `.gitkeep`. Nothing to shape.
+
+**Technical intake:** `agents/eng-manager/inbox/` holds only `.gitkeep`.
+Nothing to batch into `proposals.md`.
+
+**Gate returns:** `inbox/` holds exactly one live item,
+`2026-08-28-eng-events-dropped.md` — read fresh: still no `decision:` field,
+still not P0, still no `notified:` stamp (the earlier raise attempt failed on
+the already-filed `MODE`-collision bug, not compelling a retry for a non-P0
+item). Nothing new, nothing to act on. `2026-08-28-eng006-merge-request.md`
+is no longer live — already moved to `_handled/` by the preceding `decision`
+pass.
+
+**Merge detection:** no ticket is `blocked` on an L1 PR — all six terminal
+(confirmed above). Nothing to check.
+
+**Dispatch:** To-do (`intake`/`shaped`/`awaiting-scope`) is empty; no free
+slot to fill regardless (machine WIP 0/6).
+
+**Dead-end sweep:** all six ticket logs end in a valid, accounted-for
+terminal state with `chained: none` on record (confirmed above). No ticket
+without an owner. No broken chain.
+
+**Notify sweep:** nothing to raise, nothing to nudge (one nudge is the limit
+and the events-dropped item never even got a first successful notify —
+out of this pass's scope, already a corroborated open proposal), no stall
+(approval cap 0/3, not full).
+
+**Observations/exceptions/journal:** nothing new — no gate answered this
+pass, no exception request open on any (terminal) ticket log.
+
+No ticket was touched, no ticket state changed, no gate item was written.
+`chained: none` — this pass advanced no ticket, so there is no hop of its
+own to fire. All WIP/approval-cap figures unchanged (0/6, 0/2, 0/3). Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
 ## 2026-08-28 — watch: swept all three inboxes, nothing new — board already fully terminal
 
 `watch` event pass, context `launchd`. Per the event's own narrower contract,

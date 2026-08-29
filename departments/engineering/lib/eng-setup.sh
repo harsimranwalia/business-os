@@ -223,6 +223,7 @@ else
   else
     echo "        Start it with: sh $BUSINESS_OS_ROOT/control-center/start.sh"
   fi
+  echo "        Or stop starting it by hand: sh $BUSINESS_OS_ROOT/control-center/autostart.sh --apply"
 fi
 echo
 

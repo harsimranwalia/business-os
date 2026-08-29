@@ -3,11 +3,25 @@
 # Local-only: binds to 127.0.0.1, no passcode gate, no tunnel. Run this
 # directly on whichever desktop you want the command center on.
 #
+#   sh start.sh              start it and open the browser at it
+#   sh start.sh --no-open    start it and leave the browser alone
+#
+# --no-open exists for autostart.sh: a server started at login has nobody
+# watching yet, and a browser tab that opens itself on every single login is a
+# nuisance rather than a convenience. Nothing else about the two paths differs.
+#
 # /bin/sh, not /bin/zsh: there is no zsh on a Windows host, and nothing in here
 # needed zsh. The three things that WERE mac-only — lsof, open, and a bare
 # `python3` — each get a host-appropriate branch below rather than a rewrite.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT=7777
+
+OPEN_BROWSER=1
+case "${1:-}" in
+  --no-open) OPEN_BROWSER=0 ;;
+  "")        : ;;
+  *) echo "usage: start.sh [--no-open]" >&2; exit 2 ;;
+esac
 
 case "$(uname -s)" in
   Darwin)               HOST_KIND=mac ;;
@@ -62,11 +76,27 @@ fi
 if port_in_use; then
   echo "Control Center already running → http://localhost:$PORT"
   echo "Edited server.py? Kill the process on :$PORT and re-run this script."
-  open_url "http://localhost:$PORT"
+  [ "$OPEN_BROWSER" -eq 1 ] && open_url "http://localhost:$PORT"
   exit 0
 fi
 
 echo "Starting Business OS Control Center..."
-open_url "http://localhost:$PORT" &
-sleep 1
-exec "$PY" "$ROOT/control-center/server.py"
+if [ "$OPEN_BROWSER" -eq 1 ]; then
+  open_url "http://localhost:$PORT" &
+  sleep 1
+fi
+# -u because autostart.sh redirects this into a log file: python block-buffers
+# stdout when it is not a terminal, so an unbuffered server is the difference
+# between a log you can tail and one that stays empty until the process dies.
+#
+# -X utf8 because Windows python defaults its I/O encoding to the ANSI codepage
+# (cp1252 here), not UTF-8. Two things break under that, and the first one is
+# how it was found: redirected into a log file, the startup banner's arrow died
+# with UnicodeEncodeError before serve_forever() was ever reached, so the task
+# bound :7777 and then exited. The second is worse and quieter — server.py
+# reads and writes the board, the inboxes and the leads with bare read_text()/
+# write_text(), which take that same codepage, and every one of those files is
+# UTF-8 markdown full of em-dashes. PEP 540 UTF-8 mode fixes both at the
+# interpreter rather than at twenty call sites, and is a no-op on mac/Linux,
+# where UTF-8 is already the default.
+exec "$PY" -X utf8 -u "$ROOT/control-center/server.py"

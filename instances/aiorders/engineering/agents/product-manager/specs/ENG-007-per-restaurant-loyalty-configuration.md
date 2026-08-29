@@ -1,11 +1,11 @@
 ---
 ticket: ENG-007
 project: aiorders-api
-status: draft
+status: designed
 size: S
 author: product-manager
 created: 2026-08-28
-decided:
+decided: 2026-08-29T07:15:41.687445+00:00
 ---
 
 # Per-restaurant loyalty configuration — earn rates and redemption value
