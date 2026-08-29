@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Business OS — Control Center</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #141418;
+      --card: #1e1e24;
+      --card-hover: #24242c;
+      --border: #2a2a35;
+      --border-light: #32323f;
+      --text: #e2e2ec;
+      --muted: #5c5c72;
+      --muted-mid: #8888a0;
+      --agent: #8b5cf6;
+      --done: #10b981;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased; }
+    body { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Header ── */
+    .header { display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 16px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .logo { width: 26px; height: 26px; background: linear-gradient(135deg, var(--agent), #6366f1);
+      border-radius: 7px; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0; }
+    .header-title { font-size: 14px; font-weight: 600; }
+    .header-title span { color: var(--muted); font-weight: 400; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    .live-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted-mid);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; }
+    .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--done); animation: blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+    .header-date { font-size: 12px; color: var(--muted); }
+
+    /* ── Tabs ── */
+    .tab-nav { display: flex; gap: 2px; padding: 0 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab-btn { padding: 9px 16px; font-size: 12px; font-weight: 500; color: var(--muted); background: none;
+      border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: inherit;
+      transition: color .15s, border-color .15s; margin-bottom: -1px; }
+    .tab-btn:hover { color: var(--muted-mid); }
+    .tab-btn.active { color: var(--text); border-bottom-color: var(--agent); }
+
+    .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .view.active { display: flex; }
+
+    /* ── Toolbar ── */
+    .toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; flex-wrap: wrap; }
+    .instance-select { padding: 5px 9px; font-size: 11px; font-weight: 600; color: var(--text);
+      background: rgba(99,102,241,.1); border: 1px solid var(--agent); border-radius: 6px; cursor: pointer;
+      font-family: inherit; margin-right: 4px; }
+    .filter-btn { padding: 5px 11px; font-size: 11px; font-weight: 500; color: var(--muted); background: none;
+      border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-family: inherit; transition: all .12s; }
+    .filter-btn:hover { color: var(--muted-mid); }
+    .filter-btn.active { color: var(--text); background: rgba(99,102,241,.1); border-color: var(--agent); }
+    .toolbar-spacer { flex: 1; }
+    .refresh-btn { background: none; border: 1px solid var(--border); color: var(--muted); cursor: pointer;
+      font-size: 13px; padding: 4px 9px; border-radius: 6px; }
+    .refresh-btn:hover { color: var(--text); }
+    .btn { padding: 6px 14px; font-size: 12px; font-family: inherit; border-radius: 6px; cursor: pointer;
+      border: 1px solid var(--border-light); background: none; color: var(--muted-mid); }
+    .btn:hover { background: var(--card-hover); color: var(--text); }
+    .btn.yes { border-color: rgba(16,185,129,.5); color: #34d399; }
+    .btn.yes:hover { background: rgba(16,185,129,.14); }
+    .btn.no { border-color: rgba(239,68,68,.45); color: #f87171; }
+    .btn.no:hover { background: rgba(239,68,68,.12); }
+    .btn.edit { border-color: rgba(245,158,11,.5); color: #fbbf24; }
+    .btn.edit:hover { background: rgba(245,158,11,.14); }
+    .btn:disabled { opacity: .5; cursor: default; }
+
+    .scroll { flex: 1; overflow-y: auto; padding: 20px; }
+    .scroll::-webkit-scrollbar { width: 5px; }
+    .scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .empty { text-align: center; padding: 48px 16px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    input, textarea { background: var(--bg); border: 1px solid var(--border-light); border-radius: 6px;
+      padding: 9px 11px; color: var(--text); font-family: inherit; font-size: 13px; resize: vertical; }
+    input:focus, textarea:focus { outline: none; border-color: var(--agent); }
+
+    /* ── Section / card language (shared eng + marketing + sales) ── */
+    .section { margin-bottom: 28px; }
+    .h { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-mid);
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .h .count { color: var(--muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+      margin-bottom: 10px; }
+    .card.accent { border-color: rgba(139,92,246,.45); background: rgba(139,92,246,.05); }
+    .row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .body-text { font-size: 13px; color: var(--muted-mid); margin-top: 6px; line-height: 1.5; white-space: pre-wrap; }
+    .body-text strong { color: var(--text); font-weight: 600; }
+    .body-text h2 { color: var(--text); font-size: 12px; font-weight: 700; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .05em; }
+    .body-text h2:first-child { margin-top: 0; }
+    .meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border-light);
+      color: var(--muted-mid); text-transform: uppercase; letter-spacing: .04em; }
+    .tag.gate { border-color: rgba(139,92,246,.5); color: #a78bfa; }
+    .tag.p0, .tag.p1 { border-color: rgba(239,68,68,.55); color: #f87171; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .decide-note { display: block; width: 100%; box-sizing: border-box; margin: 8px 0; font-size: 12px; }
+    .note-text { font-size: 11px; color: var(--muted); }
+    .intake-box { display: flex; flex-direction: column; gap: 8px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+
+    .stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+    .stat { font-size: 12px; color: var(--muted-mid); }
+    .stat b { display: block; font-size: 20px; color: var(--text); font-weight: 500; }
+    .stat.over b { color: #fbbf24; }
+
+    /* ── Engineering board lanes ── */
+    .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+    .lane { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    .lane-h { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+    .lane-empty { color: var(--muted); opacity: .45; font-size: 12px; padding: 6px 2px; }
+    .mini { background: var(--card); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font-size: 12px; color: var(--text); }
+    .mini .sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .mini-title { line-height: 1.35; }
+    .mini-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .mini-tags:empty { display: none; }
+    .tag.stage { background: transparent; border: 1px solid var(--border-light); }
+    .tag.prio-now  { background: #b45309; color: #fff; border-color: transparent; }
+    .tag.prio-next { background: #1d4ed8; color: #fff; border-color: transparent; }
+    .tag.prio-hold { background: #52525b; color: #fff; border-color: transparent; }
+    .prio-row { display: flex; gap: 4px; margin-top: 6px; }
+    .prio-btn { font: inherit; font-size: 10px; line-height: 1; padding: 3px 7px; border-radius: 5px;
+      border: 1px solid var(--border-light); background: none; color: var(--muted); cursor: pointer; }
+    .prio-btn:hover { color: var(--text); border-color: var(--muted); }
+    .prio-btn.on { background: var(--text); color: var(--card); border-color: var(--text); }
+    .boardbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+
+    /* ── Funnel (Sales) ── */
+    .totals { display: flex; gap: 18px; align-items: baseline; margin-bottom: 14px; }
+    .totals .n { font-size: 20px; font-weight: 700; color: var(--text); }
+    .totals .l { font-size: 11px; color: var(--muted); }
+    .cols { display: flex; gap: 10px; overflow-x: auto; align-items: flex-start; padding-bottom: 8px; }
+    .col { flex: 0 0 250px; min-width: 0; max-width: 250px; background: rgba(255,255,255,.02);
+      border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+    .col.drag-over { outline: 1px dashed rgba(139,92,246,.5); outline-offset: -2px; }
+    .col-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .col-name { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-mid); }
+    .col-count { font-size: 10px; color: var(--muted); }
+    .lead-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px;
+      margin-bottom: 7px; cursor: pointer; transition: border-color .12s; }
+    .lead-card:hover { border-color: var(--agent); }
+    .lead-card.dragging { opacity: .4; }
+    .lead-who { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.35; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    .lead-co { font-size: 10.5px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lead-note { font-size: 10.5px; color: var(--muted-mid); line-height: 1.45; margin-top: 3px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .lead-meta { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+    .chip { font-size: 9px; font-weight: 500; padding: 1px 6px; border-radius: 3px; background: rgba(255,255,255,.06);
+      color: var(--muted-mid); text-transform: uppercase; letter-spacing: .04em; }
+    .stale { color: #e0a03c; font-size: 10px; font-weight: 600; }
+    .due-dot { width: 6px; height: 6px; border-radius: 50%; background: #e0a03c; }
+    .empty-col { font-size: 10.5px; color: var(--muted); padding: 4px 2px; }
+
+    /* ── Marketing cards ── */
+    .mkt-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+    .mkt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .mkt-title-wrap { min-width: 0; }
+    .mkt-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+    .mkt-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .status-pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    .status-pill.PENDING { background: rgba(245,158,11,.14); color: #fbbf24; }
+    .status-pill.APPROVED { background: rgba(59,130,246,.14); color: #60a5fa; }
+    .status-pill.POSTED { background: rgba(16,185,129,.14); color: #34d399; }
+    .status-pill.DISCARDED { background: rgba(120,120,140,.14); color: var(--muted-mid); }
+    .status-pill.FAILED { background: rgba(239,68,68,.14); color: #f87171; }
+    .mkt-body-view { font-size: 12.5px; color: var(--muted-mid); line-height: 1.6; white-space: pre-wrap; margin-top: 10px; }
+    .mkt-body-edit { width: 100%; margin-top: 10px; font-size: 12.5px; line-height: 1.6; min-height: 90px; }
+    .mkt-rationale { font-size: 11.5px; color: var(--muted); margin-top: 8px; font-style: italic; }
+    .mkt-link { font-size: 11px; color: #60a5fa; margin-top: 6px; display: inline-block; }
+
+    /* ── Cost ── */
+    .cost-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .cost-table th { text-align: right; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--muted); padding: 0 9px 6px; }
+    .cost-table th:first-child, .cost-table td:first-child { text-align: left; }
+    .cost-table th:nth-child(2), .cost-table td:nth-child(2),
+    .cost-table th:nth-child(3), .cost-table td:nth-child(3) { text-align: left; }
+    .cost-table td { padding: 8px 9px; border-bottom: 1px solid var(--border); color: var(--muted-mid); text-align: right; white-space: nowrap; }
+    .cost-table tr:hover td { background: rgba(255,255,255,.02); }
+    .cost-name { color: var(--text); font-weight: 600; }
+    .cost-stats { display: flex; gap: 26px; flex-wrap: wrap; margin-bottom: 22px; }
+    .cost-stat b { display: block; font-size: 21px; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.2; }
+    .cost-stat span { font-size: 11px; color: var(--muted); }
+    .cost-tier { font-size: 10px; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+    .cost-tier.classification { background: rgba(52,211,153,.12); color: #34d399; }
+    .cost-tier.reasoning      { background: rgba(139,92,246,.15); color: #a78bfa; }
+    .cost-tier.complex        { background: rgba(251,191,36,.14); color: #fbbf24; }
+    .cost-tier.unmapped { background: rgba(120,120,140,.13); color: var(--muted-mid); }
+    .cost-bar { height: 3px; background: var(--agent); border-radius: 2px; margin-top: 5px; opacity: .75; }
+    .cost-note { font-size: 11px; color: var(--muted); margin-top: 18px; line-height: 1.6; max-width: 640px; }
+    .cost-flag { color: #fbbf24; }
+
+    /* ── Logs ── */
+    #logs-view.active { flex-direction: row; }
+    .logs-sidebar { width: 260px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+    .logs-sidebar-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
+      border-bottom: 1px solid var(--border); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .log-item { padding: 9px 14px; font-size: 12px; color: var(--muted-mid); cursor: pointer; border-bottom: 1px solid var(--border); }
+    .log-item:hover { background: var(--card-hover); }
+    .log-item.active { background: rgba(99,102,241,.1); color: var(--text); }
+    .log-item .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .logs-main { flex: 1; overflow-y: auto; padding: 16px 20px; }
+    .log-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.6;
+      color: var(--muted-mid); white-space: pre-wrap; word-break: break-word; }
+
+    /* ── Modal ── */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.68); z-index: 200;
+      align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border-light); border-radius: 12px;
+      width: 640px; max-width: 94vw; max-height: 86vh; display: flex; flex-direction: column;
+      box-shadow: 0 24px 60px rgba(0,0,0,.5); overflow: hidden; }
+    .modal-head { padding: 15px 20px 12px; border-bottom: 1px solid var(--border); display: flex;
+      justify-content: space-between; align-items: flex-start; gap: 12px; flex-shrink: 0; }
+    .modal-title { font-size: 15px; font-weight: 600; line-height: 1.35; }
+    .modal-sub { font-size: 12px; color: var(--muted-mid); margin-top: 3px; line-height: 1.45; }
+    .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 2px; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px;
+      padding: 13px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .meta-grid .k { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 2px; }
+    .meta-grid .v { font-size: 12px; color: var(--text); line-height: 1.4; }
+    .modal-body { padding: 14px 20px 18px; overflow-y: auto; font-size: 12.5px; line-height: 1.65; color: var(--muted-mid); }
+    .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;
+      gap: 8px; flex-shrink: 0; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 20px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .form-field label { display: block; font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+    .form-field input, .form-field textarea { width: 100%; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">⚙</div>
+    <div class="header-title">Business OS <span>/ Control Center</span></div>
+  </div>
+  <div class="header-right">
+    <div class="live-pill"><div class="live-dot"></div><span>live</span></div>
+    <div class="header-date" id="date-display"></div>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" id="tab-marketing" onclick="switchTab('marketing')">Marketing</button>
+  <button class="tab-btn" id="tab-sales" onclick="switchTab('sales')">Sales</button>
+  <button class="tab-btn" id="tab-eng" onclick="switchTab('eng')">Engineering</button>
+  <button class="tab-btn" id="tab-cost" onclick="switchTab('cost')">Cost</button>
+  <button class="tab-btn" id="tab-logs" onclick="switchTab('logs')">Logs</button>
+</div>
+
+<!-- ── Marketing ── -->
+<div class="view active" id="marketing-view">
+  <div class="toolbar">
+    <button class="filter-btn active" data-mf="PENDING" onclick="setMktFilter('PENDING')">Pending</button>
+    <button class="filter-btn" data-mf="APPROVED" onclick="setMktFilter('APPROVED')">Approved</button>
+    <button class="filter-btn" data-mf="POSTED" onclick="setMktFilter('POSTED')">Posted</button>
+    <button class="filter-btn" data-mf="DISCARDED" onclick="setMktFilter('DISCARDED')">Discarded</button>
+    <button class="filter-btn" data-mf="FAILED" onclick="setMktFilter('FAILED')">Failed</button>
+    <button class="filter-btn" data-mf="" onclick="setMktFilter('')">All</button>
+    <div class="toolbar-spacer"></div>
+    <button class="refresh-btn" onclick="loadMarketing()" title="Refresh">↻</button>
+  </div>
+  <div class="scroll" id="mkt-scroll"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- ── Sales ── -->
+<div class="view" id="sales-view">
+  <div class="toolbar">
+    <select class="instance-select" id="sales-instance" onchange="setSalesInstance(this.value)"
+            title="Which business's pipeline"></select>
+    <div class="toolbar-spacer"></div>
+    <button class="btn yes" onclick="openLeadAddModal()">+ Add lead</button>
+    <button class="refresh-btn" onclick="loadSales()" title="Refresh">↻</button>
+  </div>
+  <div class="scroll" id="sales-scroll"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- ── Engineering ── -->
+<div class="view" id="eng-view">
+  <div class="toolbar">
+    <select class="instance-select" id="eng-instance" onchange="setEngInstance(this.value)"
+            title="Which business's engineering board"></select>
+    <button class="filter-btn active" data-eview="decide" onclick="setEngView('decide')">Decide</button>
+    <button class="filter-btn" data-eview="board" onclick="setEngView('board')">Board</button>
+    <button class="filter-btn" data-eview="bugs" onclick="setEngView('bugs')">Bugs</button>
+    <div class="toolbar-spacer"></div>
+    <button class="refresh-btn" onclick="loadEng()" title="Refresh">↻</button>
+  </div>
+  <div class="scroll" id="eng-scroll"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- ── Cost ── -->
+<div class="view" id="cost-view">
+  <div class="toolbar">
+    <button class="filter-btn active" data-cdays="7" onclick="setCostDays(7)">7 days</button>
+    <button class="filter-btn" data-cdays="30" onclick="setCostDays(30)">30 days</button>
+    <button class="filter-btn" data-cdays="90" onclick="setCostDays(90)">90 days</button>
+    <div class="toolbar-spacer"></div>
+    <button class="refresh-btn" onclick="loadCost()" title="Refresh">↻</button>
+  </div>
+  <div class="scroll" id="cost-scroll"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- ── Logs ── -->
+<div class="view" id="logs-view">
+  <div class="logs-sidebar">
+    <div class="logs-sidebar-header"><span>logs/*.log</span>
+      <button class="refresh-btn" onclick="loadLogList()" title="Refresh">↻</button>
+    </div>
+    <div id="logs-list"><div class="empty">Loading…</div></div>
+  </div>
+  <div class="logs-main" id="logs-main"><div class="empty">Pick a log file.</div></div>
+</div>
+
+<!-- ── Lead modal ── -->
+<div class="modal-backdrop" id="lead-modal" onclick="if(event.target===this)closeLeadModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div style="min-width:0">
+        <div class="modal-title" id="lm-contact"></div>
+        <div class="modal-sub" id="lm-company"></div>
+      </div>
+      <button class="modal-close" onclick="closeLeadModal()">×</button>
+    </div>
+    <div class="meta-grid" id="lm-meta"></div>
+    <div class="modal-body" id="lm-body"></div>
+    <div class="form-grid full" style="padding-top:0">
+      <div class="form-field full">
+        <label>Status note</label>
+        <input id="lm-status-note" />
+      </div>
+      <div class="form-field">
+        <label>Estimated value ($)</label>
+        <input id="lm-value" />
+      </div>
+      <div class="form-field">
+        <label>Next action due</label>
+        <input id="lm-due" placeholder="YYYY-MM-DD" />
+      </div>
+      <div class="form-field full">
+        <label>Log a note (stamps last touch)</label>
+        <textarea id="lm-note" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeLeadModal()">Close</button>
+      <button class="btn yes" onclick="saveLeadEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add lead modal ── -->
+<div class="modal-backdrop" id="lead-add-modal" onclick="if(event.target===this)closeLeadAddModal()">
+  <div class="modal" style="width:480px">
+    <div class="modal-head">
+      <div class="modal-title">New lead</div>
+      <button class="modal-close" onclick="closeLeadAddModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label>Contact</label><input id="la-contact" /></div>
+      <div class="form-field"><label>Company</label><input id="la-company" /></div>
+      <div class="form-field"><label>Source</label><input id="la-source" placeholder="e.g. referral, inbound, outbound" /></div>
+      <div class="form-field"><label>Estimated value ($)</label><input id="la-value" /></div>
+      <div class="form-field full"><label>Why this is a signal</label><textarea id="la-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeLeadAddModal()">Cancel</button>
+      <button class="btn yes" onclick="submitLeadAdd()">Add to Signal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function relTime(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!isFinite(ms) || ms < 0) return '';
+  const min = Math.round(ms / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  return `${Math.round(hr / 24)}d ago`;
+}
+function renderMarkdown(text) {
+  return esc(text)
+    .replace(/^\s*#{1,2}\s+(.*)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
+    .replace(/<br>(<h2>)/g, '$1')
+    .replace(/(<\/h2>)<br>/g, '$1');
+}
+function reflowHardWraps(text) {
+  const lines = String(text == null ? '' : text).split('\n');
+  const out = [];
+  for (const line of lines) {
+    const t = line.trim();
+    const startsNew = out.length === 0 || t === '' ||
+      /^#{1,2}\s/.test(t) || /^(\d+\.|[-*])\s/.test(t);
+    if (startsNew) { out.push(line); continue; }
+    const prevT = out[out.length - 1].trim();
+    if (prevT === '' || /^#{1,2}\s/.test(prevT)) out.push(line);
+    else out[out.length - 1] = out[out.length - 1].replace(/\s+$/, '') + ' ' + t;
+  }
+  return out.join('\n');
+}
+function renderDecisionBody(text) { return renderMarkdown(reflowHardWraps(text)); }
+
+function updateDate() {
+  document.getElementById('date-display').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+updateDate();
+setInterval(updateDate, 60000);
+
+let activeTab = 'marketing';
+function switchTab(tab) {
+  activeTab = tab;
+  ['marketing', 'sales', 'eng', 'cost', 'logs'].forEach(t =>
+    document.getElementById('tab-' + t).classList.toggle('active', tab === t));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(tab + '-view').classList.add('active');
+  if (tab === 'marketing') loadMarketing();
+  if (tab === 'sales') loadSales();
+  if (tab === 'eng') loadEng();
+  if (tab === 'cost') loadCost();
+  if (tab === 'logs') loadLogList();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Marketing — Twenty CRM "Marketing Content" lifecycle
+// ══════════════════════════════════════════════════════════════════════════
+let mktFilter = 'PENDING';
+let mktItems = [];
+
+function setMktFilter(f) {
+  mktFilter = f;
+  document.querySelectorAll('[data-mf]').forEach(b =>
+    b.classList.toggle('active', b.dataset.mf === f));
+  loadMarketing();
+}
+
+async function loadMarketing() {
+  const el = document.getElementById('mkt-scroll');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const q = mktFilter ? '?status=' + encodeURIComponent(mktFilter) : '';
+    const r = await fetch('/api/marketing' + q);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    mktItems = d.items || [];
+    renderMarketing();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load Marketing Content from Twenty: ${esc(String(e))}<br>
+      <span style="font-size:11px">Check TWENTY_BASE_URL / TWENTY_API_KEY in .env.</span></div>`;
+  }
+}
+
+function renderMarketing() {
+  const el = document.getElementById('mkt-scroll');
+  if (!mktItems.length) {
+    el.innerHTML = `<div class="empty">Nothing ${mktFilter ? mktFilter.toLowerCase() : ''}.</div>`;
+    return;
+  }
+  el.innerHTML = mktItems.map(it => {
+    const pending = it.status === 'PENDING';
+    const bodyId = 'mkt-body-' + it.id;
+    return `<div class="mkt-card">
+      <div class="mkt-head">
+        <div class="mkt-title-wrap">
+          <div class="mkt-title">${esc(it.key)} — ${esc(it.title)}</div>
+          <div class="mkt-sub">${esc(it.channel)}${it.community ? ' · r/' + esc(it.community) : ''}</div>
+        </div>
+        <span class="status-pill ${esc(it.status)}">${esc(it.status)}</span>
+      </div>
+      ${pending
+        ? `<textarea class="mkt-body-edit" id="${bodyId}">${esc(it.body)}</textarea>`
+        : `<div class="mkt-body-view">${esc(it.body) || '—'}</div>`}
+      ${it.rationale ? `<div class="mkt-rationale">why: ${esc(it.rationale)}</div>` : ''}
+      ${it.notes ? `<div class="meta">${esc(it.notes)}</div>` : ''}
+      ${it.posted_url ? `<a class="mkt-link" href="${esc(it.posted_url)}" target="_blank">Open posted thread →</a>` : ''}
+      ${it.permalink && !it.posted_url ? `<a class="mkt-link" href="${esc(it.permalink)}" target="_blank">Open target thread →</a>` : ''}
+      ${pending ? `<div class="actions">
+          <button class="btn yes" onclick="mktAction('${escAttr(it.id)}','edit_approve','${bodyId}')">Approve</button>
+          <button class="btn no" onclick="mktSkip('${escAttr(it.id)}')">Skip</button>
+        </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function mktAction(id, action, bodyId) {
+  const body = bodyId ? document.getElementById(bodyId).value : undefined;
+  const r = await fetch('/api/marketing/action', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, action, body }),
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed'); return; }
+  loadMarketing();
+}
+
+async function mktSkip(id) {
+  const reason = prompt('Reason for skipping (optional):', '');
+  if (reason === null) return;
+  const r = await fetch('/api/marketing/action', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, action: 'skip', reason }),
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed'); return; }
+  loadMarketing();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Sales — generic CRM funnel, per business instance
+// ══════════════════════════════════════════════════════════════════════════
+const PIPE_LABELS = {
+  '1-signal': 'Signal', '2-qualified': 'Qualified', '3-contacted': 'Contacted',
+  '4-engaged': 'Engaged', '5-proposal-sent': 'Proposal sent',
+  '6-negotiating': 'Negotiating', '7-closed/won': 'Won', '7-closed/lost': 'Lost',
+};
+let salesData = null;
+let salesInstance = localStorage.getItem('sales-instance') || '';
+
+async function loadSales() {
+  const el = document.getElementById('sales-scroll');
+  try {
+    const q = salesInstance ? '?instance=' + encodeURIComponent(salesInstance) : '';
+    const r = await fetch('/api/sales' + q);
+    salesData = await r.json();
+    salesInstance = salesData.instance || '';
+    localStorage.setItem('sales-instance', salesInstance);
+    renderSalesInstances();
+    renderSales();
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Error loading sales pipeline.</div>';
+  }
+}
+
+function renderSalesInstances() {
+  const sel = document.getElementById('sales-instance');
+  const list = (salesData && salesData.instances) || [];
+  sel.style.display = list.length > 1 ? '' : 'none';
+  sel.innerHTML = list.map(i =>
+    `<option value="${escAttr(i.id)}"${i.id === salesInstance ? ' selected' : ''}>${esc(i.label)}</option>`).join('');
+}
+
+function setSalesInstance(id) {
+  salesInstance = id;
+  localStorage.setItem('sales-instance', id);
+  salesData = null;
+  document.getElementById('sales-scroll').innerHTML = '<div class="empty">Loading…</div>';
+  loadSales();
+}
+
+function leadCardTitle(l) {
+  const contact = (l.contact || '').trim();
+  const name = contact.split(/\s+[—–-]{1,2}\s+/)[0].trim();
+  if (name) return name;
+  return companyShort(l) || l.slug;
+}
+function companyShort(l) {
+  const co = (l.company || '').split(' (')[0].trim();
+  return co;
+}
+
+function renderSales() {
+  const el = document.getElementById('sales-scroll');
+  const d = salesData;
+  if (d.empty) { el.innerHTML = `<div class="empty">${esc(d.empty)}</div>`; return; }
+  const stages = d.stages || [];
+  const openStages = stages.filter(s => !s.name.startsWith('7-'));
+  const activeCount = openStages.reduce((n, s) => n + s.leads.length, 0);
+
+  const totals = `<div class="totals">
+    <span><span class="n">${activeCount}</span> <span class="l">active leads</span></span>
+    <span><span class="n">$${(d.total_value || 0).toLocaleString()}</span> <span class="l">pipeline value</span></span>
+  </div>`;
+
+  const cols = `<div class="cols">${stages.map(s => `
+    <div class="col" ondragover="pipeDragOver(event, this)" ondragleave="pipeDragLeave(event, this)"
+         ondrop="pipeDrop(event, this, '${s.name}')">
+      <div class="col-head">
+        <span class="col-name">${PIPE_LABELS[s.name] || esc(s.name)}</span>
+        <span class="col-count">${s.leads.length}</span>
+      </div>
+      ${s.leads.length ? s.leads.map(l => `<div class="lead-card" draggable="true"
+        ondragstart="pipeDragStart(event, this, '${l.slug.replace(/'/g, "\\'")}')"
+        ondragend="pipeDragEnd(event, this)"
+        onclick="openLeadModal('${s.name}','${l.slug.replace(/'/g, "\\'")}')">
+        <div class="lead-who">${esc(leadCardTitle(l))}</div>
+        ${companyShort(l) && companyShort(l) !== leadCardTitle(l) ? `<div class="lead-co">${esc(companyShort(l))}</div>` : ''}
+        ${l.status_note ? `<div class="lead-note">${esc(l.status_note)}</div>` : ''}
+        <div class="lead-meta">
+          ${l.source ? `<span class="chip">${esc(l.source)}</span>` : ''}
+          ${l.value ? `<span class="chip">$${l.value.toLocaleString()}</span>` : ''}
+          ${l.days_since_touch != null && l.days_since_touch >= 7 && !s.name.startsWith('7-')
+            ? `<span class="stale">${l.days_since_touch}d silent</span>` : ''}
+          ${l.action_overdue ? '<span class="due-dot" title="next action due"></span>' : ''}
+        </div>
+      </div>`).join('') : '<div class="empty-col">—</div>'}
+    </div>`).join('')}</div>`;
+
+  el.innerHTML = totals + cols;
+}
+
+let pipeDrag = null;
+function pipeDragStart(e, el, slug) {
+  pipeDrag = slug;
+  el.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', slug); } catch (err) {}
+}
+function pipeDragEnd(e, el) {
+  el.classList.remove('dragging');
+  document.querySelectorAll('.col.drag-over').forEach(c => c.classList.remove('drag-over'));
+}
+function pipeDragOver(e, col) {
+  if (!pipeDrag) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  col.classList.add('drag-over');
+}
+function pipeDragLeave(e, col) {
+  if (!col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+}
+async function pipeDrop(e, col, stage) {
+  e.preventDefault();
+  col.classList.remove('drag-over');
+  const slug = pipeDrag;
+  pipeDrag = null;
+  if (!slug) return;
+  try {
+    const r = await fetch('/api/sales/move-lead', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instance: salesInstance, slug, to_stage: stage }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || r.status);
+  } catch (err) {
+    alert('Move failed: ' + err.message);
+  }
+  loadSales();
+}
+
+let lmCurrent = null;
+function openLeadModal(stageName, slug) {
+  const stage = (salesData.stages || []).find(s => s.name === stageName);
+  const l = stage && (stage.leads || []).find(x => x.slug === slug);
+  if (!l) return;
+  lmCurrent = { stageName, slug };
+
+  document.getElementById('lm-contact').textContent = l.contact || l.slug;
+  document.getElementById('lm-company').textContent = l.company || '';
+  document.getElementById('lm-status-note').value = l.status_note || '';
+  document.getElementById('lm-value').value = l.value || '';
+  document.getElementById('lm-due').value = l.next_action_due || '';
+  document.getElementById('lm-note').value = '';
+
+  const meta = [
+    ['Stage', PIPE_LABELS[stageName] || stageName],
+    ['Source', l.source],
+    ['Segment', l.icp_segment],
+    ['Last touch', l.last_touch || (l.days_since_touch != null ? l.days_since_touch + 'd ago' : '')],
+    ['Contract end', l.contract_end_date],
+    ['Custom cadence', l.custom_cadence],
+  ].filter(([, v]) => v);
+  document.getElementById('lm-meta').innerHTML = meta.map(([k, v]) =>
+    `<div><div class="k">${esc(k)}</div><div class="v">${esc(String(v))}</div></div>`).join('');
+
+  document.getElementById('lm-body').innerHTML = l.body
+    ? renderMarkdown(l.body) : '<span style="color:var(--muted)">No history recorded.</span>';
+  document.getElementById('lead-modal').classList.add('open');
+}
+function closeLeadModal() { document.getElementById('lead-modal').classList.remove('open'); lmCurrent = null; }
+
+async function saveLeadEdit() {
+  if (!lmCurrent) return;
+  const fields = {
+    status_note: document.getElementById('lm-status-note').value,
+    estimated_value: document.getElementById('lm-value').value,
+    next_action_due: document.getElementById('lm-due').value,
+  };
+  const note = document.getElementById('lm-note').value;
+  const r = await fetch('/api/sales/lead/update', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instance: salesInstance, slug: lmCurrent.slug, fields, note }),
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed'); return; }
+  closeLeadModal();
+  loadSales();
+}
+
+function openLeadAddModal() {
+  ['la-contact', 'la-company', 'la-source', 'la-value', 'la-note'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('lead-add-modal').classList.add('open');
+}
+function closeLeadAddModal() { document.getElementById('lead-add-modal').classList.remove('open'); }
+
+async function submitLeadAdd() {
+  const fields = {
+    instance: salesInstance,
+    contact: document.getElementById('la-contact').value,
+    company: document.getElementById('la-company').value,
+    source: document.getElementById('la-source').value,
+    estimated_value: document.getElementById('la-value').value,
+    status_note: document.getElementById('la-note').value,
+  };
+  const r = await fetch('/api/sales/lead', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed'); return; }
+  closeLeadAddModal();
+  loadSales();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Engineering — ported from life-os's control-center, re-rooted at this repo
+// ══════════════════════════════════════════════════════════════════════════
+let engData = null;
+let engInstance = localStorage.getItem('eng-instance') || '';
+let engView = 'decide';
+let engShowDropped = localStorage.getItem('engShowDropped') === '1';
+const ENG_WORKING_STATES = ['ready', 'building', 'in-review', 'in-qa', 'in-security', 'ready-to-ship'];
+
+async function loadEng() {
+  const el = document.getElementById('eng-scroll');
+  try {
+    const q = engInstance ? '?instance=' + encodeURIComponent(engInstance) : '';
+    const r = await fetch('/api/engineering' + q);
+    engData = await r.json();
+    engInstance = engData.instance || '';
+    localStorage.setItem('eng-instance', engInstance);
+    renderEngInstances();
+    renderEng();
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Error loading engineering.</div>';
+  }
+}
+
+function renderEngInstances() {
+  const sel = document.getElementById('eng-instance');
+  const list = (engData && engData.instances) || [];
+  sel.style.display = list.length > 1 ? '' : 'none';
+  sel.innerHTML = list.map(i =>
+    `<option value="${escAttr(i.id)}"${i.id === engInstance ? ' selected' : ''}>${esc(i.label)}</option>`).join('');
+}
+
+function setEngInstance(id) {
+  engInstance = id;
+  localStorage.setItem('eng-instance', id);
+  engData = null;
+  document.getElementById('eng-scroll').innerHTML = '<div class="empty">Loading…</div>';
+  loadEng();
+}
+
+function setEngView(v) {
+  engView = v;
+  document.querySelectorAll('[data-eview]').forEach(b => b.classList.toggle('active', b.dataset.eview === v));
+  if (engData) renderEng();
+}
+
+function engToggleDropped() {
+  engShowDropped = !engShowDropped;
+  localStorage.setItem('engShowDropped', engShowDropped ? '1' : '0');
+  renderEng();
+}
+
+function renderEng() {
+  const el = document.getElementById('eng-scroll');
+  const d = engData;
+  if (!d.instance) {
+    el.innerHTML = `<div class="empty">${esc(d.empty || 'No engineering instance yet.')}</div>`;
+    return;
+  }
+  const s = d.stats;
+  const overCap = s.waiting_on_harry >= s.approval_cap;
+  let h = '';
+
+  h += '<div class="stats">' +
+    `<div class="stat${overCap ? ' over' : ''}"><b>${s.waiting_on_harry}/${s.approval_cap}</b>waiting on you</div>` +
+    `<div class="stat"><b>${s.in_flight}/${s.machine_limit}</b>in flight</div>` +
+    `<div class="stat"><b>${s.open_bugs}</b>open bugs</div>` +
+    `<div class="stat"><b>${s.shipped_recent}</b>verified</div>` +
+    '</div>';
+
+  if (engView === 'decide') {
+    const blocked = d.blocked_on_harry || [];
+    h += '<div class="section"><div class="h">Waiting on you ' +
+         `<span class="count">${d.waiting.length + blocked.length}</span></div>`;
+    if (!d.waiting.length && !blocked.length) {
+      h += '<div class="card"><div class="body-text">Nothing needs you. The department is either working or idle — both are fine.</div></div>';
+    }
+    blocked.forEach(t => {
+      h += '<div class="card">' +
+        '<div class="row">' +
+          '<span class="tag gate">blocked on you</span>' +
+          `<span class="title">${esc(t.id)} — ${esc(t.title)}</span>` +
+          (t.project ? `<span class="tag">${esc(t.project)}</span>` : '') +
+        '</div>' +
+        `<div class="meta">since ${esc(relTime(t.updated))} · see the ticket for what's needed` +
+        (t.pr_url ? ` · <a href="${esc(t.pr_url)}" target="_blank" style="color:#60a5fa">Open the PR →</a>` : '') +
+        '</div></div>';
+    });
+    d.waiting.forEach((w, i) => {
+      const noteId = `eng-decide-note-${i}`;
+      h += '<div class="card accent">' +
+        '<div class="row">' +
+          `<span class="tag gate">${esc(w.gate || 'decision')}</span>` +
+          `<span class="title">${esc(w.ticket)}</span>` +
+          (w.project ? `<span class="tag">${esc(w.project)}</span>` : '') +
+        '</div>' +
+        (w.recommendation ? `<div class="meta">Recommendation: <b>${esc(w.recommendation)}</b></div>` : '') +
+        `<div class="body-text">${renderDecisionBody(w.body)}</div>` +
+        (w.pr_url ? `<div class="meta"><a href="${esc(w.pr_url)}" target="_blank" style="color:#60a5fa">Open the PR →</a></div>` : '') +
+        `<textarea id="${noteId}" class="decide-note" rows="2" placeholder="Optional note — required if you're asking for changes"></textarea>` +
+        '<div class="actions">' +
+          `<button class="btn yes" onclick="engDecide('${escAttr(w.file)}','approved','${noteId}')">Approve</button>` +
+          `<button class="btn edit" onclick="engDecide('${escAttr(w.file)}','changed','${noteId}')">Request changes</button>` +
+          `<button class="btn no" onclick="engDecide('${escAttr(w.file)}','rejected','${noteId}')">Reject</button>` +
+        '</div></div>';
+    });
+    h += '</div>';
+
+    if (d.deciding && d.deciding.length) {
+      h += '<div class="section"><div class="h">Applying your answer ' +
+           `<span class="count">${d.deciding.length}</span></div>`;
+      d.deciding.forEach(w => {
+        h += '<div class="card">' +
+          '<div class="row">' +
+            `<span class="tag gate">${esc(w.gate || 'decision')}</span>` +
+            `<span class="title">${esc(w.ticket)}</span>` +
+            (w.project ? `<span class="tag">${esc(w.project)}</span>` : '') +
+          '</div>' +
+          `<div class="meta">you said <b>${esc(w.decision)}</b> ${esc(relTime(w.decided))} · the department is acting on it now</div></div>`;
+      });
+      h += '</div>';
+    }
+
+    if (d.submitted && d.submitted.length) {
+      h += '<div class="section"><div class="h">Waiting to be shaped ' +
+           `<span class="count">${d.submitted.length}</span></div>`;
+      d.submitted.forEach(s2 => {
+        const filed = s2.origin === 'filed';
+        const via = filed ? 'filed' + (s2.source ? ` by ${esc(s2.source)}` : '') : 'sent from here';
+        h += '<div class="card">' +
+          `<div class="title">${esc(s2.title)}</div>` +
+          `<div class="meta">${via}` + (s2.received ? ` ${esc(relTime(s2.received))}` : '') +
+          ' · the PM shapes this into a ticket next pass</div></div>';
+      });
+      h += '</div>';
+    }
+
+    h += '<div class="section"><div class="h">Give the team something to build</div>' +
+      '<div class="intake-box">' +
+      '<input id="eng-intake-title" placeholder="What do you want built?" />' +
+      '<textarea id="eng-intake-desc" rows="3" placeholder="Any context worth having (optional)"></textarea>' +
+      '<div class="row"><button class="btn yes" onclick="engIntake()">Send to the PM</button>' +
+      '<span class="note-text" id="eng-intake-note">The Product Manager shapes it, writes the spec, and brings back a recommendation before anything gets built.</span></div>' +
+      '</div></div>';
+  }
+
+  if (engView === 'board') {
+    const GROUPS = [
+      ['To-do',        ['intake', 'shaped', 'awaiting-scope']],
+      ['In progress',  ['designed', 'awaiting-decision', 'ready', 'building', 'in-review', 'in-qa', 'in-security']],
+      ['Ready to ship',['ready-to-ship', 'awaiting-release']],
+      ['Done',         ['shipped', 'verified', 'advised']],
+      ['Blocked',      ['blocked']],
+      ['Dropped',      ['dropped']],
+    ];
+    const PRIO_COLS = ['To-do'];
+    const WAITING_ON_YOU = ['awaiting-scope', 'awaiting-decision', 'awaiting-release'];
+    const PRIO_RANK = { now: 0, next: 1, '': 2, hold: 3 };
+
+    const droppedCount = (d.by_state['dropped'] || []).length;
+    if (droppedCount) {
+      h += '<div class="boardbar">' +
+        `<button class="prio-btn${engShowDropped ? ' on' : ''}" onclick="engToggleDropped()">` +
+        `${engShowDropped ? 'hide' : 'show'} dropped · ${droppedCount}</button></div>`;
+    }
+
+    const cols = GROUPS
+      .filter(([name]) => name !== 'Dropped' || engShowDropped)
+      .map(([name, states]) => {
+        const items = [];
+        states.forEach(st => (d.by_state[st] || []).forEach(t => items.push([st, t])));
+        if (name === 'To-do') {
+          items.sort((a, b) => (PRIO_RANK[a[1].priority || ''] ?? 2) - (PRIO_RANK[b[1].priority || ''] ?? 2));
+        }
+        return [name, items];
+      })
+      .filter(([name, items]) => name !== 'Dropped' || items.length);
+
+    const anyTickets = cols.some(([, items]) => items.length);
+    if (!anyTickets) {
+      h += '<div class="empty">Nothing on the board yet.</div>';
+    } else {
+      h += '<div class="lanes">';
+      cols.forEach(([name, items]) => {
+        h += `<div class="lane"><div class="lane-h">${esc(name)} · ${items.length}</div>`;
+        if (!items.length) h += '<div class="lane-empty">—</div>';
+        items.forEach(([st, t]) => {
+          const tags = [];
+          tags.push(`<span class="tag stage">${esc(st)}</span>`);
+          if (WAITING_ON_YOU.includes(st) || t.blocked_on === 'approver') {
+            tags.push('<span class="tag gate">waiting on you</span>');
+          }
+          if (t.priority) tags.push(`<span class="tag prio-${esc(t.priority)}">${esc(t.priority)}</span>`);
+          if (t.lane && t.lane !== 'full') tags.push(`<span class="tag">${esc(t.lane)}</span>`);
+
+          let mergeControls = '';
+          if (st === 'blocked' && t.pr_url) {
+            mergeControls = '<div class="prio-row">' +
+              `<a class="prio-btn" href="${esc(t.pr_url)}" target="_blank" rel="noopener">open PR</a>` +
+              `<button class="prio-btn" onclick="engMergeCheck('${esc(t.id)}')">check if merged</button>` +
+              `<button class="prio-btn" onclick="engMergeCheck('${esc(t.id)}', true)">mark merged</button>` +
+              '</div>';
+          }
+
+          let controls = '';
+          if (PRIO_COLS.includes(name)) {
+            const canHold = !ENG_WORKING_STATES.includes(st);
+            const opt = (v, label) =>
+              `<button class="prio-btn${t.priority === v ? ' on' : ''}" onclick="engPriority('${esc(t.id)}','${v}')">${label}</button>`;
+            controls = '<div class="prio-row">' +
+              opt('now', 'now') + opt('next', 'next') +
+              (canHold ? opt('hold', 'hold') : '') +
+              (t.priority ? opt('', 'clear') : '') + '</div>';
+          }
+          h += '<div class="mini">' +
+               `<div class="mini-title">${esc(t.title)}</div>` +
+               `<div class="mini-tags">${tags.join('')}</div>` +
+               `<div class="sub">${esc(t.id)} · ${esc(t.project)} · ${esc(t.owner)}</div>` +
+               mergeControls + controls + '</div>';
+        });
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+  }
+
+  if (engView === 'bugs') {
+    h += '<div class="section"><div class="h">Open bugs <span class="count">' + d.bugs.length + '</span></div>';
+    if (!d.bugs.length) h += '<div class="card"><div class="body-text">No open bugs.</div></div>';
+    d.bugs.forEach(b => {
+      const sev = (b.severity || '').toLowerCase();
+      h += '<div class="card"><div class="row">' +
+        `<span class="tag ${esc(sev)}">${esc(b.severity)}</span>` +
+        `<span class="title">${esc(b.title)}</span></div>` +
+        `<div class="meta">${esc(b.id)} · ${esc(b.project)} · owner ${esc(b.owner)} · ${esc(b.age)}</div></div>`;
+    });
+    h += '</div>';
+  }
+
+  el.innerHTML = h;
+}
+
+async function engDecide(file, decision, noteId) {
+  const noteEl = noteId ? document.getElementById(noteId) : null;
+  const note = noteEl ? noteEl.value.trim() : '';
+  if (decision === 'changed' && !note) {
+    if (noteEl) noteEl.focus();
+    alert('Add a note describing the change you want — "changed" needs something to change.');
+    return;
+  }
+  const r = await fetch('/api/eng/decide', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file, decision, note, instance: engInstance }),
+  });
+  if (!r.ok) { const e = await r.json(); alert(e.error || 'Failed'); return; }
+  loadEng();
+}
+
+async function engPriority(ticket, priority) {
+  const r = await fetch('/api/eng/priority', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticket, priority, instance: engInstance }),
+  });
+  if (!r.ok) { const e = await r.json(); alert(e.error || 'Failed'); return; }
+  loadEng();
+}
+
+async function engMergeCheck(ticket, force) {
+  if (force && !confirm(`Mark ${ticket} as merged?\n\nOnly do this if you actually merged the PR. It advances the ticket to shipped without checking git.`)) return;
+  const r = await fetch('/api/eng/merge-check', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticket, force: !!force, instance: engInstance }),
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed'); return; }
+  if (!d.merged) {
+    alert(`${ticket} does not look merged yet.\n\n${d.detail}` + (d.hint ? `\n\n${d.hint}` : ''));
+    return;
+  }
+  loadEng();
+}
+
+async function engIntake() {
+  const t = document.getElementById('eng-intake-title');
+  const dsc = document.getElementById('eng-intake-desc');
+  const note = document.getElementById('eng-intake-note');
+  if (!t.value.trim()) { t.focus(); return; }
+  const r = await fetch('/api/eng/intake', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: t.value, description: dsc.value, instance: engInstance }),
+  });
+  if (!r.ok) { const e = await r.json(); alert(e.error || 'Failed'); return; }
+  t.value = ''; dsc.value = '';
+  note.textContent = 'Received — the Product Manager is shaping it now, usually a few minutes. It\'ll show up under "Waiting to be shaped" below until it becomes a ticket.';
+  loadEng();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Cost — spend by agent/model/routine/business
+// ══════════════════════════════════════════════════════════════════════════
+let costData = null;
+let costDays = 7;
+
+function setCostDays(n) {
+  costDays = n;
+  document.querySelectorAll('[data-cdays]').forEach(b => b.classList.toggle('active', Number(b.dataset.cdays) === n));
+  loadCost();
+}
+
+async function loadCost() {
+  const el = document.getElementById('cost-scroll');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const r = await fetch('/api/costs?days=' + costDays);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    costData = await r.json();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load costs: ${esc(String(e))}</div>`;
+    return;
+  }
+  renderCost();
+}
+
+function costMoney(n) { return '$' + (n || 0).toFixed(2); }
+function costTokens(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+  return String(n || 0);
+}
+
+function costTable(title, rows, keyLabel, keyField, extraCols) {
+  let h = `<div class="section"><div class="h">${title} <span class="count">${rows.length}</span></div>` +
+    `<table class="cost-table"><tr><th>${keyLabel}</th>` +
+    (extraCols || []).map(c => `<th>${c}</th>`).join('') +
+    '<th>Runs</th><th>Cost</th><th>Avg run</th><th>Tokens</th><th>Err</th></tr>';
+  const maxCost = Math.max(...rows.map(r => r.cost), 0.0001);
+  rows.forEach(r => {
+    h += `<tr><td><span class="cost-name">${esc(r[keyField])}</span>` +
+         (keyField === 'agent' || keyField === 'routine'
+           ? `<div class="cost-bar" style="width:${Math.max(2, (r.cost / maxCost) * 100)}%"></div>` : '') +
+         '</td>' +
+         (extraCols || []).map(c => {
+           if (c === 'Tier') return `<td><span class="cost-tier ${esc(r.tier || 'unmapped')}">${esc(r.tier || 'unmapped')}</span> <span style="color:var(--muted)">${esc(r.model || '')}</span></td>`;
+           return '<td></td>';
+         }).join('') +
+         `<td>${r.runs}</td><td>${costMoney(r.cost)}</td><td>${costMoney(r.avg_cost)}</td>` +
+         `<td>${costTokens(r.tokens)}</td><td class="${r.errors ? 'cost-flag' : ''}">${r.errors || '—'}</td></tr>`;
+  });
+  h += '</table></div>';
+  return h;
+}
+
+function renderCost() {
+  const d = costData, el = document.getElementById('cost-scroll');
+  if (!d) return;
+  if (!d.runs) {
+    el.innerHTML = '<div class="empty">No runs recorded in the last ' + d.days + ' days.<br>' +
+      '<span style="font-size:11px;color:var(--muted)">Rows are written by departments/engineering/lib/run-stream.py on every ' +
+      '<code>claude -p</code> run under an engineering instance.</span></div>';
+    return;
+  }
+
+  let h = '<div class="cost-stats">' +
+    `<div class="cost-stat"><b>${costMoney(d.total_cost)}</b><span>total, ${d.days} days</span></div>` +
+    `<div class="cost-stat"><b>${d.runs}</b><span>runs</span></div>` +
+    `<div class="cost-stat"><b>${costMoney(d.avg_cost)}</b><span>average run</span></div>` +
+    `<div class="cost-stat"><b class="${d.errors ? 'cost-flag' : ''}">${d.errors || '—'}</b><span>errored</span></div>` +
+    `<div class="cost-stat"><b class="${d.drift ? 'cost-flag' : ''}">${d.drift || '—'}</b><span>model drift</span></div>` +
+    '</div>';
+
+  if (d.by_business.length > 1) h += costTable('Spend by business', d.by_business, 'Business', 'business');
+  h += costTable('Spend by agent', d.by_agent, 'Agent', 'agent');
+  h += costTable('Spend by model billed', d.by_model, 'Model', 'model');
+  h += costTable('Spend by routine', d.by_routine, 'Routine', 'routine', ['Tier']);
+  if (d.by_version.length > 1) h += costTable('Spend by agent version', d.by_version, 'Version', 'version');
+
+  h += `<div class="cost-note">${esc(d.note)}<br>` +
+       'Tiers resolve through <code>departments/engineering/lib/model-tier.sh</code>: ' +
+       Object.entries(d.tiers || {}).map(([t, m]) => `${esc(t)} → ${esc(m)}`).join(' · ') + '.' +
+       (d.drift ? '<br><span class="cost-flag">Model drift means a run asked for one model and billed another.</span>' : '') +
+       '</div>';
+
+  el.innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Logs — logs/*.log tail viewer
+// ══════════════════════════════════════════════════════════════════════════
+let currentLog = null;
+
+async function loadLogList() {
+  const el = document.getElementById('logs-list');
+  try {
+    const r = await fetch('/api/logs');
+    const d = await r.json();
+    const files = d.files || [];
+    if (!files.length) {
+      el.innerHTML = '<div class="empty">No log files yet.</div>';
+      return;
+    }
+    el.innerHTML = files.map(f => `<div class="log-item${f.name === currentLog ? ' active' : ''}"
+        onclick="viewLog('${escAttr(f.name)}')">
+      <div>${esc(f.name)}</div>
+      <div class="sub">${(f.size / 1024).toFixed(1)} KB · ${esc(relTime(new Date(f.mtime * 1000).toISOString()))}</div>
+    </div>`).join('');
+    if (!currentLog && files.length) viewLog(files[0].name);
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Error loading log list.</div>';
+  }
+}
+
+async function viewLog(name) {
+  currentLog = name;
+  document.querySelectorAll('.log-item').forEach(el =>
+    el.classList.toggle('active', el.textContent.trim().startsWith(name)));
+  const main = document.getElementById('logs-main');
+  main.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const r = await fetch('/api/logs/view?name=' + encodeURIComponent(name));
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    main.innerHTML = `<div class="meta" style="margin-bottom:10px">Showing last ${d.shown} of ${d.total_lines} lines</div>` +
+      `<div class="log-text">${esc(d.text) || '(empty)'}</div>`;
+  } catch (e) {
+    main.innerHTML = `<div class="empty">Error loading log: ${esc(String(e))}</div>`;
+  }
+  loadLogList();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+loadMarketing();
+</script>
+</body>
+</html>
