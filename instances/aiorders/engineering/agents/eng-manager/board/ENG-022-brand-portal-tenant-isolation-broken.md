@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P0
 priority:
-state: shaped
-owner: architect
+state: designed
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
@@ -23,7 +23,7 @@ blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-022-brand-portal-tenant-isolation-broken.md
-  design:
+  design: agents/architect/designs/ENG-022-brand-portal-tenant-isolation-broken.md
   adrs: []
   review:
   test_plan:
@@ -147,3 +147,121 @@ not need this ticket to ship first, only to not repeat its bug.
   severity. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-022`) and whole-board: see pass notes in
   `agents/eng-manager/board/_index.md`.
+
+- `2026-08-29` `shaped → designed` (architect, `continue` event pass, context
+  `ENG-022` — this fire's own turn at the front of `traces/.pending`,
+  reached after the approver's plain "approved" acknowledgement on the P0
+  incident notice, `inbox/_handled/2026-08-29-eng022-p0-incident.md`; no
+  priority change requested, nothing else to act on there). Narrow scope
+  per this event's own contract — this ticket only. Mode check clean
+  (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+  `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  whole-board: exit 0, clean.
+
+  Read the real code before designing against it, per
+  `agents/architect/agent.md` ("match the codebase"): the department's own
+  `aiorders-api` worktree (`~/Documents/_eng/aiorders-api`, confirmed clean —
+  no uncommitted changes from a prior dead pass) rather than the PRD's
+  summary alone. Confirmed all 19 broken call sites and the 4 correct
+  contrast files match the PRD's table exactly (grep + targeted reads, all
+  9 files). One thing the PRD didn't surface: `utils.ts:116` already
+  contains `verifyRestaurantAccessLegacy`, a correctly-implemented throwing
+  wrapper around `verifyRestaurantAccess`, exported but called from
+  **nowhere** in the repo (confirmed by grep across the whole worktree) —
+  changes the design from "invent a fix" to "promote the unused correct one
+  already sitting here."
+
+  Design written: `agents/architect/designs/ENG-022-brand-portal-tenant-isolation-broken.md`.
+  Approach: the 9 files already split into two pre-existing, still-valid
+  error conventions (throw vs. return `{success:false}`); fixed each broken
+  file per its *own* convention rather than unifying all 9 (that's a
+  refactor bundled into a bug fix — refused per `agents/architect/agent.md`'s
+  own "what you refuse" list) — `feedback.ts`/`customers.ts`/`hiring.ts`/
+  `website.ts` (11 sites) get the promoted `requireRestaurantAccess`
+  (renamed from the dead legacy helper, `@deprecated` dropped, one
+  `console.warn` denial log added per `security-baseline.md` A09);
+  `offers.ts` (8 sites) fixed in place — correct argument order and
+  `.hasAccess` check, matching its own already-correct siblings
+  (`catering.ts`/`menus.ts`/`restaurants.ts`) — no new helper, since its
+  surrounding code already returns `{success:false}` and switching it to
+  throw would change its response shape for no reason. Full alternatives,
+  the two response-shape risk, and the rollout plan (qualifies for the P0
+  hotfix exception to the release window, security gate still applies) are
+  on the design doc, not repeated here.
+
+  Test plan for acceptance criterion 4: `Deno.test` files colocated per
+  fixed source file, using a stubbed `SupabaseClient` (no live project, no
+  network) to prove the negative case per call site — real automated
+  coverage, not a manual-verification fallback, and does not need the
+  repo-wide test-harness ticket `config/projects.md` frames for
+  `restaurant-portal` (different stack, different gap; Deno's built-in
+  runner needs no scaffolding).
+
+  **No one-way door.** Renaming a zero-external-caller internal function and
+  correcting call sites to an existing primitive's real signature are both
+  fully reversible — no new datastore, vendor, auth model, or public
+  contract. No ADR written (`adrs: []` in the design's own frontmatter).
+  `awaiting-decision` (G2) does not apply; per `definition-of-done.md` the
+  ticket moves straight to `ready` next.
+
+  **State:** `shaped → designed`, `owner: architect → eng-manager` — the
+  next state's owner per `definition-of-done.md`'s table (`ready |
+  eng-manager`), mirroring how this ticket's own prior entry named the next
+  actor rather than the current one. **Consequence:** stays short of the
+  counted `ready..ready-to-ship` machine-WIP range (6/12 unaffected);
+  `security`-typed, no G1/G2 raised, approver-facing WIP and approval cap
+  both unaffected (1/2, 1/3, unchanged).
+
+  One observation filed (`agents/eng-manager/observations.md`): the two
+  pre-existing, unrelated error-response conventions living side by side in
+  `brand-portal/` — noted so a future ticket doesn't mistake it for
+  something this fix introduced.
+
+  This pass does not attempt the eng-manager's own `ready` sequencing work
+  inline, matching this board's own established practice for a
+  `shaped→designed` (and `designed`-adjacent) hop — see `ENG-014`'s
+  2026-08-29 log ("this pass does not attempt the architect's own design
+  work inline... belongs in the dedicated session the now-genuinely-queued
+  chain will launch"), same principle applied one hop later.
+
+  `chained: ENG-022` — `designed`, owned by `eng-manager`, an agent-owned
+  state; firing `/bin/sh
+  departments/engineering/lib/eng-trigger.sh continue ENG-022` before this
+  pass exits. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-022`) and whole-board: see pass notes in
+  `agents/eng-manager/board/_index.md`.
+
+- `2026-08-29` no state change (eng-manager, `decision` event pass, context
+  `2026-08-29-eng022-p0-incident.md` — this event's own turn at the front of
+  `traces/.pending`, drained immediately behind the `continue ENG-022`
+  design pass directly above: `traces/eng-loop-2026-08-29.log` — `pass end:
+  continue (exit 0, 1286s)` 16:25:37 → `queue: collapsed 5 duplicate
+  event(s)` → `draining queued event: decision
+  (2026-08-29-eng022-p0-incident.md)` 16:26:33, no gap). Mode check clean
+  (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+  `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  whole-board: exit 0, clean.
+
+  Verified fresh rather than trusted before concluding no-op: the incident
+  item already sits in `inbox/_handled/2026-08-29-eng022-p0-incident.md`
+  carrying its own "Processed" footer — an earlier `watch`/`schtasks` pass
+  had already fully actioned it (nothing to decide per the item's own text,
+  no `priority` set); `decision-journal.md` row 34 already records this
+  exact decision and timestamp; this ticket's own immediately-preceding log
+  entry already ends at `designed` with `chained: ENG-022`, and
+  `traces/.pending` confirms that fire is still genuinely queued (`1
+  continue ENG-022`) — not lost or stale. This is the well-documented
+  decision-races-a-prior-pass shape `observations.md` has logged over a
+  dozen times on this board, the clean variant this time (chain genuinely
+  fired and queued), not the broken-chain one (`ENG-014`/`ENG-015`'s rows,
+  where the record existed but the fire never reached the trigger).
+
+  **No state change.** `chained: none` — already correctly chained by the
+  immediately-preceding pass, confirmed still live in `traces/.pending`;
+  re-firing `continue ENG-022` here would only queue a duplicate for the
+  collapse logic to clean up, not fill a real gap. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean — unchanged from pre-pass since no edit was made. One observation
+  filed (`observations.md`) corroborating the open `proposals.md` race fix
+  (2026-08-27 row: skip the launch when a `decision` event's named gate item
+  is already in `_handled/`).

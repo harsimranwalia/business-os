@@ -8,7 +8,7 @@ time_estimate: several days to a week
 time_spent:
 time_remaining:
 severity: P2
-priority:
+priority: next
 state: shaped
 owner: product-manager
 lane: full

@@ -5,12 +5,15 @@ project: aiorders-admin-hub
 type: feature
 size: M
 time_estimate: half a day to a couple of days
-time_spent: ~3h, ready → building (migration + backend handler + frontend
-  UI across both repos, self-tested, live-schema verified against
-  production, database migration doc written)
-time_remaining: ~2-4h estimated across in-review/in-qa/in-security/
-  ready-to-ship and release admin; unchanged from the PRD's original band,
-  roughly half consumed
+time_spent: ~3h build (unchanged this pass — no new code written) plus one
+  code-review round (principal-engineer)
+time_remaining: ~2.5-4.5h — round 1 of code review found a real gap (no
+  automated test on the new authz-gated write path) and bounced the ticket
+  back to building; add one colocated Deno test file (access-gate negative
+  case, stage validation, the source='foodswipe' tenant-scoping) before
+  re-entering review, then in-qa/in-security/ready-to-ship/release admin as
+  before. The added test-writing (~30-60min) is closing a definition-of-done
+  gap, not new PRD scope, so no approver time_impact
 severity: P2
 priority:
 state: building
@@ -652,3 +655,106 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
   whole-board: both exit 0, clean (re-verified immediately before this
   entry was written).
+
+- `2026-08-29` **code review round 1: FAIL — automatic-failure #10, no
+  failure-case test on the new authz-gated write path** (principal-engineer,
+  `continue` event pass, context `ENG-013`, this fire's own turn at the
+  front of `traces/.pending` finally reached). Narrow scope per the event's
+  own contract (resume this ticket from its current state; no board-wide
+  sweep). Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: both exit 0, clean.
+
+  **Read the actual diff fresh from both worktrees rather than trusting the
+  building pass's own PR-body summary**, and without disturbing either
+  worktree: both `_eng` worktrees were sitting on `ENG-008`'s branch, not
+  this ticket's, same as the building pass itself found — so this review
+  read via `git diff origin/main...feat/ENG-013-foodswipe-funnel-stage-control`
+  and `git show <branch>:<path>` rather than checking either worktree out.
+  Confirmed both branches match this ticket's own frontmatter
+  (`aiorders-api@ac4efba`, `aiorders-admin-hub@a1c3bdf`) and the PR bodies
+  already recorded on this ticket's log.
+
+  **Ran `skills/code-review-gate/SKILL.md` step 2 (the automatic-failure
+  scan) before any deeper review**, per the skill's own instruction not to
+  conduct a thorough review of a change that already hits one. Found one:
+  **#10, "auth[-adjacent]/authorization path changed with no failure-case
+  test."** `foodswipe.ts` adds two brand-new write actions —
+  `setStageOverride` (line 155) and `resetStageOverride` (line 203), routed
+  at lines 69/72 — both mutating `profiles.foodswipe_stage_override` behind
+  the handler's admin/sub-admin gate (`hasFoodswipeAccess`, line 42) and
+  both scoped by `.eq('source', 'foodswipe')` (lines 178, 219) as the only
+  thing stopping a valid six-value write from landing on a non-Foodswipe
+  profile — the ticket's own PR body already names this line as "what to
+  review hardest." **Zero test coverage exists for any of it**: `git diff
+  --stat` against both branches shows only `foodswipe.ts` and the migration
+  changed in `aiorders-api`, no `.test.ts` anywhere in the diff; `git
+  ls-tree origin/main` confirms this repo already carries five precedent
+  test files, two written on this exact board for this exact reason
+  (`brands.test.ts` — `ENG-011`; `loyalty-config.test.ts` — `ENG-007`, 44
+  tests including a dedicated non-admin-role-gets-403 case) despite the same
+  "no `deno.json`" gap `config/projects.md` names for this repo — so the
+  absence here is a regression against this board's own established
+  practice, not an unreasonable new bar being invented at review time.
+  `engineering-standards.md`'s Tests section is explicit that tests are the
+  implementing engineer's own job, not something QA backfills onto untested
+  code ("QA is not a test-writing service that cleans up after untested
+  code") — so this is a code-review finding routed back to `building`, not
+  something to wave through for QA to quietly absorb.
+
+  Per the skill's own step 2 instruction, stopped here rather than running
+  the full line-by-line review (shape, correctness, naming) steps 3–7 would
+  otherwise cover. For what it's worth, a quick skim for anything else
+  automatic-failure-shaped found nothing else: no secret, no silent catch
+  (`console.error` before every error response, in both new functions), no
+  unbounded query, no new dependency, no commented-out code, no drive-by
+  refactor (`hasFoodswipeAccess`'s extraction is exactly the shared check
+  the two new branches need, not unrelated cleanup), no datastore bypass.
+  The `aiorders-admin-hub` side (`FoodswipeListings.tsx`, `constants.ts`)
+  read clean on the same pass: typed throughout (`StageKey`, no new `any`),
+  dialog/dropdown pattern matches `Leads.tsx` as the design specified, error
+  handling via `toast` consistent with the rest of the page.
+
+  **No receipt written**, per the skill's own rule
+  (`agents/principal-engineer/reviews/ENG-013.md` stays absent — a receipt
+  written on a fail would satisfy the exact filesystem check it exists to
+  prove). Verdict and finding written here and to
+  `agents/principal-engineer/notebook/2026-08-29-review-log.md` instead.
+  **QA's hop not run this round** — the combined-hop design discards it on
+  a review fail since the code is about to change (`config.yaml` →
+  `machine_gates.combined_hop`), so no point spending it yet.
+
+  **0 net frontmatter transitions** — `state` was `building` at pass start
+  and is `building` at pass end; the gate was reached (that's what
+  triggered this review at all) and immediately routed back on the fail
+  verdict, so nothing was ever persisted as `in-review`. `owner` unchanged
+  (`eng-manager`, this instance's established convention throughout the
+  machine-owned range — see `ENG-008`'s identical frontmatter at the same
+  state). `time_spent`/`time_remaining` updated in frontmatter this pass.
+  `machine_wip` unaffected (`ENG-013` was and remains inside the counted
+  `ready`..`ready-to-ship` range, still 5/1). Approver-facing WIP and
+  approval cap both unaffected — no gate raised, nothing resolved.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  `ENG-007`/`ENG-008`/`ENG-009`/`ENG-010` left untouched — each has or will
+  have its own `continue` event.
+
+  **Notify sweep:** nothing to raise — a failed *machine* gate doesn't reach
+  the approver (only G1/G2/G3/merge requests do); nothing to nudge.
+
+  **Observation filed** (`observations.md`): this is the first code-review
+  failure recorded on this board — worth a marker for
+  `speed.first_pass_gate_rate` once a weekly report actually computes it,
+  not itself an action.
+
+  `chained: ENG-013` — `building` is an agent-owned state (the implementing
+  engineer adds the missing test next), not the approver, not blocked, not
+  terminal, not held by a cap. `failed_gate` sends it back to `building` and
+  stops this pass there by design (`config.yaml` → `build_loop.stop_at`),
+  but a *fresh* session is exactly what the missing work needs, per
+  `eng_build_loop.md`'s "a pass stops after building on purpose." Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`
+  lines.

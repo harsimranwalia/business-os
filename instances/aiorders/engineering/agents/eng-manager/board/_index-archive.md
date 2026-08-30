@@ -12,6 +12,211 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — continue ENG-022: architect's design written, shaped → designed
+
+`continue` event pass, context `ENG-022` — this fire's own turn at the
+front of `traces/.pending`, reached after the approver's plain "approved"
+acknowledgement on the P0 incident notice (no priority change, nothing
+else to act on). Narrow scope per this event's own contract — this ticket
+only. Mode check clean. Pre-pass gate check: exit 0, clean, both scoped and
+whole-board.
+
+Read the live `aiorders-api` worktree before designing against it rather
+than trusting the PRD's summary alone; confirmed all 19 broken call sites
+and the 4 correct contrast files match exactly. Found one thing the PRD
+didn't surface: `utils.ts` already contains a correct, unused throwing
+wrapper (`verifyRestaurantAccessLegacy`, called from nowhere in the repo) —
+promoted it (renamed, `@deprecated` dropped) instead of designing a new one.
+Design written: `agents/architect/designs/ENG-022-brand-portal-tenant-isolation-broken.md`
+— fixes each of the 5 broken files per its *own* pre-existing error
+convention (throw vs. `{success:false}`) rather than unifying all 9, which
+would be a refactor bundled into a P0 bug fix. Test plan: colocated
+`Deno.test` files with a stubbed Supabase client, proving the negative case
+per call site with no live project and no new CI wiring. No one-way door,
+no ADR. Full detail on the ticket's own log.
+
+**1 transition** (`shaped → designed`), well under the cap. `ENG-022` stays
+short of the counted `ready..ready-to-ship` machine-WIP range (6/12
+unaffected); `security`-typed, no G1/G2 raised, approver-facing WIP and
+approval cap both unchanged (1/2, 1/3).
+
+One observation filed (`observations.md`): `brand-portal/`'s two
+pre-existing, unrelated error-response conventions, so a future pass
+doesn't mistake the split for something this ticket introduced.
+
+`chained: ENG-022` — `designed`, owned by `eng-manager` next (no one-way
+door, so `awaiting-decision` does not apply), an agent-owned state; firing
+`/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-022`
+before this pass exits. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-022`) and
+whole-board: exit 0, clean, no `WAIVED:` lines.
+
+## 2026-08-29 — scheduled schtasks: safety-net sweep — processed ENG-025's G1, raised ENG-023's, recovered five passes of uncommitted work
+
+`scheduled` event pass, context `schtasks` — the four-times-daily safety-net
+sweep, drained immediately behind the `decision ENG-015` pass above in the
+same held lock (`traces/.loop.lock/pid 1909`, confirmed alive throughout).
+Whole-board sweep per this event's own contract, not one named ticket. Mode
+check clean (business-os `.env` → `MODE=` empty; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
+**Business/technical intake:** `agents/product-manager/inbox/`,
+`agents/eng-manager/inbox/`, and `inbox/requests/` all empty. Nothing to
+shape, nothing to batch as a proposal.
+
+**Gate returns:** `inbox/` held exactly one file,
+`2026-08-29-eng025-g1-scope.md` (`decision: approved`,
+`decided: 2026-08-29T22:22:18.827452+00:00`). Processed:
+`ENG-025` `awaiting-scope → designed`, owner `approver → architect`; PRD
+`status: approved`; gate item moved to `inbox/_handled/`; journaled
+(`decision-journal.md`). That freed both the approver-facing WIP slot and
+the approval-cap slot ENG-025 held — reused in this same pass, per
+`_index.md`'s own standing note, to raise `ENG-023`'s G1 (fully drafted
+already in its PRD's Decision section, nothing written fresh): `ENG-023`
+`shaped → awaiting-scope`, owner `product-manager → approver`;
+`inbox/2026-08-29-eng023-g1-scope.md` raised, `eng-notify.sh raise` run
+(logged `SLACK_WEBHOOK_URL unset`, same open gap every gate item today has
+hit), `notified:` stamped manually. Net: approver-facing WIP and approval
+cap both end this pass exactly where they started (1/2, 1/3), now against
+`ENG-023` instead of `ENG-025`. `ENG-016`–`ENG-021` (also G1-drafted)
+deliberately left unraised — see `ENG-023`'s own log for why only the one
+explicitly-earmarked ticket was raised rather than filling every free slot.
+
+**Merge detection:** no ticket sits at `blocked` anywhere on the board — no
+L1 PRs to check ancestry on this pass.
+
+**Dispatch / dead-end sweep, whole board:** `ENG-007` (`ready-to-ship`)
+re-confirmed correctly held — release window still closed (Saturday);
+resumes naturally Monday. `ENG-009`/`ENG-010` (`ready`) re-confirmed
+correctly held pending `ENG-008` reaching `in-review` or later — neither
+worktree shows a branch or build started yet. `ENG-011`'s
+`chained: ENG-011` already fired and sits genuinely queued in
+`traces/.pending`, not stale. No broken chain found on any in-flight
+ticket beyond the two already repaired by the two passes immediately
+above. Removed `_index-archive.md.tmp.4632.31c9ee9459a2`, the stale
+5,027-line crash-artifact temp file `observations.md`'s immediately
+preceding row flagged as safe to clear on a dead-end sweep — verified
+against that row's own description (size, mtime, stale content) before
+deleting.
+
+**Uncommitted-work recovery, the main substance of this pass.** Pre-pass
+`git status` showed nothing committed since `a143d9b` despite the board's
+own narrative recording five further passes' worth of real, verified work
+since: `continue ENG-008` (built the influencer admin-edit path),
+`continue ENG-013` (built the FoodSwipe stage-override path), the
+`ENG-014`/`ENG-015` chain repairs, and the `ENG-022`/`ENG-023` incident/
+question processing — including the `eng-loop-halted` repair pass's own
+config-path fix for `read_plan_budget()` (the actual cause of today's
+40-hop ceiling firing early). That repair pass's own log states it
+committed three of those files "alongside this pass's own changes," but a
+fresh `git status` at this pass's start showed all three still modified —
+the commit most likely never ran. Verified each change against its own
+ticket log before trusting it (per this instance's standing practice, and
+the specific lesson `observations.md` names for exactly this shape of
+mismatch) rather than committing blindly. Committed the accumulated,
+verified work in this pass — see the commit itself for the exact file
+list; the stray temp file above was deleted, not committed, and nothing
+else in the tree looked suspicious (no secrets, no `.env`, no unrelated
+files). Filed as its own `observations.md` row for the pattern (a pass's
+own narrated git action not matching the filesystem — a new variant of an
+already-seen lesson).
+
+**Notify sweep:** `ENG-023`'s new item raised and stamped this pass (see
+above). No item found with `notified:` older than 24h and no `decision:` —
+nothing to nudge. Approval cap 1/3, not full — no stall.
+
+**Journal:** `ENG-025`'s G1 answer added to `decision-journal.md`.
+
+`chained: ENG-025` — fired this pass (see that ticket's own log);
+`ENG-023` and all `ready`/`ready-to-ship` tickets correctly recorded
+`chained: none` (approver-owned or deliberately held) and are not
+re-chained here. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
+## 2026-08-29 — decision ENG-015: G1 already processed by the same dying `watch` pass as ENG-014, its own recorded chain never fired either — repaired
+
+`decision` event pass, context `2026-08-29-eng015-g1-scope.md` — this
+event's own queued fire, drained behind the `decision ENG-014` repair pass
+immediately before it (`pass end: decision (exit 0, 685s)` at 15:33:53 →
+`draining queued event: decision (2026-08-29-eng015-g1-scope.md)`,
+15:34:45, no gap, one duplicate collapsed). Mode check clean. Pre-pass gate
+check: exit 0, clean, scoped (`ENG-015`) and whole-board.
+
+Exactly the gap the immediately-preceding pass predicted and flagged in
+`observations.md`: `ENG-015`'s G1 was genuinely fully processed (approved,
+`awaiting-scope → designed`, owner `architect`, journaled — all verified
+fresh against `inbox/_handled/`, the PRD, and `decision-journal.md` rather
+than trusted), but its own recorded `chained: ENG-015` line never actually
+fired — same dying `watch` pass (pid 36150), same absence from
+`traces/eng-loop-2026-08-29.log` and from `traces/.pending` beforehand.
+
+**Action:** re-fired `/bin/sh
+departments/engineering/lib/eng-trigger.sh continue ENG-015` directly.
+Confirmed on `traces/.pending` afterward (`1 continue ENG-015`) and via
+`traces/.loop.lock/pid` (`1909`) confirmed alive with `ps -W` — queued
+correctly behind this still-running pass rather than lost again. No ticket
+state changed.
+
+**0 transitions**, no cap impact — this was a chain repair, not new gate
+or state movement. This closes out both halves of the pair `ENG-014`'s own
+repair pass surfaced; no further tickets carry this shape as far as this
+pass found.
+
+`chained: ENG-015` — re-fired and confirmed queued this pass (see above).
+Post-pass gate check: exit 0, clean, both scoped and whole-board. Full
+detail on the ticket's own log
+(`agents/eng-manager/board/ENG-015-agency-reseller-brand-scoping.md`).
+
+## 2026-08-29 — continue ENG-013: built the stage-override column, handler, and UI across both repos, ready → building
+
+`continue` event pass, context `ENG-013`, its turn at the front of
+`traces/.pending` finally reached. Narrow scope per the event's own
+contract. Mode check clean.
+
+Pre-pass gate check arrived flagged (exit 2, all of `ENG-013`..`ENG-024`
+reported "not a regular file"). Investigated rather than trusted: `stat`
+confirmed every file is a normal regular file, and a fresh re-run (scoped
+and whole-board) returned exit 0 clean. Transient — the injected report was
+captured mid-write during the prior pass's own commit
+(`1a6fe83`). Nothing to fix.
+
+Both `_eng` worktrees existed, sitting on `feat/ENG-011-...` (still owed —
+`ENG-011` hasn't opened its PR yet). `aiorders-admin-hub` carried the same
+benign `package-lock.json` `peer:true` drift `ENG-011`'s own recovery
+already named — stashed, labeled, not discarded, not committed. Branched
+both repos fresh off `origin/main` as `feat/ENG-013-foodswipe-funnel-stage-control`.
+
+Built per the design: one nullable `foodswipe_stage_override` column on
+`profiles` (six-value `CHECK`); `classifyStage()`'s caller now prefers it;
+two new gated, source-scoped write actions
+(`/foodswipe/stage/{set,reset}`) in `aiorders-api`. Per-card stage dropdown
++ dialog (styled after `Leads.tsx`) and a "Manually set" badge in
+`aiorders-admin-hub`. Self-tested: `deno check` clean, `npm run lint`
+(zero new issues — the repo's 150 pre-existing errors are all in files
+this ticket didn't touch), `npm run build` clean. Live-verified read-only
+via Supabase MCP against the real `aiorders-api` project
+(`bmnmnejwdxbcqinqkwko`): schema assumptions, table scale (528 rows, 36
+`source='foodswipe'`), and non-applied migration status all confirmed.
+Database migration doc written
+(`agents/database/migrations/ENG-013-foodswipe-funnel-stage-control.md`).
+Both branches committed and pushed; PR bodies drafted in the ticket's own
+log (no PR opened yet — that's devops's release step). Artifact-enumeration
+grep for "foodswipe" across instance+department docs found no
+instruction/map conflicts, only one harmless location-citation drift in
+`ENG-009`'s design doc, left alone.
+
+**1 transition** (`ready → building`), well under the cap — the next hop
+(review + quality, combined) is a fresh session's work by design. No cap
+change; `ENG-013` stays inside the counted `ready..ready-to-ship` range.
+
+`chained: ENG-013` — `building` is agent-owned (principal-engineer + qa
+next). Fired `continue ENG-013`. Post-pass gate check: exit 0, clean, both
+scoped and whole-board. Full detail on the ticket's own log
+(`agents/eng-manager/board/ENG-013-foodswipe-funnel-stage-control.md`).
+
 ## 2026-08-29 — continue ENG-008: built the preference/rating/collaboration-count edit path across both repos, ready → building
 
 `continue` event pass, context `ENG-008`, its turn at the front of

@@ -8,14 +8,14 @@ time_estimate: half a day to a couple of days
 time_spent: not separately clocked — build, review, QA, security and the
   database gate all completed in an unrecorded prior pass (see Log); read as
   most of the estimate consumed
-time_remaining: ~0 build time; PR-open (two repos), merge and verify remain
+time_remaining: ~0 build time; merge and verify remain
 severity: P3
 priority:
-state: ready-to-ship
-owner: devops
+state: blocked
+owner: approver
 lane: full
-blocked_on:
-blocked_from:
+blocked_on: approver
+blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
 updated: 2026-08-29
@@ -31,7 +31,7 @@ links:
   test_plan: agents/qa/test-plans/ENG-011.md
   security_review: agents/security/reviews/ENG-011.md
   release:
-  pr:
+  pr: "aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/3 | aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/3"
 ---
 
 ## Input
@@ -515,3 +515,110 @@ Append-only. One line per state transition, newest last.
   Fired `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-011`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-011`) and whole-board: see pass notes.
+
+- `2026-08-29` `ready-to-ship → blocked` (devops — `continue` event pass,
+  context `ENG-011`, this fire's own turn at the front of `traces/.pending`).
+  Narrow scope per the event's own contract (resume this ticket from its
+  current state; no board-wide sweep). Mode check clean (business-os `.env`
+  → `MODE=` empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+  whole-board: both exit 0, clean.
+
+  **Read the current `skills/release-runner/SKILL.md` before acting, not the
+  stale assumption carried in this ticket's own prior log entry.** The prior
+  entry flagged the release window as a real question for this hop to
+  decide; the skill (corrected earlier today, 2026-08-29, after the approver's
+  own words: *"you anyway don't ship anything, just raise a PR... doesn't
+  matter"*) answers it directly — **step 1's window check governs an actual
+  production release (L2 merge-to-main-and-deploy, L3 deploy) and explicitly
+  does not apply to L1**, which both `aiorders-admin-hub` and `aiorders-api`
+  are registered as (`config/projects.md`). Opening a PR touches nothing in
+  production. So the Saturday date this pass ran on is not a hold — matches
+  the precedent `ENG-005` already set at this identical boundary (L1 PR
+  opened and merge-requested same-day, no window applied).
+
+  **Verified every upstream gate fresh from the receipt files rather than
+  trusted from the board summary**: migration
+  (`agents/database/migrations/ENG-011-client-stage-health-visibility.md`,
+  **pass with a named gap** — no live Postgres on this host, corrected
+  DROP+CREATE statement verified by reading plus a read-only Supabase MCP
+  catalog check, not a container dry-run), code review
+  (`agents/principal-engineer/reviews/ENG-011.md`, **pass**), quality
+  (`agents/qa/test-plans/ENG-011.md`, **pass**, 12/12 tests), security
+  (`agents/security/reviews/ENG-011.md`, **pass**). All four reference the
+  same commits re-verified below — no drift.
+
+  **Re-verified the live worktrees before touching anything**, since both
+  `_eng` worktrees were sitting on `ENG-008`'s branch (that ticket's own
+  `building` work), not this ticket's: confirmed both trees clean
+  (`git status` — nothing to commit) before switching, so no in-progress
+  `ENG-008` work was at risk. `git fetch` + `git checkout
+  feat/ENG-011-client-stage-health-visibility` in both, then diffed against
+  `origin/main`: `aiorders-admin-hub` at `6cf5e8c` (1 file, 63+/5-, matches
+  the review's own diff reference exactly); `aiorders-api` at `4a5eb4d` (6
+  files, 255+/12-, matches exactly). Both already pushed. Checked for an
+  already-opened PR before creating one, same caution `ENG-005` used given
+  this instance's own history of recovering unrecorded work: `gh pr list
+  --head feat/ENG-011-client-stage-health-visibility --state all` on both
+  repos — empty on both. None existed.
+
+  **Opened both PRs** (`gh pr create`): `aiorders-api`
+  https://github.com/harsimranwalia/aiorders-api/pull/3, `aiorders-admin-hub`
+  https://github.com/harsimranwalia/aiorders-admin-hub/pull/3. `aiorders-api`
+  opened first, per the code review's own recommended deploy order (either
+  order degrades gracefully — both pill renderers fall back to `-` — but the
+  intended order is now documented rather than left to chance). Each PR body
+  states what changed, why, and its own project's gate verdicts. Restored
+  both worktrees to `feat/ENG-008-influencer-admin-management` afterward
+  (re-verified clean) so `ENG-008`'s own in-flight state is undisturbed.
+
+  Wrote the L1 merge-request item
+  (`inbox/2026-08-29-eng011-merge-request.md`, `gate: merge`, `agent:
+  eng-manager`) carrying both PR links and all four gate verdicts by file
+  reference, plus the two non-blocking gaps (no live-app verification either
+  repo; unbatched per-brand KV read fan-out) named rather than hidden. Ran
+  `departments/engineering/lib/eng-notify.sh raise` — reproduced the
+  already-known `SLACK_WEBHOOK_URL unset` gap (`traces/eng-notify-2026-08-29.log`
+  17:04:29), the same standing issue every gate item today has hit, not a new
+  finding. Stamped `notified: 2026-08-29T17:04:29` by hand, since the script
+  never writes back to the item either way. State → `blocked`, `blocked_on:
+  approver`, `blocked_from: ready-to-ship`, owner `devops → approver`.
+
+  **Cap check before this transition, read fresh from `inbox/`'s actual
+  contents rather than trusted from the board header**: exactly two open
+  gate items existed going in (`ENG-023`'s G1, this ticket's soon-to-be-raised
+  merge request) — approver-facing WIP was 1/2, approval cap 1/3. `ENG-011`
+  is an already-in-flight, already-fully-gated ticket reaching its own next
+  gate, not a new start — same reasoning `ENG-005` used at this identical
+  boundary. Advancing brings approver-facing WIP to 2/2 (at the limit, not
+  over) and approval cap to 2/3 (not over) — proceeded on that basis.
+
+  **1 transition this pass** (`ready-to-ship → blocked`), well under the cap
+  of 4 — opening two PRs and writing the gate item is itself the real work of
+  this hop. **Consequence:** `machine_wip` 6/1 → 5/1 (`blocked` sits outside
+  the counted `ready`..`ready-to-ship` range — one closer to the cap, though
+  still over until the remaining five drain to `shipped`). Approver-facing
+  WIP 1/2 → 2/2; approval cap 1/3 → 2/3.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+  valid, accounted-for state with the chain record below. `ENG-008` (the
+  ticket whose branch occupied both worktrees) untouched beyond the
+  clean-before/clean-after check — out of scope for a `continue` event naming
+  `ENG-011` specifically, and its own worktree state was fully restored.
+
+  **Notify sweep:** this pass's own gate item raised and stamped above.
+  Nothing else to nudge (`ENG-023`'s G1 not yet 24h old). Approval cap now
+  2/3, not full — no stall.
+
+  One observation filed (`observations.md`): the release-runner skill's own
+  L1/window correction (made earlier today) directly resolved a question this
+  ticket's own prior log entry had left open for this exact hop — worth
+  naming so a future pass trusts the current skill file over an older
+  ticket-log note when the two disagree on policy, not just on ticket state.
+
+  `chained: none` — `blocked`, `blocked_on: approver`. This is the human gate
+  the whole hop was driving toward; firing `continue ENG-011` again would
+  just re-queue against a ticket with nothing left for a machine to do until
+  the approver merges one or both PRs or replies to the gate item. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+  whole-board: see pass notes.

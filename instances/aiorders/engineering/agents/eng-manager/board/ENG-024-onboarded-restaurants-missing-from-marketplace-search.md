@@ -104,3 +104,36 @@ visible by a one-time backfill, not just new sign-ups going forward.
   gate to wait at (G1 auto-skipped), so nothing about this ticket is waiting
   on a human. Full reasoning above; see also `agents/eng-manager/board/_index.md`'s
   dated entry for this pass.
+
+- 2026-08-29 no state change (eng-manager, `continue` event pass, context
+  `ENG-024` — this ticket's own chain fire from the `intake` pass above).
+  Narrow scope per this event's own contract: this ticket only. Mode check
+  clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+  `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-024`) and whole-board: exit 0, clean.
+
+  Re-checked fresh rather than trusted the board's cached header: all six
+  machine-WIP tickets' own frontmatter (`ENG-007` ready-to-ship, `ENG-008`
+  building, `ENG-009` ready, `ENG-010` ready, `ENG-011` ready-to-ship,
+  `ENG-013` building) — count unchanged at 6/1, still over the cap of 1.
+  Per `eng_build_loop.md` step 6, the To-do column (`intake`/`shaped`/
+  `awaiting-scope`) is the only place a new start is drawn from, and "there
+  is exactly one slot [that] does not free until the ticket occupying it
+  reaches `shipped`" — this ticket (severity P1, fast lane) cannot enter
+  `building` this pass regardless of severity; nothing in the loop's
+  dispatch rule exempts P1 from the machine WIP cap, only the unrelated
+  proposal-batching P0 carve-out (step 3) mentions P0 at all, and that's a
+  different gate entirely. `agents/eng-manager/inbox/` empty — no technical
+  intake item for this ticket; G1 was already correctly auto-skipped (bug
+  type, fast lane), so there is no gate item to check either. Ticket
+  correctly stays at `shaped`.
+
+  **0 transitions.** `chained: none` — held by the machine WIP cap (6/1, no
+  free slot); one of the explicit do-not-chain conditions. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-024`) and
+  whole-board: exit 0, clean. One observation filed (`observations.md`): the
+  `intake` pass above fired this chain without checking the machine-WIP cap,
+  which was already known full at the time — this pass is the cost of that
+  gap, one hop spent to re-derive a hold the shaping pass could have
+  recognized itself. Full narrative on `agents/eng-manager/board/_index.md`'s
+  dated entry for this pass.
