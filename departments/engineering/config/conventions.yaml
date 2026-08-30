@@ -158,6 +158,27 @@ notify:
     how a reply comes back.
 
 # ---------------------------------------------------------------------------
+# Authoring the template itself. roots.dept is writable: false — no pass ever
+# edits an agent or skill definition file; only a deliberate, git-tracked
+# change does (see roots.dept above). The approver's instruction, 2026-08-29:
+# that deliberate authoring is done with the Fable model only.
+# ---------------------------------------------------------------------------
+authoring:
+  scope:
+    - agents/**      # agent.md, config.yaml, and everything under an agent's own dir — this template AND every instance's
+    - skills/**       # SKILL.md and everything under a skill's own dir
+    - business-os root: .claude/agents/*.md, .claude/skills/*/SKILL.md
+  model: fable
+  rule: >
+    Any update to an agent or skill definition file — this department's
+    template, an instance's copy, or business-os's own .claude/agents/ and
+    .claude/skills/ — is written with the Fable model, never Sonnet/Opus/Haiku,
+    regardless of which model is driving the session that requests the change.
+    Schedules, docs, lib/ scripts, and shared contract files like this one are
+    outside this rule's scope; only files inside an agent's or a skill's own
+    directory are covered.
+
+# ---------------------------------------------------------------------------
 # Naming. Was life-os config/settings.yaml.
 # ---------------------------------------------------------------------------
 naming:

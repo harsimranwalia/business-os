@@ -26,9 +26,18 @@ worked, and write the record.
 
 ## Steps
 
-### 1. Window check
+### 1. Window check — L2/L3 only
 
-Read `.env` → `MODE` and the clock. Refuse the release when:
+**This step governs an actual production release: L2's merge-to-main-and-deploy,
+and L3's deploy. It does not apply to L1.** Opening a PR is not a release — it
+touches nothing in production, and the approver reviews it whenever they want.
+The approver, 2026-08-29, correcting an earlier pass that held an L1 ticket at
+`ready-to-ship` for the weekend: *"you anyway don't ship anything, just raise a
+PR, so you do that on weekends too, doesn't matter — I can check them on
+weekdays or weekends, my choice."* **If the project's autonomy is L1, skip this
+step entirely and go to step 4.**
+
+For L2/L3, read `.env` → `MODE` and the clock. Refuse the release when:
 
 - `sabbath` or `retreat` is active, or `ENG_RELEASE_FREEZE` is set
 - It's Friday after 15:00 local
@@ -58,24 +67,32 @@ Fail on any of:
   business-os grows one that consumes cost data. The approver learning about
   new spend from a bill is a system failure, and this notice is the mechanism
   that prevents it.
-- **Window closed** (step 1).
+- **Window closed** (step 1) — **L2/L3 only; never a reason to fail an L1
+  ticket**, since step 1 does not run for L1 at all.
 
 ### 4. Route by autonomy level
 
 | Level | Action |
 |---|---|
 | **L0** | Unreachable — an L0 ticket terminates at `advised` and never gets here. If one does, that's a pipeline bug: stop and flag it. |
-| **L1** | Open a PR **and write a merge request to `inbox/`** in the same step. |
-| **L2** | Merge after gates, then raise **G3** to the approver through the EM. Deploy on approval. |
-| **L3** | Deploy, then notify the approver. G3 is automatic. |
+| **L1** | Open a PR **and write a merge request to `inbox/`** in the same step. **Any day, any time** — not gated by step 1's window check, which does not apply to L1. A ticket that touches more than one repo gets a PR in each repo but exactly **one** merge-request item covering all of them — never one item per repo. |
+| **L2** | Merge after gates, then raise **G3** to the approver through the EM. Deploy on approval. Subject to step 1's window. |
+| **L3** | Deploy, then notify the approver. G3 is automatic. Subject to step 1's window. |
 
 Never deploy above the registered level. Raising a level is the approver's
 call alone.
 
 **The L1 merge request is not optional.** Set the ticket to `blocked` with
 `blocked_on: approver`, and write an inbox item carrying the PR link, what it
-does in one line, and the gates it passed. The ticket keeps its WIP slot and
-counts against the approval cap while it waits.
+does in one line, and the gates it passed. When the ticket spans N repos, the
+one item carries all N PR links, each as its own clearly labelled line — repo
+name plus its own URL — in the frontmatter as a `pr_urls:` YAML list of
+`{repo, url}` pairs. Never crammed into a single string field, and never fewer
+links than repos touched. (A single-repo ticket keeps the plain `pr_url:`
+string — no change there.) This is not hypothetical: ENG-011 (2026-08-29), the
+first two-repo ticket, correctly wrote one item but packed both links into one
+`pr_url:` string with a `|` separator, and the approver caught it. The ticket
+keeps its WIP slot and counts against the approval cap while it waits.
 
 Before this (fixed 2026-07-27) an L1 release just set `blocked` and stopped: the
 ticket left the WIP bucket, counted against nothing, freed a slot for a new
@@ -152,9 +169,17 @@ deploy duration, health result, rollback used or not, cost delta.
 ## Failure modes to avoid
 
 - **Releasing without a tested rollback.**
-- **Releasing outside the window.** The board can wait until Monday.
+- **Releasing an L2/L3 change outside the window.** The board can wait until
+  Monday.
+- **Holding an L1 ticket for the window.** L1 never releases — it opens a PR.
+  Treating that like a production release and making it wait for Monday is
+  exactly the mistake this step was rewritten to stop (2026-08-29).
 - **Deploying above the autonomy level.**
 - **Skipping first-fire verification** on a scheduled job — the most common
   silent failure in an internal-automation project.
 - **Writing the record from the plan** instead of from reality.
+- **One merge-request item per repo on a multi-repo ticket** — it's one
+  decision, so it's one item; two items double-count the ticket against the
+  approver's caps. And the links go in a `pr_urls:` list, never crammed into
+  one delimited string (ENG-011, 2026-08-29).
 - **Diagnosing before stabilising** when something looks wrong.

@@ -139,10 +139,19 @@ report.
    channel reply through `lib/eng-notify.sh`; a `hold` sitting in a working
    state is a violation `lib/eng-gate-check.sh` reports at you.
 
-3. **Sequencing and WIP.** Default WIP is 2 tickets in flight (`config.yaml`).
-   The limit exists because a queue of finished-but-unapproved work landing on
-   the approver is exactly the burnout the department was built to end. Finish
-   before you start. When something must jump the queue, say what it displaced.
+3. **Sequencing and WIP.** Two separate limits, in `config.yaml`: approver WIP
+   (2) and machine WIP (**1**, the approver's correction, 2026-08-29 — it used
+   to scale with the plan tier, up to 12). Approver WIP exists because a queue
+   of finished-but-unapproved work landing on them is exactly the burnout the
+   department was built to end. Machine WIP at 1 exists for a different
+   reason, learned the hard way: at a higher limit, a build-loop pass advanced
+   every in-flight ticket by one shallow step each and moved on, so the board
+   carried six or more tickets simultaneously mid-pipeline and none of them
+   ever reached `shipped`. **Finish before you start, literally: one ticket
+   runs `ready → ready-to-ship → shipped` before the next one enters `ready`.**
+   Draw the next start from To-do in order — priority, then severity, then the
+   order it was added — only once the current one ships. When something must
+   jump the queue, say what it displaced.
 
    **The fast lane** runs alongside it: an XS bug or chore that touches no
    sensitive surface skips the PRD file, the design, the separate test plan, and
@@ -247,8 +256,10 @@ report.
 - Working any project above its registered autonomy level in
   `config/projects.md`. For a project at L0 this is absolute: no branches, no
   PRs, no scans, no CI runs.
-- Shipping to production on a Friday afternoon, a weekend, during `sabbath`,
-  `retreat`, or while `ENG_RELEASE_FREEZE` is set. P0 hotfixes only.
+- Shipping an L2/L3 change to production on a Friday afternoon, a weekend,
+  during `sabbath`, `retreat`, or while `ENG_RELEASE_FREEZE` is set. P0
+  hotfixes only. Not applicable to L1 — opening a PR is not shipping to
+  production, and every aiorders project is L1 (the approver, 2026-08-29).
 - Carrying an `XL` ticket. Split it before it leaves intake.
 - Building a process that only works if the approver maintains it.
 

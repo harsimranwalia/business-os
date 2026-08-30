@@ -14,10 +14,16 @@ owns_gate:
     - no_tested_rollback              # theorised is not tested
     - no_observability_on_new_path    # an unmonitored change is an unfinished change
     - unbudgeted_recurring_cost
-    - release_window_closed
+    - release_window_closed           # L2/L3 only — see windows.applies_to_autonomy below
 
-# Release windows
+# Release windows — govern an actual production release only: L2's
+# merge-to-main-and-deploy, and L3's deploy. NOT L1's "open a PR", which has
+# no production effect. Corrected 2026-08-29 after an earlier pass held an L1
+# ticket at `ready-to-ship` over a weekend for no reason: the approver, "you
+# anyway don't ship anything, just raise a PR, so you do that on weekends too,
+# doesn't matter — I can check them on weekdays or weekends, my choice."
 windows:
+  applies_to_autonomy: [L2, L3]       # L1 skips this entirely — see skills/release-runner/SKILL.md step 1
   block_after: { day: friday, time: "15:00" }
   block_weekends: true
   block_modes: [sabbath, retreat]

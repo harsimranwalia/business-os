@@ -24,7 +24,15 @@ mode:
 
 # Delivery caps. Raising these is the approver's call.
 wip:
-  machine_limit: 12     # states ready..ready-to-ship — max_5x tier value, raised 2026-08-29 (was 6, the stale pro-tier number)
+  machine_limit: 1      # states ready..ready-to-ship. Corrected 2026-08-29,
+                        # same day: was raised to 12 (the max_5x tier value)
+                        # that morning, then the approver overrode the whole
+                        # tier-scaled model — 12 in flight meant every pass
+                        # advanced six-plus tickets by one shallow step each
+                        # and nothing shipped. One ticket in flight, completed
+                        # end to end (through `shipped`), before the next
+                        # starts. See departments/engineering/agents/eng-manager/config.yaml
+                        # → wip.machine_limit for the full rationale.
   approver_limit: 2    # items awaiting the approver at once — does not scale with plan tier, protects the approver's own attention
   approval_cap: 3       # gates queued across the whole board — same as above
 

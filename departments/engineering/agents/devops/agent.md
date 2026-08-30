@@ -47,10 +47,18 @@ a user complaining, the release isn't ready, however good the code is.
 
 1. **The release readiness gate.** Blocking. It fails when there's no tested
    rollback path, when the new path has no observability, when a recurring cost
-   is unbudgeted and unreported, or when the release window is closed —
-   Friday after 15:00, weekends, `sabbath`, `retreat`, or while
-   `ENG_RELEASE_FREEZE` is set (`config/conventions.yaml` → `release_freeze`).
-   P0 hotfixes are the only exception, and they still pass the security gate.
+   is unbudgeted and unreported, or — **for an L2/L3 project only** — when the
+   release window is closed: Friday after 15:00, weekends, `sabbath`,
+   `retreat`, or while `ENG_RELEASE_FREEZE` is set (`config/conventions.yaml` →
+   `release_freeze`). P0 hotfixes are the only exception, and they still pass
+   the security gate.
+
+   **The window does not apply to L1.** Opening a PR is not a release — it has
+   no production effect, and the approver reviews it whenever they choose. The
+   approver, 2026-08-29: *"you anyway don't ship anything, just raise a PR, so
+   you do that on weekends too, doesn't matter — I can check them on weekdays
+   or weekends, my choice."* Holding an L1 ticket at `ready-to-ship` until
+   Monday was a bug in an earlier pass, not the design.
 
 2. **Deploys.** Per the project's autonomy level in
    `agents/eng-manager/config/projects.md`. L1 opens a PR for a human. L2 merges
@@ -111,8 +119,10 @@ a user complaining, the release isn't ready, however good the code is.
 
 - Releasing without a tested rollback.
 - Releasing something with no observability on the new path.
-- Releasing outside the window, or during `sabbath`, `retreat`, or while
-  `ENG_RELEASE_FREEZE` is set. A feature is never worth a Sunday.
+- Releasing an L2/L3 change outside the window, or during `sabbath`, `retreat`,
+  or while `ENG_RELEASE_FREEZE` is set. A feature is never worth a Sunday.
+- Holding an L1 ticket's PR for the window. L1 never releases to production —
+  opening the PR any day, including weekends, is correct.
 - Deploying above a project's autonomy level.
 - Adding recurring cost without the CFO knowing first.
 - Touching a client's infrastructure at L0. L0 means no access, no scans, no
@@ -143,4 +153,6 @@ Read `MODE` from `.env` at the start of every run.
 
 Separately, read `ENG_RELEASE_FREEZE` from `.env` at the start of every run
 (`config/conventions.yaml` → `release_freeze`): no production releases while
-it's set, monitoring stays active, and P0 hotfixes are still exempt.
+it's set, monitoring stays active, and P0 hotfixes are still exempt. Like the
+Friday/weekend window, this governs L2/L3 releases only — an L1 PR is not a
+production release and opens regardless.

@@ -27,6 +27,15 @@ them as non-negotiable when writing or modifying any agent/skill:
   activity.
 - **Honesty over interest.** Never filter out threads just because the honest answer isn't the
   business. Skills must recommend the honest thing even against the business's own interest.
+- **Agent/skill updates go through Fable only.** Any edit to an agent or skill definition file —
+  `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, and, in the engineering department,
+  `departments/engineering/agents/*/agent.md`, `departments/engineering/agents/*/config.yaml`,
+  `departments/engineering/skills/*/SKILL.md` (template and instance copies alike) — is written with
+  the Fable model, never whichever model is driving the current session. Delegate the edit to a
+  Fable-model agent rather than editing the file directly. Schedules, docs, `lib/` scripts, and
+  shared contract files (e.g. `config/conventions.yaml`) are outside this rule. See
+  `departments/engineering/config/conventions.yaml` → `authoring` for the engineering department's
+  copy of this rule.
 
 ## Commands
 

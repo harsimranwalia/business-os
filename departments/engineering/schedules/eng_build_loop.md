@@ -152,11 +152,24 @@ Each pass, in order:
    stays open, keeps counting against the approval cap, and appears in the weekly
    report's "Waiting on you" section, oldest first.
 
-5. **Merge detection** — for every ticket `blocked` on an L1 PR: `git fetch`,
-   then check whether the branch head is an ancestor of the project's default
-   branch. Merged → advance the ticket to `shipped`. Not merged → it stays
-   blocked, stays counted against the approval cap, and resurfaces after 3 days.
-   Local git only: no API call, no cost.
+5. **Merge detection** — for every ticket `blocked` on an L1 PR (or PRs — a
+   ticket may span more than one repo, `ENG-011` being the first): for
+   **each** repo the ticket touches, `git fetch`, then check whether that
+   repo's branch head is an ancestor of that project's default branch. A
+   multi-repo ticket advances to `shipped` only once **every** repo's branch
+   has merged — one repo merging does not ship the ticket, since the change
+   is only coherent with all of them in. Partially merged → stays `blocked`,
+   stays counted against the approval cap, resurfaces after 3 days, and the
+   ticket log names which repo(s) are still outstanding so the next pass
+   doesn't re-derive it. Local git only: no API call, no cost.
+
+   **One gate item per ticket, never one per repo.** A ticket spanning N
+   repos still gets exactly one merge-request item in `inbox/`, listing every
+   repo's PR as its own distinct line — never N separate items for what is,
+   to the approver, one decision ("merge this ticket"). A second item for the
+   same ticket would double-count it against both the approver-facing WIP
+   limit and the approval cap for work that is genuinely one unit, not two.
+   See `skills/release-runner/SKILL.md` step 4 for the format.
 
    **A merge is not a gate.** Do not advance to `shipped` from a state that owes
    gates — a merged PR proves the code landed, never that it was reviewed,
@@ -189,7 +202,17 @@ Each pass, in order:
    `now`, then `next`, then unset, then never `hold` — rather than whatever is
    most recently touched or most interesting. That ordering is the board's own
    sort, so what you pick and what the approver sees at the top of To-do are
-   the same ticket.
+   the same ticket. Among tickets of equal priority, take the lowest ticket id
+   — the order it was added — never the one that looks most interesting.
+
+   **There is exactly one slot** (machine WIP 1, the approver's correction,
+   2026-08-29). It does not free until the ticket occupying it reaches
+   `shipped`. Do not start a second ticket into `ready` because the first is
+   "basically done" at `ready-to-ship` — basically done is not done, and
+   starting early is exactly the shallow-parallelism failure the limit exists
+   to stop. Shaping and design work (`intake`/`shaped`/`designed`,
+   `awaiting-scope`) is not gated by this slot and may continue as backlog
+   grooming — it is paperwork, not code in flight.
 
    **Never write to `priority` yourself.** It is the approver's field, and an
    agent setting it on a "the approver would obviously want this" inference
@@ -625,20 +648,33 @@ stop, and the approver-facing WIP limit is 2.
 
 - **Approver WIP limit (2)** — tickets whose path still runs through the
   approver. At the limit, nothing new starts that will need them.
-- **Machine WIP limit (6)** — tickets moving purely between agents. Higher on
-  purpose: these cost the approver nothing, so throttling them bought only
-  latency. Bounded rather than unlimited — ten in flight means ten shallow
-  contexts and more rework than throughput.
+- **Machine WIP limit (1)** — tickets moving purely between agents, counting
+  states `ready` through `ready-to-ship`. **The approver's correction,
+  2026-08-29.** This used to scale with the plan tier (up to 12), reasoned as
+  "these cost the approver nothing, so throttling them bought only latency."
+  True about cost, wrong about the outcome: at 6–12 in flight, a pass advanced
+  every ticket by one shallow step and moved to the next, so the board carried
+  many tickets simultaneously mid-pipeline and none of them ever reached
+  `shipped` — a department that looked busy and shipped nothing. At the
+  limit, nothing new enters `ready` until the one ticket in flight reaches
+  `shipped`. One ticket, completed end to end, then the next — not several,
+  each a little bit done.
 - **Approval cap (3)** — counts open G1/G2/G3 items **and** tickets blocked on
   the approver, including L1 PRs awaiting a merge. At the cap, nothing
   advances into a gate state and nothing new starts that will need them.
   Before this counted blocked tickets (fixed 2026-07-27), an L1 PR freed a WIP
   slot and sat invisible — the exact pile of finished-but-unapproved work
   these caps exist to prevent.
-- **Release window** — no production release Friday after 15:00, weekends,
-  during `sabbath`/`retreat`, or while `ENG_RELEASE_FREEZE` is set. The Friday
-  15:30 pass therefore never releases; it advances everything else and leaves
-  the release for Monday.
+- **Release window** — **L2/L3 only.** No production release Friday after
+  15:00, weekends, during `sabbath`/`retreat`, or while `ENG_RELEASE_FREEZE`
+  is set. The Friday 15:30 pass therefore never releases an L2/L3 ticket; it
+  advances everything else and leaves the release for Monday. **Does not
+  apply to L1** — opening a PR is not a release, and every project on this
+  instance is registered L1 (`agents/eng-manager/config/projects.md`). The
+  approver's correction, 2026-08-29, after an earlier pass held an L1 ticket
+  over a weekend by mistake: *"you anyway don't ship anything, just raise a
+  PR, so you do that on weekends too, doesn't matter — I can check them on
+  weekdays or weekends, my choice."*
 - **Repo isolation** — the loop never runs git operations in a directory the
   approver works in interactively. See `agents/eng-manager/config/projects.md`.
 - **Interrupts** — P0 only. Everything else waits for `eng_weekly_report`.

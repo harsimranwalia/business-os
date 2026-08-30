@@ -96,7 +96,9 @@ mode:
 
 # Delivery caps. Raising these is the approver's call.
 wip:
-  machine_limit: 6      # states ready..ready-to-ship
+  machine_limit: 1      # states ready..ready-to-ship — one ticket shipped
+                        # before the next starts (the approver's correction,
+                        # 2026-08-29; see departments/engineering/agents/eng-manager/config.yaml)
   approver_limit: 2    # items awaiting the approver at once
   approval_cap: 3       # gates queued across the whole board
 EOF
@@ -234,8 +236,9 @@ EOF
 emit agents/eng-manager/board/_index.md <<'EOF'
 # Board
 
-**Machine WIP 6** (`config/config.yaml` → `wip.machine_limit`) — counts states
-`ready` through `ready-to-ship`. **Currently 0/6.**
+**Machine WIP 1** (`config/config.yaml` → `wip.machine_limit`) — counts states
+`ready` through `ready-to-ship`. One ticket in flight at a time, shipped
+before the next starts. **Currently 0/1.**
 **Approver-facing WIP 2 — currently 0/2. Approval cap 3 — currently 0/3.**
 
 `priority:` is a field on every ticket, and **only the approver sets it.** It is

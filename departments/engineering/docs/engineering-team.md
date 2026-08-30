@@ -421,7 +421,7 @@ time each actually costs:
 | 2 | **Pass boundaries** | Up to ~6h, or overnight, or a weekend | Event triggers: intake and answered gates run a pass now, not at 15:30. |
 | 3 | **Rework rounds** | A full gate cycle each | Shift left — engineers get the standards and the security baseline *before* writing. First-pass rate is tracked; below 70% the brief is the problem, not the engineers. |
 | 4 | **Serial gates** | One model run each | Review and quality now run concurrently. Security stays after quality — it checks QA's test plan, so running it early would pass a plan that doesn't exist. |
-| 5 | **WIP** | Blocks a third ticket starting | Split into two limits: 2 for tickets that will need the approver, 6 for tickets moving purely between agents. |
+| 5 | **WIP** | Blocks a second ticket starting | Split into two limits: 2 for tickets that will need the approver, 1 for tickets moving purely between agents — one ticket shipped before the next starts (the approver's correction, 2026-08-29; this was 6–12 and produced many shallow, unfinished tickets instead of throughput). |
 
 **More scheduled passes is still the weakest lever** — not because sessions are
 expensive, but because polling for work that isn't there is waste at any price.
@@ -461,11 +461,14 @@ One value controls it: `agents/eng-manager/config.yaml` → `plan.tier`.
 
 | Tier | Hops/day | Hops/ticket | Machine WIP | Review depth |
 |---|---|---|---|---|
-| `pro` — $20 | 40 | 8 | 6 | standard |
-| `max_5x` — $100 | 200 | 20 | 12 | thorough |
-| `max_20x` — $200 | 600 | 40 | 20 | thorough |
+| `pro` — $20 | 40 | 8 | 1 | standard |
+| `max_5x` — $100 | 200 | 20 | 1 | thorough |
+| `max_20x` — $200 | 600 | 40 | 1 | thorough |
 
-Changing it moves every budget. Nothing hardcodes a ceiling.
+Changing it moves every budget except machine WIP, which is fixed at 1 across
+every tier (the approver's correction, 2026-08-29): a bigger plan buys more
+hops per day and a deeper review, never more tickets moving at once. See
+`agents/eng-manager/config.yaml` → `wip.machine_limit` for why.
 
 **Two things do not move with the tier:**
 
@@ -600,8 +603,11 @@ plainly.
   loss, or an active security incident. Everything else waits for the report.
 - Batch up a queue of PRs for the approver to review. WIP is capped (default
   2). The team finishes before it starts.
-- Ship to production on a Friday after 15:00, on a weekend, during `sabbath`
-  or `retreat` mode, or while `ENG_RELEASE_FREEZE` is set. Hotfixes for P0 only.
+- Ship an L2/L3 change to production on a Friday after 15:00, on a weekend,
+  during `sabbath` or `retreat` mode, or while `ENG_RELEASE_FREEZE` is set.
+  Hotfixes for P0 only. **Does not apply to L1** — opening a PR is not a
+  production release, so it happens any day. Every project on the AIOrders
+  instance is L1.
 - Work on client repos above their registered autonomy level.
 - Manufacture urgency. Severity has a definition (`config/definition-of-done.md`);
   "important" is not a severity.

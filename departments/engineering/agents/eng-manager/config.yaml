@@ -138,17 +138,28 @@ wip:
   # department exists to prevent. Raising it is the approver's call, not the
   # EM's.
 
-  machine_limit: 6           # ← from plan.budgets[plan.tier].machine_wip
+  machine_limit: 1           # ← the approver's correction, 2026-08-29; no
+                              # longer read from plan.budgets[plan.tier].machine_wip
   # Tickets moving entirely between agents — building, review, QA, security,
-  # release readiness. These cost the approver nothing, so throttling them
-  # bought nothing but latency. The old single limit of 2 capped both kinds
-  # together and was the second-biggest source of slowness after the
-  # approver's own response time.
+  # release readiness. This used to scale with the plan tier (2 → 6 → 12 → 20)
+  # on the reasoning that this work costs the approver nothing, so throttling
+  # it bought nothing but latency.
   #
-  # Bounded rather than unlimited, and NOT purely a cost decision — twenty
-  # tickets in flight means twenty shallow contexts, more rework, and worse
-  # reviews. This ceiling should rise with the plan tier but never to
-  # "unlimited": past a point, parallelism buys confusion, not throughput.
+  # That reasoning was correct about cost and wrong about the failure mode it
+  # traded for. At 6/12 in flight, a build-loop pass advanced every ticket by
+  # one shallow step and moved on — nine tickets simultaneously mid-pipeline,
+  # none reaching `shipped`. The approver's words, 2026-08-29: work like a
+  # real engineering department, where one ticket is completed end to end
+  # before the next one starts — not twelve tickets each a little bit done.
+  #
+  # So machine WIP is now 1, unconditionally, at every plan tier: only one
+  # ticket may sit in `ready`..`ready-to-ship` at a time. The next ticket is
+  # drawn from To-do — priority first, then severity, then ticket id (the
+  # order it was added) — only once the current one leaves that range by
+  # reaching `shipped`. Tickets already over this cap when it took effect are
+  # not force-reverted; they drain naturally and no *new* ticket starts until
+  # the count is back at or under 1. The plan tier still scales hops/day,
+  # hops/ticket, and review depth — just not how many tickets move at once.
   #
   # approver_limit does NOT move with the tier. The approver's attention is
   # the one thing no subscription buys more of.
@@ -195,11 +206,28 @@ gates:
     # is written the moment the PR opens — carrying the PR link, what it does,
     # and the gates it passed. Before this fix an L1 PR sat in a silent
     # uncapped `blocked` pile with nothing watching it.
+    #
+    # A ticket may touch more than one repo (ENG-011, 2026-08-29, is the
+    # first). Still exactly ONE merge_request item — never one per repo. To
+    # the approver, merging a multi-repo ticket is one decision; a second
+    # item would say the same thing twice while counting the same ticket
+    # twice against wip.approver_limit and wip.awaiting_approver_cap.
+    #
+    # The one item carries every repo's PR link as a proper list — a
+    # `pr_urls:` array of {repo, url} entries on the inbox item — never
+    # crammed into one delimited string. ENG-011's own item did exactly that
+    # (`pr_url: "repo-a: url | repo-b: url"`), which is fragile — easy to
+    # mis-parse, easy to silently drop a repo on a careless append — and
+    # doesn't scale past two repos.
     detect_merged_by: git_ancestry
     # On each build-loop pass: fetch, then check whether the branch head is an
     # ancestor of the project's default branch. Local, free, no API call.
     # Merged → the ticket advances to `shipped`. Not merged → it stays counted
     # against awaiting_approver_cap and resurfaces after 3 days.
+    # Multi-repo: the ancestry check runs independently per repo, and the
+    # ticket reaches `shipped` only when EVERY repo's branch is merged. One
+    # repo merged first is a partial state, not done — the ticket stays
+    # `blocked` and stays counted.
   inbox_dir: inbox/
   # Never infer approval from silence. Explicit confirmation only.
 
@@ -403,21 +431,25 @@ plan:
     pro:
       hops_per_day: 40
       hops_per_ticket: 8
-      machine_wip: 6
+      machine_wip: 1
       review_depth: standard
     max_5x:
       hops_per_day: 200
       hops_per_ticket: 20
-      machine_wip: 12
+      machine_wip: 1
       review_depth: thorough   # second-pass review on L-size diffs, full eval runs
     max_20x:
       hops_per_day: 600
       hops_per_ticket: 40
-      machine_wip: 20
+      machine_wip: 1
       review_depth: thorough
   # These are guard rails against a runaway loop, not a spending target. The
   # department should use what the work needs and no more — a pass that adds
   # nothing is waste at any tier.
+  #
+  # machine_wip is fixed at 1 across every tier (the approver's correction,
+  # 2026-08-29 — see wip.machine_limit below) — a bigger plan buys more hops
+  # per day and a deeper review, never more tickets moving at once.
 
 # Build loop — the engine
 build_loop:
@@ -533,8 +565,21 @@ l0_pipeline:
   package_contains: [problem, design, findings, what_the_approver_would_have_to_do]
   never_enters: [ready, building, in-review, in-qa, in-security, ready-to-ship, shipped]
 
-# Release windows
+# Release windows — L2/L3 PRODUCTION RELEASES ONLY.
+# The window exists so nothing lands on production going into a weekend with
+# nobody watching. An L1 "release" has no production effect at all — it opens
+# a PR and stops, and a human merges whenever they choose — so gating it on
+# the calendar bought nothing and cost real days: a finished L1 ticket sat
+# blocked over a weekend "waiting for the release window to open" on a step
+# that releases nothing. The approver's correction, 2026-08-29: "You anyways
+# dont ship anything just raise a PR, so you do that on weekends too doesnt
+# matter. I can check them on weekdays or weekends my choice." Every
+# registered aiorders project is L1 (config/projects.md), so today this
+# window governs nothing on the board — it stays for the day a project is
+# raised to L2/L3, which is the approver's call alone.
 releases:
+  applies_to_autonomy: [L2, L3]  # L1 skips this entirely — opens a PR any day;
+                                 # see skills/release-runner/SKILL.md step 1
   block_after: { day: friday, time: "15:00" }
   block_weekends: true
   block_modes: [sabbath, retreat]

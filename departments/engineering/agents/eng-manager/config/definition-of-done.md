@@ -282,10 +282,14 @@ that escalates a P1 as a P0 gets that logged as a correction in its notebook.
 
 ## Release windows
 
-- No production release Friday after 15:00 local, or on a weekend.
-- No production release during `sabbath` or `retreat` mode, or while
+- No L2/L3 production release Friday after 15:00 local, or on a weekend.
+- No L2/L3 production release during `sabbath` or `retreat` mode, or while
   `ENG_RELEASE_FREEZE` is set.
-- P0 hotfixes are the only exception, and they still pass the security gate.
+- P0 hotfixes are the only L2/L3 exception, and they still pass the security
+  gate.
+- L1 is exempt (the approver's correction, 2026-08-29): opening a PR is not a
+  production release, so it happens any day and the approver merges on their
+  own schedule — and every registered aiorders project is L1.
 
 ## What "done" is not
 
