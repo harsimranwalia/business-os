@@ -23,21 +23,20 @@ per the corrected `skills/release-runner/SKILL.md` (2026-08-29), its own
 window hold no longer applies either, since `aiorders-api` is L1 — worth a
 fresh look next pass rather than assuming Monday.
 
-**Approver-facing WIP 2 — 2/2, at the limit.** `ENG-025`'s G1 was processed
-earlier this pass sequence (`scheduled`, context `schtasks`) — moved
-`awaiting-scope → designed`, off this count. `ENG-023` (its G1 raised the
-same pass, from its own already-drafted PRD content) holds one slot;
-`ENG-011` (`ready-to-ship → blocked`, both PRs opened, merge request raised
-this pass) now holds the second. At the limit, not over — nothing new
-starts that would need the approver until one of these two clears.
+**Approver-facing WIP 2 — 1/2.** `ENG-025`'s G1 was processed earlier this
+pass sequence (`scheduled`, context `schtasks`) — moved `awaiting-scope →
+designed`, off this count. `ENG-023`'s G1 was found answered and processed
+this pass (`watch`, context `schtasks`) — also moved `awaiting-scope →
+designed`, off this count. `ENG-011` (`ready-to-ship → blocked`, both PRs
+opened, merge request raised earlier this pass sequence) holds the
+remaining slot. One slot free.
 
-**Approval cap 3 — 2/3.** `ENG-023`'s G1
-(`inbox/2026-08-29-eng023-g1-scope.md`) and `ENG-011`'s new merge request
-(`inbox/2026-08-29-eng011-merge-request.md`, both PR links) occupy two of
-the three. One slot free — `ENG-016` through `ENG-021` are also G1-drafted
-and ready, but deliberately left for a future pass rather than filling
-every open slot in one sweep; see `ENG-023`'s own ticket log for the
-reasoning.
+**Approval cap 3 — 1/3.** `ENG-011`'s merge request
+(`inbox/2026-08-29-eng011-merge-request.md`, both PR links, still
+unanswered) is the only item occupying the cap. Two slots free —
+`ENG-016` through `ENG-021` are also G1-drafted and ready, but deliberately
+left for a future pass rather than filling every open slot in one sweep;
+see `ENG-023`'s own ticket log for the reasoning.
 
 `priority:` is a field on every ticket, and **only the approver sets it.** It is
 not `severity`, which is the agent's read of how bad a problem is.
@@ -61,7 +60,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ENG-020 | Marketing ROI reporting — traffic source and revenue attribution on the brand dashboard | restaurant-portal | shaped | | product-manager | M | 2026-08-29 |
 | ENG-021 | Website chat-bar engagement visibility — customer questions and self-service FAQ editing on the brand portal | restaurant-portal | shaped | | product-manager | M | 2026-08-29 |
 | ENG-022 | Fix broken restaurant-scoped access check on 5 brand-portal handlers — cross-tenant PII/write exposure | aiorders-api | designed | | eng-manager | M | 2026-08-29 |
-| ENG-023 | Add status and internal notes to each brand-portal feedback item | restaurant-portal | awaiting-scope | | approver | S | 2026-08-29 |
+| ENG-023 | Add status and internal notes to each brand-portal feedback item | restaurant-portal | designed | | architect | S | 2026-08-29 |
 | ENG-024 | Set show_in_marketplace on onboarding's createRestaurant insert, plus a backfill | aiorders-api | shaped | | eng-manager | XS | 2026-08-29 |
 | ENG-025 | Recurring feedback issues, per restaurant, over time | restaurant-portal | designed | | architect | S | 2026-08-29 |
 
@@ -89,50 +88,13 @@ off the In-flight table (terminal); see its own board file.
 
 ## Waiting on the approver
 
-Cap: 3 across all gates. **2/3.** `ENG-023`'s G1
-(`inbox/2026-08-29-eng023-g1-scope.md` — status and internal notes on each
-brand-portal feedback item) and `ENG-011`'s new L1 merge request
+Cap: 3 across all gates. **1/3.** `ENG-011`'s L1 merge request
 (`inbox/2026-08-29-eng011-merge-request.md` — two PRs, `aiorders-api` #3 and
-`aiorders-admin-hub` #3) occupy two of the three slots. `ENG-016` through
-`ENG-021` are also G1-drafted and ready to raise, deliberately left for a
-future pass rather than filling every open slot in one sweep — see
-`ENG-023`'s own ticket log for the reasoning.
-
-## 2026-08-29 — continue ENG-024: shaped, held — machine WIP still 6/1 over cap, no slot free
-
-`continue` event pass, context `ENG-024` — its own chain fire from the
-`intake` pass that shaped it. Narrow scope per this event's own contract:
-this ticket only. Mode check clean (business-os `.env` → `MODE=` empty;
-instance `config/config.yaml` → `mode:` empty). Pre-pass gate check: exit
-0, clean, both scoped (`ENG-024`) and whole-board.
-
-Re-checked fresh rather than trusted the board's cached header: all six
-machine-WIP tickets' own frontmatter (`ENG-007` ready-to-ship, `ENG-008`
-building, `ENG-009` ready, `ENG-010` ready, `ENG-011` ready-to-ship,
-`ENG-013` building) — count unchanged at 6/1, still over the cap of 1. Per
-`eng_build_loop.md` step 6, the To-do column is the only place a new start
-is drawn from, and "there is exactly one slot [that] does not free until
-the ticket occupying it reaches `shipped`" — `ENG-024` (severity P1, fast
-lane, `shaped`) cannot enter `building` this pass regardless of severity;
-nothing in the loop's dispatch rule exempts P1 from the WIP cap. Only the
-unrelated proposal-batching P0 carve-out (step 3) mentions P0 at all, and
-that gate doesn't apply here since ENG-024 already has an approved ticket.
-`agents/eng-manager/inbox/` empty — no technical-intake item for this
-ticket; G1 was already correctly auto-skipped (bug type, fast lane), so
-there is no gate item to check either. Ticket correctly stays at `shaped`.
-
-**0 transitions.** `chained: none` — held by the machine WIP cap (6/1, no
-free slot); one of the explicit do-not-chain conditions. Recorded on the
-ticket's own log.
-
-One observation filed (`observations.md`): the `intake` pass that shaped
-this ticket fired its chain without checking the machine-WIP cap, which was
-already known full at the time (six tickets already in flight) — this pass
-is the cost of that gap, one hop spent to re-derive a hold the shaping pass
-could have recognized itself.
-
-Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
-(`ENG-024`) and whole-board: exit 0, clean, no `WAIVED:` lines.
+`aiorders-admin-hub` #3) occupies the one slot. `ENG-023`'s G1 was found
+answered and processed this pass (`watch`, context `schtasks`), off this
+count. `ENG-016` through `ENG-021` are also G1-drafted and ready to raise,
+deliberately left for a future pass rather than filling every open slot in
+one sweep — see `ENG-023`'s own ticket log for the reasoning.
 
 ## 2026-08-29 — continue ENG-011: both L1 PRs opened, ready-to-ship → blocked
 
@@ -212,5 +174,49 @@ next hop's work), not the approver, not blocked, not terminal, not held by
 a cap. Fired `/bin/sh departments/engineering/lib/eng-trigger.sh continue
 ENG-013` before exiting. Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+## 2026-08-29 — watch: ENG-023's G1 found answered, awaiting-scope → designed
+
+`watch` event pass, context `schtasks` — a file changed in a watched inbox
+outside the notify channel. Per this event's own contract, swept all three
+watched inboxes (`agents/product-manager/inbox/`, `agents/eng-manager/inbox/`,
+`inbox/`) rather than the whole board. Mode check clean (business-os `.env`
+→ `MODE=` empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
+whole-board: both exit 0, clean.
+
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` held nothing
+beyond `.gitkeep`. `inbox/` held exactly two live items:
+`2026-08-29-eng023-g1-scope.md` (**approved**,
+`decided: 2026-08-29T23:38:32.834274+00:00`, no additional comment) and
+`2026-08-29-eng011-merge-request.md` (still an empty `decision:` — left
+untouched, genuinely still waiting).
+
+Processed `ENG-023`'s G1 the same way `ENG-025`'s identical transition was
+processed earlier today: PRD `status: draft → approved`, `decided:` stamped;
+ticket `awaiting-scope → designed`, `owner: approver → architect`; gate item
+moved to `inbox/_handled/` with a processed footer; journaled in
+`agents/eng-manager/config/decision-journal.md`. Design work itself not
+started this pass — `designed`'s exit condition is the architect's own
+output, belongs in a dedicated `continue ENG-023` session. Full detail on
+`ENG-023`'s own ticket log.
+
+**1 transition.** Approver-facing WIP 2/2 → 1/2; approval cap 2/3 → 1/3.
+`machine_wip` unaffected (still 5/1 — `designed` is outside the counted
+`ready`...`ready-to-ship` range).
+
+**Board rolled**: the live index held four dated entries once this one was
+added (`ENG-024`, `ENG-011`, `ENG-013`, this one) — moved the oldest
+(`continue ENG-024`) to `_index-archive.md`, prepended under its header, per
+the keep-three rule.
+
+One observation filed (`observations.md`): none beyond what's captured on
+`ENG-023`'s own ticket log.
+
+`chained: ENG-023` — `designed`, owned by `architect`, an agent-owned state;
+fired `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-023`
+before this pass exits. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
 whole-board: both exit 0, clean, no `WAIVED:` lines.
 

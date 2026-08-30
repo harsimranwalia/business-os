@@ -1,11 +1,11 @@
 ---
 ticket: ENG-023
 project: restaurant-portal
-status: draft
+status: approved
 size: S
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-08-29T23:38:32.834274+00:00
 ---
 
 # Feedback board: status and notes per item, so the restaurant can act on feedback and show it did

@@ -12,6 +12,42 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — continue ENG-024: shaped, held — machine WIP still 6/1 over cap, no slot free
+
+`continue` event pass, context `ENG-024` — its own chain fire from the
+`intake` pass that shaped it. Narrow scope per this event's own contract:
+this ticket only. Mode check clean (business-os `.env` → `MODE=` empty;
+instance `config/config.yaml` → `mode:` empty). Pre-pass gate check: exit
+0, clean, both scoped (`ENG-024`) and whole-board.
+
+Re-checked fresh rather than trusted the board's cached header: all six
+machine-WIP tickets' own frontmatter (`ENG-007` ready-to-ship, `ENG-008`
+building, `ENG-009` ready, `ENG-010` ready, `ENG-011` ready-to-ship,
+`ENG-013` building) — count unchanged at 6/1, still over the cap of 1. Per
+`eng_build_loop.md` step 6, the To-do column is the only place a new start
+is drawn from, and "there is exactly one slot [that] does not free until
+the ticket occupying it reaches `shipped`" — `ENG-024` (severity P1, fast
+lane, `shaped`) cannot enter `building` this pass regardless of severity;
+nothing in the loop's dispatch rule exempts P1 from the WIP cap. Only the
+unrelated proposal-batching P0 carve-out (step 3) mentions P0 at all, and
+that gate doesn't apply here since ENG-024 already has an approved ticket.
+`agents/eng-manager/inbox/` empty — no technical-intake item for this
+ticket; G1 was already correctly auto-skipped (bug type, fast lane), so
+there is no gate item to check either. Ticket correctly stays at `shaped`.
+
+**0 transitions.** `chained: none` — held by the machine WIP cap (6/1, no
+free slot); one of the explicit do-not-chain conditions. Recorded on the
+ticket's own log.
+
+One observation filed (`observations.md`): the `intake` pass that shaped
+this ticket fired its chain without checking the machine-WIP cap, which was
+already known full at the time (six tickets already in flight) — this pass
+is the cost of that gap, one hop spent to re-derive a hold the shaping pass
+could have recognized itself.
+
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-024`) and whole-board: exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-29 — continue ENG-022: architect's design written, shaped → designed
 
 `continue` event pass, context `ENG-022` — this fire's own turn at the

@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P2
 priority:
-state: awaiting-scope
-owner: approver
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
@@ -221,5 +221,51 @@ approver asked in their own words ("any actions taken").
 
   `chained: none` — `awaiting-scope`, owned by the approver; the chaining
   guard never fires on a ticket waiting on a human. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
+
+- `2026-08-29` `awaiting-scope → designed` (approver → architect, `watch`
+  event pass, context `schtasks`) — swept all three watched inboxes per this
+  event's own contract; `inbox/2026-08-29-eng023-g1-scope.md` was the only
+  item found changed (found answered, **approved**,
+  `decided: 2026-08-29T23:38:32.834274+00:00`, no additional comment).
+  `ENG-011`'s merge request, the only other live item in `inbox/`, still
+  carries an empty `decision:` — left untouched. Mode check clean
+  (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+  `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-023`) and whole-board: both exit 0, clean.
+
+  Same procedure `ENG-025`'s identical transition used earlier today: PRD
+  `status: draft → approved`, `decided:` stamped. Gate item moved to
+  `inbox/_handled/` with a processed footer. Journaled in
+  `agents/eng-manager/config/decision-journal.md`.
+
+  **Handed to the architect at `designed`, design work itself not started
+  this pass** — same reasoning `ENG-025`'s own G1 processing used:
+  `designed`'s exit condition (tech design written) is the architect's own
+  output, not board bookkeeping, so it belongs in a dedicated `continue
+  ENG-023` session.
+
+  **State:** `awaiting-scope → designed`, `owner` moves `approver →
+  architect`. **Consequence:** approver-facing WIP 2/2 → 1/2; approval cap
+  2/3 → 1/3. `ENG-011`'s merge request is now the only item occupying either
+  cap.
+
+  **Dead-end sweep (scoped to this event's three-inbox contract):**
+  `agents/product-manager/inbox/` and `agents/eng-manager/inbox/` both held
+  nothing beyond `.gitkeep` — no other unprocessed item found.
+
+  **Notify sweep:** nothing to raise for this ticket itself (its own gate is
+  now closed, not open). No item found with `notified:` older than 24h and
+  no `decision:`/`nudged:` among the two live inbox items. Approval cap
+  1/3, not full — no stall.
+
+  **Observations filed** (`observations.md`): none beyond what's captured
+  here.
+
+  `chained: ENG-023` — `designed`, owned by `architect`, an agent-owned
+  state; firing
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-023`
+  before this pass exits. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
   whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
