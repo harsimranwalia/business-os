@@ -12,6 +12,50 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-30 — continue ENG-008: code review round 1 FAIL, bounced to building
+
+`continue` event pass, context `ENG-008` — this fire's own turn at the front
+of `traces/.pending`, re-fired by the `scheduled` sweep above after the
+original 2026-08-29 fire never ran. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+Both branches were cut before `ENG-007`/`ENG-011` merged to `main` (this same
+board's own `scheduled` entry above), so a raw two-dot diff against current
+`main` shows spurious deletions of both tickets' shipped work. Read the
+isolated single-commit patch on each branch instead (`git show --stat` /
+merge-base diffing) to avoid reviewing noise that was never this ticket's.
+
+Ran the code-review gate's automatic-failure scan: hit **#10** again —
+`influencers.ts`'s new admin-gated `PATCH` path (`hasInfluencerAdminAccess`,
+`updateInfluencer`) carries **zero test coverage**, identical shape to
+`ENG-013`'s own round 1 failure one day earlier, same repo. Also found an
+independent correctness bug: `Influencers.tsx`'s `openInfluencer` defaults
+`accepts_paid`/`accepts_barter` via `null ?? !null`, which evaluates `true`
+in JavaScript — so the 51/306 production rows where the preference is
+genuinely unset get a fabricated "accepts paid" value written back on the
+next save of *any* field, contradicting the migration's own deliberate
+null-preserving backfill. Full detail on the ticket's own log. No receipt
+written; findings logged on the ticket and in
+`agents/principal-engineer/notebook/2026-08-30-review-log.md`. QA's hop not
+run this round — discarded per the combined-hop design.
+
+**0 net frontmatter transitions** — `state`/`owner` unchanged
+(`building`/`eng-manager`); the gate was reached and immediately routed
+back on the fail verdict. `machine_wip` unaffected, still 4/1.
+Approver-facing WIP and approval cap both unaffected. Two observations filed
+(`observations.md`): second occurrence of the automatic-failure-#10 shape in
+two days (same repo, same handler family); `ENG-008`'s frontmatter missing
+`time_estimate`/`time_spent`/`time_remaining` despite both
+`definition-of-done.md` and the ticket template calling for them.
+
+`chained: ENG-008` — `building` is agent-owned (both findings are the next
+hop's work), not the approver, not blocked, not terminal, not held by a cap.
+Fired `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-30 — scheduled (launchd): two silent merges shipped, three broken chains resumed
 
 `scheduled` event pass, context `launchd`, the 15:30 safety-net slot (fired

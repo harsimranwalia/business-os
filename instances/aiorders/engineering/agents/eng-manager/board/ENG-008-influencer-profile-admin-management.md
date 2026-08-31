@@ -13,8 +13,8 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-30
-branch: feat/ENG-008-influencer-admin-management (aiorders-api@e240767, aiorders-admin-hub@f2ea36c)
+updated: 2026-08-31
+branch: feat/ENG-008-influencer-admin-management (aiorders-api@57f8c4b, aiorders-admin-hub@63be255)
 depends_on: []
 blocks: []
 parent:
@@ -735,6 +735,160 @@ Append-only. One line per state transition, newest last.
   `chained: ENG-008` — `building` is agent-owned (the two findings above are
   the next hop's work), not the approver, not blocked, not terminal, not
   held by a cap. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: see board index.
+
+- `2026-08-31` **round 1's two findings fixed: missing-profile/allowlist test
+  gaps closed on top of an undocumented existing commit, and the null-bug
+  fixed for real** (eng-manager, `continue` event pass, context `ENG-008`).
+  Narrow scope per the event's own contract (resume this ticket only; no
+  board-wide sweep). Mode check clean (business-os `.env` → `MODE=active`;
+  instance `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Both worktrees fetched and checked out onto this ticket's branch**
+  (`aiorders-api` was sitting clean on `ENG-013`'s branch, `aiorders-admin-hub`
+  clean on `ENG-005`'s — both from other tickets' own continue passes; no
+  mid-work found on either, safe to switch).
+
+  **Found a second undocumented commit, same shape as `ENG-013`'s
+  2026-08-30 discovery, but not the same outcome.** `aiorders-api` carried
+  `dc6972a` ("Add missing test coverage for admin-portal influencer handler
+  (ENG-008)") on top of this ticket's own recorded `e240767`, same
+  automation identity (`businesspilotcare-gif`), already pushed — this
+  ticket's own log and frontmatter knew nothing about it. Investigated
+  rather than trusted, per the same practice `ENG-013` established: read
+  `influencers.ts` and the new `influencers.test.ts` in full and
+  hand-traced every test against the live handler logic (no `deno` on this
+  host, same residual gap `ENG-013` already named). Unlike `ENG-013`, this
+  commit was **not simply accept-and-move-on** — it was correct as far as
+  it went (all field-validation rejections, the three role-shaped access
+  cases, one mocked success path — all hand-traced and confirmed correct)
+  but **incomplete against round 1's own review notebook**
+  (`agents/principal-engineer/notebook/2026-08-30-review-log.md`), which
+  named exactly four `hasInfluencerAdminAccess` cases — "admin, sub-admin,
+  wrong role, missing/undefined profile" — and asked for proof "the field
+  allowlist (`EDITABLE_FIELDS`) actually restricts what a caller can
+  write." The found commit covered the first three access cases and every
+  field's own validation, but neither of those two. Observation filed
+  (`observations.md`) naming this as its own nuance: verifying a found
+  commit means checking it against the finding it was supposed to close,
+  not only checking that what's already there is internally correct.
+
+  **Checked whether the missing-profile case was live risk before treating
+  it as one.** Read `admin-portal/index.ts`'s router (`getAuthenticatedUser`
+  equivalent, lines 62–126): it already 401s on no user and 403s on no
+  `profiles` row **before any handler runs**, so `auth.user.profile` is
+  guaranteed non-null by the time `hasInfluencerAdminAccess` is called —
+  not reachable in production today. Fixed anyway: round 1 named it
+  explicitly, the repo's own established precedent
+  (`loyalty-config.ts`'s `hasLoyaltyConfigAccess(profile: ... | null |
+  undefined)`, with its own dedicated "rejects a missing profile" test)
+  already treats this defensively, and closing what a failed review
+  explicitly asked for is this hop's job, not a judgement call to
+  second-guess. `hasInfluencerAdminAccess`: `userProfile.role` /
+  `userProfile.additional_roles` → `userProfile?.role` /
+  `userProfile?.additional_roles`. Added
+  `hasInfluencerAdminAccess rejects a missing profile` (null and undefined,
+  both hand-traced to `false`, no throw).
+
+  **Field-allowlist test**: added
+  `handleInfluencers PATCH strips fields outside the editable allowlist
+  before writing` — a PATCH body mixing a valid field (`staff_rating: 4`)
+  with three fields never named in `EDITABLE_FIELDS` (`role`, `is_admin`,
+  `id`, the exact shape a privilege-escalation or cross-record write
+  attempt would take) — captures what's actually passed to
+  `adminSupabase....update()` and asserts it's exactly `{ staff_rating: 4
+  }`. Hand-traced against `updateInfluencer`'s field-by-field
+  `if ('x' in body)` construction: correct, since unlisted keys are never
+  copied into `update` regardless of what the caller sends.
+
+  **Independently re-verified the CORS/`PATCH` fix from the original build
+  hop is still intact** (untouched by this pass, but it's the kind of thing
+  a rebase or a sibling ticket's touch could have quietly reverted):
+  `admin-portal/index.ts` line 17 still carries `PATCH` in
+  `Access-Control-Allow-Methods`. Fine.
+
+  **The real bug — `Influencers.tsx`'s null-coalescing default — fixed
+  properly, not just patched.** Read the review notebook's own prescribed
+  fix closely: "default both to false (or track which the user actually
+  touched)... **and add the regression test**... confirm neither checkbox
+  pre-checks and **neither is written unless the user checks it**." The
+  second half only holds under dirty-tracking — a blanket default-to-`false`
+  would stop pre-checking the box but would still send `false`
+  unconditionally on every save (same unconditional-inclusion bug the
+  review flagged, just with a less actively-wrong value), so implemented
+  the stronger fix: `InfluencerEditForm.accepts_paid`/`accepts_barter`
+  widened to `boolean | null`; `openInfluencer` now passes
+  `influencer.accepts_paid`/`accepts_barter` straight through instead of
+  coalescing against `barter_visit` at all (confirmed this fallback was
+  never reachable with a correct substitute: the migration backfills both
+  new flags from `barter_visit` **additively**, so every row where
+  `accepts_paid` is null also has `barter_visit` null in that same row —
+  the `!barter_visit` fallback evaluated `!null → true` in 100% of the
+  cases it ever fired, never anything else); both `Checkbox` components
+  render `checked={editForm.accepts_paid ?? false}` (visually unchecked for
+  null, independent of the stored form state); `handleSaveInfluencer` now
+  omits `accepts_paid`/`accepts_barter` from the PATCH body entirely while
+  either is still `null`, following the exact conditional-inclusion pattern
+  the function already uses for `min_visit_payment` — so the backend's own
+  `'accepts_paid' in body` check (unchanged, `influencers.ts` line 109)
+  never fires and the column stays untouched. An influencer whose
+  preference was never set now stays unset through any number of saves
+  until a staff member actually clicks one of the two checkboxes.
+
+  **Dropped the one unrelated cosmetic change round 1 flagged but didn't
+  block on**: `<Button variant="secondary">` on the Contact button reverted
+  to `<Button>`, keeping the diff to exactly what this ticket describes.
+
+  **Self-tested with this repo's only available tools** (no test framework
+  installed, per the proposal filed below): `npm run build` — clean, same
+  pre-existing chunk-size notice only, no new warnings. `npm run lint` —
+  150 errors, identical count to this ticket's own `ready → building`
+  entry and to `ENG-013`'s recorded baseline, zero new; `Influencers.tsx`
+  carries only the same pre-existing `useEffect` missing-dependency
+  warning on `fetchData`, confirmed unchanged.
+
+  **No automated frontend regression test.** Confirmed fresh this pass
+  (not assumed from `config/projects.md`'s week-old table):
+  `aiorders-admin-hub`'s `package.json` has no `vitest`/`jest`/
+  `@testing-library` dependency and no `test` script; a repo-wide sweep
+  found zero `*.test.*`/`*.spec.*` files. Building a test harness from
+  scratch inside this fix is out of scope for a bug fix — same reasoning
+  `restaurant-portal`'s own harness (`ENG-002`) was an approver-originated
+  ticket, not something a feature pass invented for itself. Proposal filed
+  (`proposals.md`) naming the gap and sizing the fix (`M`) rather than
+  silently shipping without one.
+
+  **Both branches committed and pushed**, automation identity
+  (`businesspilotcare-gif`, same as every prior commit on this ticket):
+  `aiorders-api@57f8c4b` ("Cover missing-profile and
+  allowlist-enforcement gaps in influencer admin tests (ENG-008)", on top
+  of the found `dc6972a`), `aiorders-admin-hub@63be255` ("Fix
+  accepts_paid/accepts_barter fabricating a value on null preferences
+  (ENG-008)"). Frontmatter `branch:` updated to both new hashes.
+
+  **0 net frontmatter transitions** — `state`/`owner` unchanged
+  (`building`/`eng-manager`): fixing a failed review's findings is build
+  work, and the next machine-owned checkpoint (`in-review`) is only reached
+  by a fresh review-plus-quality session actually passing it, same
+  precedent this ticket's own round-1 entry and `ENG-013`'s 2026-08-30
+  entry both already established. `machine_wip` unaffected (still inside
+  the counted `ready..ready-to-ship` range at `building`). No
+  approver-facing or approval-cap change — this hop touches no gate.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing raised this pass (no
+  gate item written; a build-fix hop isn't a gate). **Observations/
+  proposals filed:** see above — one proposal (`aiorders-admin-hub` test
+  infrastructure), one observation (verify-found-work-against-the-finding,
+  not just against the code).
+
+  `chained: ENG-008` — `building` is agent-owned (the next hop is code
+  review + quality, combined, round 2), not the approver, not blocked, not
+  terminal, not held by a cap. Firing
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-008`) and whole-board: see board index.

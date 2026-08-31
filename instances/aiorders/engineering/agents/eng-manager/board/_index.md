@@ -41,7 +41,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 
 | ID | Title | Project | State | Priority | Owner | Size | Updated |
 |---|---|---|---|---|---|---|---|
-| ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | building | | eng-manager | M | 2026-08-29 |
+| ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | building | | eng-manager | M | 2026-08-31 |
 | ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | building | | eng-manager | M | 2026-08-30 |
@@ -99,50 +99,6 @@ Cap: 3 across all gates. **0/3, fully clear.** `ENG-011`'s L1 merge request
 decision. `ENG-016` through `ENG-021` are also G1-drafted and ready to
 raise, deliberately left for a future pass rather than filling every open
 slot in one sweep — see `ENG-023`'s own ticket log for the reasoning.
-
-## 2026-08-30 — continue ENG-008: code review round 1 FAIL, bounced to building
-
-`continue` event pass, context `ENG-008` — this fire's own turn at the front
-of `traces/.pending`, re-fired by the `scheduled` sweep above after the
-original 2026-08-29 fire never ran. Narrow scope per the event's own
-contract (resume this ticket from its current state; no board-wide sweep).
-Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean.
-
-Both branches were cut before `ENG-007`/`ENG-011` merged to `main` (this same
-board's own `scheduled` entry above), so a raw two-dot diff against current
-`main` shows spurious deletions of both tickets' shipped work. Read the
-isolated single-commit patch on each branch instead (`git show --stat` /
-merge-base diffing) to avoid reviewing noise that was never this ticket's.
-
-Ran the code-review gate's automatic-failure scan: hit **#10** again —
-`influencers.ts`'s new admin-gated `PATCH` path (`hasInfluencerAdminAccess`,
-`updateInfluencer`) carries **zero test coverage**, identical shape to
-`ENG-013`'s own round 1 failure one day earlier, same repo. Also found an
-independent correctness bug: `Influencers.tsx`'s `openInfluencer` defaults
-`accepts_paid`/`accepts_barter` via `null ?? !null`, which evaluates `true`
-in JavaScript — so the 51/306 production rows where the preference is
-genuinely unset get a fabricated "accepts paid" value written back on the
-next save of *any* field, contradicting the migration's own deliberate
-null-preserving backfill. Full detail on the ticket's own log. No receipt
-written; findings logged on the ticket and in
-`agents/principal-engineer/notebook/2026-08-30-review-log.md`. QA's hop not
-run this round — discarded per the combined-hop design.
-
-**0 net frontmatter transitions** — `state`/`owner` unchanged
-(`building`/`eng-manager`); the gate was reached and immediately routed
-back on the fail verdict. `machine_wip` unaffected, still 4/1.
-Approver-facing WIP and approval cap both unaffected. Two observations filed
-(`observations.md`): second occurrence of the automatic-failure-#10 shape in
-two days (same repo, same handler family); `ENG-008`'s frontmatter missing
-`time_estimate`/`time_spent`/`time_remaining` despite both
-`definition-of-done.md` and the ticket template calling for them.
-
-`chained: ENG-008` — `building` is agent-owned (both findings are the next
-hop's work), not the approver, not blocked, not terminal, not held by a cap.
-Fired `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
-before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
 
 ## 2026-08-30 — continue ENG-013: the missing test already existed, found undocumented rather than written
 
@@ -244,4 +200,70 @@ to do. Re-check once a `scheduled`/`watch`/`continue` pass drains
 `ENG-008`/`ENG-009`/`ENG-010`/`ENG-013` below the cap. Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
 whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+## 2026-08-31 — continue ENG-008: round 1's findings fixed, chained for review round 2
+
+`continue` event pass, context `ENG-008`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+Found a second undocumented commit on `aiorders-api` (`dc6972a`, the missing
+test file round 1 asked for) — same cross-host shape `ENG-013` hit
+2026-08-30, but this time hand-tracing it against the review notebook (not
+just against the handler) found it incomplete: covered three of four named
+`hasInfluencerAdminAccess` cases and every field validation, but not the
+"missing/undefined profile" case or a test proving `EDITABLE_FIELDS`
+actually strips an unauthorized field from a mixed body. Closed both gaps:
+`hasInfluencerAdminAccess` now null-safe (optional chaining; confirmed not
+live-reachable today since `index.ts`'s router already 403s before any
+handler runs on a missing profile, fixed anyway to match this repo's own
+`loyalty-config.ts` precedent and close what round 1 explicitly asked for),
+plus two new tests. Independently re-confirmed the CORS/`PATCH` fix from the
+original build hop is still intact.
+
+Fixed the real bug properly rather than patching the symptom:
+`Influencers.tsx`'s `accepts_paid`/`accepts_barter` now pass through
+`openInfluencer` as `null` (dropping the `barter_visit` fallback entirely —
+hand-confirmed it never had a correct value to fall back to, since the
+migration's additive backfill guarantees `barter_visit` is null in every row
+where the new flags are also null), checkboxes render unchecked via
+`?? false` without mutating the stored form state, and
+`handleSaveInfluencer` now omits either field from the PATCH body while
+still `null` — an untouched unset preference survives any number of saves
+instead of getting overwritten with a guess. This is the stronger of the two
+fixes the review offered ("or track which the user actually touched"),
+required because the review's own regression-test wording ("neither is
+written unless the user checks it") isn't satisfiable by a blanket
+default alone. Also dropped the one cosmetic `Button variant="secondary"`
+change round 1 flagged but didn't block on.
+
+Self-tested with this repo's only available tools: `npm run build` clean,
+`npm run lint` 150 errors / 1 warning, both figures identical to this
+ticket's own recorded baseline, zero new. No automated frontend regression
+test exists to add — confirmed fresh that `aiorders-admin-hub` has no test
+framework, no `test` script, and zero test files anywhere in the repo;
+proposal filed (`proposals.md`) rather than standing up a test harness
+inside a bug-fix ticket. One observation filed (`observations.md`): a found
+commit needs checking against the finding it was meant to close, not only
+against the code.
+
+Both branches committed (automation identity `businesspilotcare-gif`,
+consistent with every prior commit on this ticket) and pushed:
+`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`. Frontmatter `branch:`
+and `updated:` refreshed.
+
+**0 net frontmatter transitions** — `state`/`owner` unchanged
+(`building`/`eng-manager`): fixing a failed review's findings is build work,
+and `in-review` is only reached by a fresh review-plus-quality session
+actually passing it. `machine_wip` unaffected, still 4/1 (draining
+naturally, unrelated to this pass). Approver-facing WIP and approval cap
+both unaffected — no gate touched.
+
+`chained: ENG-008` — `building` is agent-owned (the next hop is code review
++ quality, combined, round 2), not the approver, not blocked, not terminal,
+not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: see below.
 
