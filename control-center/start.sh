@@ -16,7 +16,7 @@
 # needed zsh. The three things that WERE mac-only — lsof, open, and a bare
 # `python3` — each get a host-appropriate branch below rather than a rewrite.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PORT=6666
+PORT=6789
 
 OPEN_BROWSER=1
 case "${1:-}" in

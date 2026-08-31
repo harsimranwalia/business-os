@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Business OS Control Center — http://localhost:6666
+"""Business OS Control Center — http://localhost:6789
 
 A standalone command center for business-os, with zero dependency on
 life-os. Runs entirely off this repo: departments/, instances/, and this
@@ -53,7 +53,7 @@ from urllib.parse import urlparse, parse_qs
 ROOT = Path(__file__).resolve().parent.parent  # business-os root
 HTML_FILE = Path(__file__).parent / "index.html"
 LOGIN_HTML_FILE = Path(__file__).parent / "login.html"
-PORT = 6666
+PORT = 6789
 
 
 def load_env():
