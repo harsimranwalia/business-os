@@ -16,7 +16,7 @@
 # needed zsh. The three things that WERE mac-only — lsof, open, and a bare
 # `python3` — each get a host-appropriate branch below rather than a rewrite.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PORT=7777
+PORT=6666
 
 OPEN_BROWSER=1
 case "${1:-}" in
@@ -95,7 +95,7 @@ fi
 # (cp1252 here), not UTF-8. Two things break under that, and the first one is
 # how it was found: redirected into a log file, the startup banner's arrow died
 # with UnicodeEncodeError before serve_forever() was ever reached, so the task
-# bound :7777 and then exited. The second is worse and quieter — server.py
+# bound the port and then exited. The second is worse and quieter — server.py
 # reads and writes the board, the inboxes and the leads with bare read_text()/
 # write_text(), which take that same codepage, and every one of those files is
 # UTF-8 markdown full of em-dashes. PEP 540 UTF-8 mode fixes both at the

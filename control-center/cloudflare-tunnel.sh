@@ -33,7 +33,7 @@ ROOT="$(CDPATH= cd -P -- "$CC/.." && pwd -P)"
 LOG_DIR="$ROOT/logs"
 LOG="$LOG_DIR/cloudflare-tunnel.log"
 TUNNEL_NAME="business-os-control-center"
-PORT=7777
+PORT=6666
 
 # One value out of .env, not a general parser (server.py's load_env() already
 # owns that job for the Python side) — grep is enough for a single key and
