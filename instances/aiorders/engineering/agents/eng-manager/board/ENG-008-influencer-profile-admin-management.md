@@ -6,15 +6,15 @@ type: feature
 size: M
 time_estimate: half a day to a couple of days
 time_spent: ~1 day machine time — build, two code-review rounds (round 1
-  fail, round 2 pass), plus the QA quality gate; all machine time, see log
-time_remaining: ~30min-1h machine time — the security gate (fresh session,
-  now has a finished QA plan to check negative-authz coverage against),
-  then release-readiness (devops opens the PR). After that it's the
-  approver's own merge, on their own schedule (L1). No approver time_impact.
+  fail, round 2 pass), the QA quality gate, plus the security gate; all
+  machine time, see log
+time_remaining: ~15-30min machine time — release-readiness (devops opens
+  the PR). After that it's the approver's own merge, on their own schedule
+  (L1). No approver time_impact.
 severity: P3
 priority:
-state: in-qa
-owner: eng-manager
+state: ready-to-ship
+owner: devops
 lane: full
 blocked_on:
 blocked_from:
@@ -31,7 +31,7 @@ links:
   adrs: []
   review: agents/principal-engineer/reviews/ENG-008.md
   test_plan: agents/qa/test-plans/ENG-008.md
-  security_review:
+  security_review: agents/security/reviews/ENG-008.md
   release:
   pr:
 ---
@@ -990,5 +990,107 @@ Append-only. One line per state transition, newest last.
   `chained: ENG-008` — `in-qa` is agent-owned (security next, fresh
   session), not the approver, not blocked, not terminal, not held by a cap.
   Firing `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: see board index.
+
+- `2026-08-31` **security gate: PASS — now `ready-to-ship`** (security,
+  `continue` event pass, context `ENG-008`, this fire's own turn at the
+  front of `traces/.pending`). Narrow scope per the event's own contract
+  (resume this ticket only; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Re-derived the diff from disk rather than trusting the prior review's
+  own account.** Both worktrees confirmed clean, on branch, at the recorded
+  commits (`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`); `git fetch
+  origin main` plus `git merge-base` on each repo matched code review's own
+  figures exactly (4 files/404 insertions on `aiorders-api`, 1 file/202
+  insertions/14 deletions on `aiorders-admin-hub`). Read
+  `influencers.ts`, `influencers.test.ts`, the migration, `index.ts`'s diff,
+  and the full `Influencers.tsx` diff directly — none of the findings below
+  are taken on the review's or QA's word alone.
+
+  **Threat-modelled the change** (4 questions, full detail in the receipt):
+  new capability is read+write on 6 fields for the same admin/sub-admin
+  population that already read all of them (page was 100% read-only
+  before this ticket); no new data-classification tier; blast radius if
+  fully compromised is identical to `loyalty-config.ts`/`foodswipe.ts`
+  (service-role client, RLS bypassed, only the in-code role checks gate
+  access) — already-accepted architecture, not a new risk this ticket
+  introduces.
+
+  **Negative-auth cases independently verified, not assumed**: no-token/
+  invalid-token 401 and no-profile 403 confirmed live in `index.ts`'s
+  unmodified `authenticate()`; wrong-role 403 proven by a
+  throwing-Proxy-`adminSupabase` test that fails if the gate is ever
+  bypassed; the field-allowlist test confirmed mutation-sensitive (asserts
+  the exact object passed to `.update()`, not just the response shape) —
+  hand-traced against `influencers.ts` at HEAD myself rather than
+  re-reading only the code review's summary of it. Body-supplied `id` is
+  never used for row selection (URL path id is), so no IDOR shape exists
+  even though this handler intentionally has no per-row tenant scoping —
+  "any admin/sub-admin, any influencer" is the ticket's own intended shape
+  (a shared internal roster), not a gap.
+
+  **OWASP A01–A10 walked**, each marked applicable or `n/a` with a reason;
+  full table in the receipt. Nothing blocking. **One non-blocking finding**
+  (A05): `getInfluencer`/`updateInfluencer` return a raw `error.message` in
+  a 500 body — same shape `ENG-013`'s review already tracked as occurrence
+  1/3 on `foodswipe.ts`. Checked this repo's actual extent before logging
+  it as a repeat rather than assuming: a grep across
+  `admin-portal/handlers/` finds the identical pattern in **8 files total**,
+  six pre-dating this department's review process — so three-strike
+  tracking here counts *gate-reviewed* occurrences (this is the 2nd), not
+  the repo's pre-existing total, or every legacy file would already read as
+  a third strike. Logged to `agents/security/notebook/2026-08-31-findings.md`
+  rather than blocking on it, same disposition `ENG-013` got for the first
+  occurrence. CORS's widened `Access-Control-Allow-Methods` (now including
+  `PATCH`) reviewed and found not to change the endpoint's real security
+  boundary — the wildcard origin predates this diff and the actual
+  authorization boundary is the bearer token, which CORS doesn't protect
+  against a direct caller anyway.
+
+  **Secrets**: full diff and branch history on both repos scanned
+  (`aiorders-api`: `e240767`/`dc6972a`/`57f8c4b`; `aiorders-admin-hub`:
+  `f2ea36c`/`63be255`) for key/token/password/PEM/service-role patterns.
+  Two matches, both benign (the CORS header's literal string `apikey`, and
+  the frontend's own forwarded user session token) — no leaked credential.
+  **Dependencies**: none new on either repo. **LLM checklist**: n/a, design
+  frontmatter confirms `touches_models: false`, matches the diff.
+
+  **`min_visit_payment` stale-value-on-uncheck** (code review's own new
+  finding this round, P3): independently re-confirmed against the diff
+  directly rather than taken on trust — `handleSaveInfluencer` does send it
+  unconditionally whenever non-empty, independent of `accepts_paid`. Not a
+  security finding (no unauthorized access, no crash, has a workaround);
+  named in the receipt's carry-forward section rather than re-raised as a
+  fresh finding.
+
+  **Receipt written**: `agents/security/reviews/ENG-008.md` (verdict
+  `pass`). `links.security_review` set on this ticket in the same write.
+  `time_spent`/`time_remaining` updated — only release-readiness remains.
+
+  **1 transition** (`in-qa → ready-to-ship`), well under the cap of 4.
+  **Consequence:** `machine_wip` unaffected — `ENG-008` stays inside the
+  counted `ready`..`ready-to-ship` range, still 4/1 (`ENG-009`/`ENG-010` at
+  `ready`, `ENG-013` at `ready-to-ship` alongside this ticket now). No
+  approver-facing or approval-cap change — a security-gate pass isn't a
+  gate item to the approver, and `owner` moving to `devops` is an
+  agent-to-agent handoff, not a human wait.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing to raise (a security
+  pass isn't a gate item). **Observations/proposals filed:** none new — the
+  frontend-test-harness proposal and the `AuthenticatedRequest`-`any`
+  pattern are both already tracked elsewhere; the raw-error-message finding
+  is tracked in the security notebook, not filed as a separate proposal.
+
+  `chained: ENG-008` — `ready-to-ship` is agent-owned (devops's
+  release-readiness hop next: open the PR), not the approver, not blocked,
+  not terminal, not held by a cap (still inside the same counted machine-WIP
+  range this ticket already occupied). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-008`) and whole-board: see board index.
