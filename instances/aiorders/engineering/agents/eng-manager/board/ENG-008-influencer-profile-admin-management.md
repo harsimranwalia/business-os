@@ -4,9 +4,16 @@ title: Influencer board admin management — region/campaign-type preference, ra
 project: aiorders-admin-hub
 type: feature
 size: M
+time_estimate: half a day to a couple of days
+time_spent: ~1 day machine time — build, two code-review rounds (round 1
+  fail, round 2 pass), plus the QA quality gate; all machine time, see log
+time_remaining: ~30min-1h machine time — the security gate (fresh session,
+  now has a finished QA plan to check negative-authz coverage against),
+  then release-readiness (devops opens the PR). After that it's the
+  approver's own merge, on their own schedule (L1). No approver time_impact.
 severity: P3
 priority:
-state: building
+state: in-qa
 owner: eng-manager
 lane: full
 blocked_on:
@@ -22,8 +29,8 @@ links:
   prd: agents/product-manager/specs/ENG-008-influencer-profile-admin-management.md
   design: agents/architect/designs/ENG-008-influencer-profile-admin-management.md
   adrs: []
-  review:
-  test_plan:
+  review: agents/principal-engineer/reviews/ENG-008.md
+  test_plan: agents/qa/test-plans/ENG-008.md
   security_review:
   release:
   pr:
@@ -890,5 +897,98 @@ Append-only. One line per state transition, newest last.
   review + quality, combined, round 2), not the approver, not blocked, not
   terminal, not held by a cap. Firing
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: see board index.
+
+- `2026-08-31` **code review round 2: PASS, plus the quality gate — now
+  in-qa** (principal-engineer then qa, `continue` event pass, context
+  `ENG-008`, this fire's own turn at the front of `traces/.pending`). Narrow
+  scope per the event's own contract (resume this ticket only; no
+  board-wide sweep). Mode check clean (business-os `.env` → `MODE=active`;
+  instance `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Re-derived both diffs from disk rather than trusting the prior pass's
+  own account.** Both worktrees confirmed clean, on branch, at the recorded
+  commits (`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`); `git
+  fetch origin main` plus `git merge-base` on each repo confirmed a clean
+  diff (4 files / 404 insertions on `aiorders-api`, 1 file / 202
+  insertions/14 deletions on `aiorders-admin-hub` against each repo's own
+  merge-base) — no main-drift pollution this round.
+
+  **Automatic-failure scan: 0/10 open.** Both round-1 findings independently
+  re-verified, not taken on trust: hand-traced all 19 `Deno.test` cases in
+  `influencers.test.ts` against `influencers.ts` at HEAD (no `deno` on this
+  host, same residual gap every ticket on this repo carries) — the
+  missing-profile null-safety fix and the field-allowlist test both check
+  out exactly as the fix-pass described. Hand-traced the frontend fix
+  independently too: with the migration's additive backfill guaranteeing
+  `barter_visit` is null in every row where the new flags are also null, the
+  removed `?? !barter_visit` fallback never had a correct value to fall back
+  to — confirmed by re-reading the migration's `UPDATE` statement directly,
+  not assumed. `#4` (`any`-typed `AuthenticatedRequest`) is pre-existing and
+  already tracked as a 2-occurrence pattern by `ENG-013`'s own round-2
+  review today; not re-litigated here.
+
+  **One new, non-blocking finding from this round's own full review** (not
+  a round-1 regression): `Influencers.tsx`'s `handleSaveInfluencer` sends
+  `min_visit_payment` whenever the field is non-empty, independent of the
+  current `accepts_paid` value — unchecking "Paid" after a min payment was
+  set leaves the stale value in local state and it gets written alongside
+  `accepts_paid: false`. Not visible anywhere today (the read path gates
+  the "Min: $" display on `accepts_paid`), not named in any of the 8
+  acceptance criteria, P3 per `definition-of-done.md`'s severity table (has
+  a workaround: re-enter the value). Named in the review receipt rather
+  than filed as a bug or proposal — single occurrence, non-blocking, and
+  this board has never yet filed anything to `agents/qa/bugs/` for a finding
+  at this scale.
+
+  **Frontend regression test still not possible** — reconfirmed fresh
+  (not assumed from the fix-pass's own claim) that `aiorders-admin-hub` has
+  no test framework, no `test` script, and zero test files anywhere in the
+  repo. Same non-blocking treatment `ENG-011`'s own round of review already
+  gave this exact class of gap on this exact project. Substitute
+  verification: `npm run build` (clean, 3340 modules, same pre-existing
+  chunk-size notice) and `npm run lint` (150 errors / 31 warnings, identical
+  to this ticket's recorded baseline; `Influencers.tsx` carries exactly the
+  one pre-existing `fetchData` missing-dependency warning, zero new) — both
+  reproduced fresh this pass, not carried forward from the log.
+
+  **Quality gate (QA):** test plan written,
+  `agents/qa/test-plans/ENG-008.md` — all 8 acceptance criteria covered
+  (executed-via-fake-client, hand-traced, or inspected; none untestable),
+  failure-path table includes the allowlist-escalation shape and the new
+  `min_visit_payment` gap named rather than silently dropped. No open P0/P1
+  bug anywhere on this board.
+
+  **Receipts written:** `agents/principal-engineer/reviews/ENG-008.md`
+  (verdict `pass`, round 2), `agents/qa/test-plans/ENG-008.md`.
+  `links.review`/`links.test_plan` set on this ticket. `time_estimate`/
+  `time_spent`/`time_remaining` populated for the first time — round 1's
+  own observation had flagged these as never carried on this ticket despite
+  `definition-of-done.md` calling for them from `building` onward; closed
+  here rather than left for another pass to notice again.
+
+  **2 transitions** (`building → in-review → in-qa`), well under the cap of
+  4 — stopped deliberately, not by the cap: `config.yaml`'s `combined_hop`
+  licenses exactly `[code_review, quality]` together; security is a separate
+  hop by design (`sequential_after_quality`), needs this pass's own
+  just-written test plan, and `eng_build_loop.md` calls for a fresh session
+  there. `machine_wip` unaffected (`ENG-008` stays inside the counted
+  `ready`..`ready-to-ship` range). Approver-facing WIP and approval cap both
+  unaffected — no gate raised.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing to raise (a review/quality
+  pass isn't a gate item). **Observations/proposals filed:** none new —
+  the frontend-test-harness proposal and the shared-`any`-interface pattern
+  are both already tracked by this ticket's own prior entry and by
+  `ENG-013`'s today; the `min_visit_payment` gap is named in the review
+  receipt, not separately filed, per the reasoning above.
+
+  `chained: ENG-008` — `in-qa` is agent-owned (security next, fresh
+  session), not the approver, not blocked, not terminal, not held by a cap.
+  Firing `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-008`) and whole-board: see board index.

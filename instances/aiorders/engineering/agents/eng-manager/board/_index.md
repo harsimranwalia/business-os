@@ -10,7 +10,8 @@ advanced by one shallow step per pass.** This was 12 (the `max_5x` tier value)
 earlier the same day; see that file for the full rationale.
 
 **Currently 4/1 — over the new cap, but shrinking.** `ENG-009` and `ENG-010`
-sit at `ready`; `ENG-008` and `ENG-013` sit at `building` — all were already
+sit at `ready`; `ENG-008` and `ENG-013` both sit at `in-qa` (security next for
+both, fresh sessions) — all were already
 in flight when the cap changed and are **not** being reverted or paused; they
 drain naturally as each reaches `shipped`. `ENG-007` left this range this
 pass — found already merged on GitHub (no gate item ever raised; the
@@ -41,7 +42,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 
 | ID | Title | Project | State | Priority | Owner | Size | Updated |
 |---|---|---|---|---|---|---|---|
-| ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | building | | eng-manager | M | 2026-08-31 |
+| ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | in-qa | | eng-manager | M | 2026-08-31 |
 | ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | in-qa | | eng-manager | M | 2026-08-31 |
@@ -99,72 +100,6 @@ Cap: 3 across all gates. **0/3, fully clear.** `ENG-011`'s L1 merge request
 decision. `ENG-016` through `ENG-021` are also G1-drafted and ready to
 raise, deliberately left for a future pass rather than filling every open
 slot in one sweep — see `ENG-023`'s own ticket log for the reasoning.
-
-## 2026-08-31 — continue ENG-008: round 1's findings fixed, chained for review round 2
-
-`continue` event pass, context `ENG-008`. Narrow scope per the event's own
-contract (resume this ticket from its current state; no board-wide sweep).
-Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean.
-
-Found a second undocumented commit on `aiorders-api` (`dc6972a`, the missing
-test file round 1 asked for) — same cross-host shape `ENG-013` hit
-2026-08-30, but this time hand-tracing it against the review notebook (not
-just against the handler) found it incomplete: covered three of four named
-`hasInfluencerAdminAccess` cases and every field validation, but not the
-"missing/undefined profile" case or a test proving `EDITABLE_FIELDS`
-actually strips an unauthorized field from a mixed body. Closed both gaps:
-`hasInfluencerAdminAccess` now null-safe (optional chaining; confirmed not
-live-reachable today since `index.ts`'s router already 403s before any
-handler runs on a missing profile, fixed anyway to match this repo's own
-`loyalty-config.ts` precedent and close what round 1 explicitly asked for),
-plus two new tests. Independently re-confirmed the CORS/`PATCH` fix from the
-original build hop is still intact.
-
-Fixed the real bug properly rather than patching the symptom:
-`Influencers.tsx`'s `accepts_paid`/`accepts_barter` now pass through
-`openInfluencer` as `null` (dropping the `barter_visit` fallback entirely —
-hand-confirmed it never had a correct value to fall back to, since the
-migration's additive backfill guarantees `barter_visit` is null in every row
-where the new flags are also null), checkboxes render unchecked via
-`?? false` without mutating the stored form state, and
-`handleSaveInfluencer` now omits either field from the PATCH body while
-still `null` — an untouched unset preference survives any number of saves
-instead of getting overwritten with a guess. This is the stronger of the two
-fixes the review offered ("or track which the user actually touched"),
-required because the review's own regression-test wording ("neither is
-written unless the user checks it") isn't satisfiable by a blanket
-default alone. Also dropped the one cosmetic `Button variant="secondary"`
-change round 1 flagged but didn't block on.
-
-Self-tested with this repo's only available tools: `npm run build` clean,
-`npm run lint` 150 errors / 1 warning, both figures identical to this
-ticket's own recorded baseline, zero new. No automated frontend regression
-test exists to add — confirmed fresh that `aiorders-admin-hub` has no test
-framework, no `test` script, and zero test files anywhere in the repo;
-proposal filed (`proposals.md`) rather than standing up a test harness
-inside a bug-fix ticket. One observation filed (`observations.md`): a found
-commit needs checking against the finding it was meant to close, not only
-against the code.
-
-Both branches committed (automation identity `businesspilotcare-gif`,
-consistent with every prior commit on this ticket) and pushed:
-`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`. Frontmatter `branch:`
-and `updated:` refreshed.
-
-**0 net frontmatter transitions** — `state`/`owner` unchanged
-(`building`/`eng-manager`): fixing a failed review's findings is build work,
-and `in-review` is only reached by a fresh review-plus-quality session
-actually passing it. `machine_wip` unaffected, still 4/1 (draining
-naturally, unrelated to this pass). Approver-facing WIP and approval cap
-both unaffected — no gate touched.
-
-`chained: ENG-008` — `building` is agent-owned (the next hop is code review
-+ quality, combined, round 2), not the approver, not blocked, not terminal,
-not held by a cap. Fired
-`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
-before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: see below.
 
 ## 2026-08-31 — continue ENG-013: review+quality combined hop, round 2 — PASS, now in-qa
 
@@ -300,4 +235,46 @@ this pass (see ticket logs). `chained: none` for `ENG-014` — already
 queued; a second fire would not be a repair. Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
 clean, no `WAIVED:` lines.
+
+## 2026-08-31 — continue ENG-008: review+quality combined hop, round 2 — PASS, now in-qa
+
+`continue` event pass, context `ENG-008`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+Ran the code-review-gate and quality gates fresh, re-deriving both diffs
+from disk rather than trusting the prior pass's own account (clean diff
+against each repo's own merge-base, no main-drift pollution). Automatic-
+failure scan: 0/10 open — both round-1 findings independently re-verified:
+hand-traced all 19 `Deno.test` cases in `influencers.test.ts` against
+`influencers.ts` at HEAD (no `deno` on this host), and independently
+re-confirmed the frontend null-coalescing fix by re-reading the migration's
+additive backfill, not by trusting the fix-pass's own claim. One new,
+non-blocking (P3) finding from this round's own full review — not a round-1
+regression: `handleSaveInfluencer` can write a stale `min_visit_payment`
+after `accepts_paid` is toggled off, since the two fields are sent
+independently of each other. Named in the review receipt rather than filed,
+per this board's practice for a single-occurrence, non-blocking finding at
+this scale. Full detail: `agents/principal-engineer/reviews/ENG-008.md`,
+`agents/qa/test-plans/ENG-008.md`, and the ticket's own log.
+
+**2 transitions** (`building→in-review→in-qa`), well under the cap of 4 —
+stopped deliberately, not by the cap: security is a separate hop by design
+(`sequential_after_quality`), needing this pass's own just-written QA plan,
+and a fresh session is what `eng_build_loop.md` calls for there. `machine_wip`
+unaffected (`ENG-008` stays inside the counted `ready`..`ready-to-ship`
+range — now at `in-qa`, alongside `ENG-013`). Approver-facing WIP and
+approval cap both unaffected — no gate raised.
+
+Also populated `time_estimate`/`time_spent`/`time_remaining` on this ticket
+for the first time — round 1's own observation had flagged these as never
+carried despite `definition-of-done.md` calling for them from `building`
+onward; closed here rather than left for another pass to re-notice.
+
+`chained: ENG-008` — `in-qa` is agent-owned (security next, fresh session),
+not the approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
 

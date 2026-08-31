@@ -12,6 +12,72 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-008: round 1's findings fixed, chained for review round 2
+
+`continue` event pass, context `ENG-008`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+Found a second undocumented commit on `aiorders-api` (`dc6972a`, the missing
+test file round 1 asked for) — same cross-host shape `ENG-013` hit
+2026-08-30, but this time hand-tracing it against the review notebook (not
+just against the handler) found it incomplete: covered three of four named
+`hasInfluencerAdminAccess` cases and every field validation, but not the
+"missing/undefined profile" case or a test proving `EDITABLE_FIELDS`
+actually strips an unauthorized field from a mixed body. Closed both gaps:
+`hasInfluencerAdminAccess` now null-safe (optional chaining; confirmed not
+live-reachable today since `index.ts`'s router already 403s before any
+handler runs on a missing profile, fixed anyway to match this repo's own
+`loyalty-config.ts` precedent and close what round 1 explicitly asked for),
+plus two new tests. Independently re-confirmed the CORS/`PATCH` fix from the
+original build hop is still intact.
+
+Fixed the real bug properly rather than patching the symptom:
+`Influencers.tsx`'s `accepts_paid`/`accepts_barter` now pass through
+`openInfluencer` as `null` (dropping the `barter_visit` fallback entirely —
+hand-confirmed it never had a correct value to fall back to, since the
+migration's additive backfill guarantees `barter_visit` is null in every row
+where the new flags are also null), checkboxes render unchecked via
+`?? false` without mutating the stored form state, and
+`handleSaveInfluencer` now omits either field from the PATCH body while
+still `null` — an untouched unset preference survives any number of saves
+instead of getting overwritten with a guess. This is the stronger of the two
+fixes the review offered ("or track which the user actually touched"),
+required because the review's own regression-test wording ("neither is
+written unless the user checks it") isn't satisfiable by a blanket
+default alone. Also dropped the one cosmetic `Button variant="secondary"`
+change round 1 flagged but didn't block on.
+
+Self-tested with this repo's only available tools: `npm run build` clean,
+`npm run lint` 150 errors / 1 warning, both figures identical to this
+ticket's own recorded baseline, zero new. No automated frontend regression
+test exists to add — confirmed fresh that `aiorders-admin-hub` has no test
+framework, no `test` script, and zero test files anywhere in the repo;
+proposal filed (`proposals.md`) rather than standing up a test harness
+inside a bug-fix ticket. One observation filed (`observations.md`): a found
+commit needs checking against the finding it was meant to close, not only
+against the code.
+
+Both branches committed (automation identity `businesspilotcare-gif`,
+consistent with every prior commit on this ticket) and pushed:
+`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`. Frontmatter `branch:`
+and `updated:` refreshed.
+
+**0 net frontmatter transitions** — `state`/`owner` unchanged
+(`building`/`eng-manager`): fixing a failed review's findings is build work,
+and `in-review` is only reached by a fresh review-plus-quality session
+actually passing it. `machine_wip` unaffected, still 4/1 (draining
+naturally, unrelated to this pass). Approver-facing WIP and approval cap
+both unaffected — no gate touched.
+
+`chained: ENG-008` — `building` is agent-owned (the next hop is code review
++ quality, combined, round 2), not the approver, not blocked, not terminal,
+not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: see below.
+
 ## 2026-08-31 — continue ENG-023: tech design written, held at `designed` by the WIP cap
 
 `continue` event pass, context `ENG-023`. Narrow scope per the event's own
