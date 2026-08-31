@@ -6,17 +6,18 @@ type: feature
 size: M
 time_estimate: half a day to a couple of days
 time_spent: ~3h build, two code-review rounds (round 1 fail, round 2 pass),
-  plus the QA quality gate — all machine time; see log
-time_remaining: ~10-20min machine time — release-readiness (devops opens
-  the PR). After that it's the approver's own merge, on their own schedule
-  (L1). No approver time_impact.
+  the QA quality gate, the security gate, and release-readiness (two PRs
+  opened) — all machine time; see log
+time_remaining: none for the department. Waiting on the approver's own
+  merge of both PRs, on their own schedule (L1). No approver time_impact
+  beyond that merge.
 severity: P2
 priority:
-state: ready-to-ship
-owner: devops
+state: blocked
+owner: approver
 lane: full
-blocked_on:
-blocked_from:
+blocked_on: approver
+blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
 updated: 2026-08-31
@@ -33,6 +34,8 @@ links:
   security_review: agents/security/reviews/ENG-013.md
   release:
   pr:
+    aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/5
+    aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/4
 ---
 
 ## Input
@@ -1124,3 +1127,104 @@ Append-only. One line per state transition, newest last.
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`
   lines.
+
+- `2026-08-31` `ready-to-ship → blocked` (devops — `continue` event pass,
+  context `ENG-013`, this fire's own turn at the front of `traces/.pending`
+  reached — drained immediately after the `ENG-008` security-gate pass
+  ended, confirmed via `traces/eng-loop-2026-08-31.log`: `pass end: continue
+  (exit 0, 589s)` at `10:59:15` immediately followed by `draining queued
+  event: continue (ENG-013)` and `pass start: continue (ENG-013)` at
+  `10:59:16`). Narrow scope per the event's own contract (resume this ticket
+  from its current state; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: both exit 0, clean.
+
+  **Read the current `skills/release-runner/SKILL.md` before acting**, same
+  discipline `ENG-011`'s own equivalent hop used. Step 1's window check
+  doesn't apply — both `aiorders-api` and `aiorders-admin-hub` are
+  registered **L1** (`config/projects.md`) — so went straight to step 4.
+
+  **Verified all four upstream gates fresh from the receipt files, not
+  trusted from this ticket's own log summary**:
+  `agents/database/migrations/ENG-013-foodswipe-funnel-stage-control.md`
+  (**pass**), `agents/principal-engineer/reviews/ENG-013.md` (**pass**,
+  round 2), `agents/qa/test-plans/ENG-013.md` (**pass**),
+  `agents/security/reviews/ENG-013.md` (**PASS**). All four read in full,
+  not just their verdict lines.
+
+  **Worktrees.** Both `~/Documents/projects/_eng/{aiorders-api,
+  aiorders-admin-hub}` were clean, sitting on `ENG-008`'s branch (that
+  ticket's own `ready-to-ship` state, still awaiting its own devops hop) —
+  same shape every prior pass on this ticket found. Fetched both, checked
+  out `feat/ENG-013-foodswipe-funnel-stage-control`, diffed against
+  `origin/main`: `aiorders-api` at `c95b25b` (3 files, 387+/11-),
+  `aiorders-admin-hub` at `a1c3bdf` (2 files, 172+/5-) — both match this
+  ticket's own frontmatter exactly, no drift. Checked for an already-opened
+  PR before creating one, same caution `ENG-011` used: `gh pr list --head
+  feat/ENG-013-foodswipe-funnel-stage-control --state all` on both repos —
+  empty on both. None existed.
+
+  **Opened both PRs** (`gh pr create`): `aiorders-api`
+  https://github.com/harsimranwalia/aiorders-api/pull/5,
+  `aiorders-admin-hub`
+  https://github.com/harsimranwalia/aiorders-admin-hub/pull/4.
+  `aiorders-api` opened first (the frontend depends on its two new routes).
+  Each PR body states what it does, what it deliberately does not do,
+  uncertainties, what to review hardest, and this ticket's four gate
+  verdicts by file reference. Restored both worktrees to
+  `feat/ENG-008-influencer-admin-management` afterward (re-verified clean)
+  so `ENG-008`'s own in-flight state is undisturbed.
+
+  **Wrote the L1 merge-request item**
+  (`inbox/2026-08-31-eng013-merge-request.md`, `gate: merge`, `agent:
+  eng-manager`) carrying both PR links and all four gate verdicts by file
+  reference, plus the named non-blocking gaps (raw `error.message` on a
+  500; no audit trail; no live Postgres/frontend session exercised).
+  **Used `pr_urls:` as a YAML list of `{repo, url}` pairs**, per the
+  skill's current, corrected instruction — not the single delimited
+  `pr_url:` string `ENG-011`'s own item used before the approver caught
+  it. Ran `departments/engineering/lib/eng-notify.sh raise`: succeeded
+  cleanly this time (`traces/eng-notify-2026-08-31.log`: `sent: active`) —
+  unlike `ENG-011`'s recorded `SLACK_WEBHOOK_URL unset` gap. Stamped
+  `notified: 2026-08-31T11:05:16` (the trace log's own timestamp). State →
+  `blocked`, `blocked_on: approver`, `blocked_from: ready-to-ship`, owner
+  `devops → approver`. `links.pr` set to both PR URLs in frontmatter.
+
+  **Cap check before this transition, read fresh from `inbox/`'s actual
+  top-level contents**: one file present besides this pass's own new item —
+  `2026-08-30-eng-events-dropped.md` (`gate: incident`, ticket `ENG-023`,
+  out of this event's scope) — which does not count against the
+  G1/G2/G3/merge-request approval cap, consistent with the immediately
+  preceding `ENG-008` pass's own board header (0/3 with that same file
+  already present). Approver-facing WIP was 0/2, approval cap 0/3 going in.
+
+  **1 transition this pass** (`ready-to-ship → blocked`), well under the
+  cap of 4 — opening two PRs and writing the gate item is itself the real
+  work of this hop. **Consequence:** `machine_wip` 4/1 → 3/1 (`blocked`
+  sits outside the counted `ready`..`ready-to-ship` range — `ENG-009`,
+  `ENG-010` at `ready` and `ENG-008` at `ready-to-ship` remain inside it).
+  Approver-facing WIP 0/2 → 1/2; approval cap 0/3 → 1/3.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in
+  a valid, accounted-for state with the chain record below. `ENG-008` (the
+  ticket whose branch occupied both worktrees) untouched beyond the
+  clean-before/clean-after check.
+
+  **Notify sweep:** this pass's own gate item raised and stamped above.
+  Nothing else to nudge (the `ENG-023` incident item is a notice, not a
+  24h-nudge-eligible G-gate). Approval cap now 1/3, not full — no stall.
+
+  **Observation filed** (`observations.md`): `eng-notify.sh raise` sent
+  cleanly this pass with no gap reproduced, in direct contrast to
+  `ENG-011`'s recorded `SLACK_WEBHOOK_URL unset` failure at this identical
+  step two days earlier — worth a corroborating data point for whoever next
+  looks at that channel's reliability, not itself investigated further
+  here (out of this event's own narrow contract).
+
+  `chained: none` — `blocked`, `blocked_on: approver`. This is the human
+  gate the whole hop was driving toward; firing `continue ENG-013` again
+  would only queue against a ticket with nothing left for a machine to do
+  until the approver merges one or both PRs or replies to the gate item.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-013`) and whole-board: see pass notes below.
