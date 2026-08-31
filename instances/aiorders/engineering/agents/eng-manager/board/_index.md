@@ -48,7 +48,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | ready-to-ship | | devops | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-31 |
-| ENG-015 | Agency/reseller (partner) users — brand-scoped locations and a working add-location path | aiorders-admin-hub | designed | | architect | M | 2026-08-29 |
+| ENG-015 | Agency/reseller (partner) users — brand-scoped locations and a working add-location path | aiorders-admin-hub | designed | | architect | M | 2026-08-31 |
 | ENG-016 | Catering page — self-serve quote generator, with automatic stage update | config-site-builder | shaped | | product-manager | L | 2026-08-29 |
 | ENG-017 | Autopilot nurture for the presignup sales lead pipeline — stage-triggered email/SMS | aiorders-api | shaped | | product-manager | L | 2026-08-29 |
 | ENG-018 | Sales demonstration account — a fully seeded AIOrders environment to show prospects | aiorders-admin-hub | shaped | | product-manager | L | 2026-08-29 |
@@ -101,48 +101,6 @@ Cap: 3 across all gates. **0/3, fully clear.** `ENG-011`'s L1 merge request
 decision. `ENG-016` through `ENG-021` are also G1-drafted and ready to
 raise, deliberately left for a future pass rather than filling every open
 slot in one sweep — see `ENG-023`'s own ticket log for the reasoning.
-
-## 2026-08-31 — continue ENG-008: review+quality combined hop, round 2 — PASS, now in-qa
-
-`continue` event pass, context `ENG-008`. Narrow scope per the event's own
-contract (resume this ticket from its current state; no board-wide sweep).
-Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean.
-
-Ran the code-review-gate and quality gates fresh, re-deriving both diffs
-from disk rather than trusting the prior pass's own account (clean diff
-against each repo's own merge-base, no main-drift pollution). Automatic-
-failure scan: 0/10 open — both round-1 findings independently re-verified:
-hand-traced all 19 `Deno.test` cases in `influencers.test.ts` against
-`influencers.ts` at HEAD (no `deno` on this host), and independently
-re-confirmed the frontend null-coalescing fix by re-reading the migration's
-additive backfill, not by trusting the fix-pass's own claim. One new,
-non-blocking (P3) finding from this round's own full review — not a round-1
-regression: `handleSaveInfluencer` can write a stale `min_visit_payment`
-after `accepts_paid` is toggled off, since the two fields are sent
-independently of each other. Named in the review receipt rather than filed,
-per this board's practice for a single-occurrence, non-blocking finding at
-this scale. Full detail: `agents/principal-engineer/reviews/ENG-008.md`,
-`agents/qa/test-plans/ENG-008.md`, and the ticket's own log.
-
-**2 transitions** (`building→in-review→in-qa`), well under the cap of 4 —
-stopped deliberately, not by the cap: security is a separate hop by design
-(`sequential_after_quality`), needing this pass's own just-written QA plan,
-and a fresh session is what `eng_build_loop.md` calls for there. `machine_wip`
-unaffected (`ENG-008` stays inside the counted `ready`..`ready-to-ship`
-range — now at `in-qa`, alongside `ENG-013`). Approver-facing WIP and
-approval cap both unaffected — no gate raised.
-
-Also populated `time_estimate`/`time_spent`/`time_remaining` on this ticket
-for the first time — round 1's own observation had flagged these as never
-carried despite `definition-of-done.md` calling for them from `building`
-onward; closed here rather than left for another pass to re-notice.
-
-`chained: ENG-008` — `in-qa` is agent-owned (security next, fresh session),
-not the approver, not blocked, not terminal, not held by a cap. Fired
-`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
-before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
 
 ## 2026-08-31 — continue ENG-013: security gate — PASS, now ready-to-ship
 
@@ -243,4 +201,76 @@ unaffected — no gate raised.
 `ENG-008`/`ENG-009`/`ENG-010`/`ENG-013` occupying), one of the documented
 no-chain conditions. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 scoped (`ENG-014`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+## 2026-08-31 — continue ENG-015: design actually written — PASS, stays at designed (WIP-capped)
+
+`continue` event pass, context `ENG-015`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+This is the design work three prior passes recorded chaining to and none of
+them actually reached — confirmed at pass start: `ENG-015` absent from
+`traces/.pending` (already drained to launch this session); no design file
+existed at `agents/architect/designs/ENG-015-*.md`. Mode check clean.
+Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-015`) and whole-board: both exit 0, clean.
+
+Read the real code across both repos this ticket touches — `aiorders-api`'s
+`admin-portal/handlers/restaurants.ts` (all four functions, not only the one
+the PRD's Evidence section named), `brands.ts`, `_shared/restaurantAccess.ts`,
+`proxy-login/index.ts`, every migration touching `restaurants`'/`brands`'
+RLS, and `admin-portal/index.ts`'s auth middleware; `aiorders-admin-hub`'s
+`AddRestaurantModal.tsx`, `AuthContext.tsx`, `Brands.tsx`,
+`PartnerBrandAssignment.tsx`, `Restaurants.tsx` — rather than trusting the
+PRD's summary. Wrote
+`agents/architect/designs/ENG-015-agency-reseller-brand-scoping.md`: one
+local helper pair in `restaurants.ts` (`isStaff`, `getPartnerBrandIds`)
+applied to `getRestaurants`/`getRestaurantById`/`updateRestaurant`; one new
+`INSERT` policy migration on `restaurants` (brand-scoped, `WITH CHECK
+(approved = false)`); one small `AddRestaurantModal.tsx` change.
+
+**Tracing the RLS history changed the design from what the PRD proposed.**
+The PRD suggested mirroring `brands.ts`'s client-branch pattern for the read
+fix. Three migrations after the one the PRD cited already locked
+`restaurants`' public SELECT down to `USING (false)` — that branch would
+return zero rows for a partner today, not their own brand's rows. Separately
+`brands` has zero RLS policies in tracked migration history at all, the same
+untracked-schema-history gap the PRD already names for `profiles`/
+`influencers`, now confirmed for a second table. Designed around both
+findings — brand scoping enforced in code via the service-role client, not
+by trusting either table's RLS. `ADR-006` records the decision; judged
+reversible and not a one-way door, same precedent `ADR-004`/`ADR-005` set —
+**no G2**.
+
+**Extended the fix to two functions the PRD's Evidence section didn't
+name** (`getRestaurantById`, `updateRestaurant` — same file, same defect,
+reachable today by a partner via a direct call, squarely inside AC2's own
+wording), logged as a deliberate scope decision rather than silently
+expanded or silently left open. **Found a third, unrelated defect in the
+same file** (`updateBrandOwner()` — no role/ownership check at all, any
+partner can rewrite any brand owner's contact info) — different resource
+than this PRD describes, not folded in; filed as a proposal in
+`agents/eng-manager/proposals.md` (architect-originated finding, step 3)
+instead.
+
+**Stays at `designed` regardless — held by the machine WIP cap, not a
+gate.** Re-verified fresh from each ticket's own frontmatter: `ENG-008`
+(`in-qa`), `ENG-009`/`ENG-010` (`ready`), `ENG-013` (`ready-to-ship`) — four
+tickets inside the counted `ready`..`ready-to-ship` range against a cap of
+1, unchanged since this morning's `scheduled` sweep. Design work itself is
+exempt from this cap; entering `ready` is not, so this pass does not
+attempt it — no branch created in either worktree, no code written.
+
+Closes the chain gap the `scheduled` sweep flagged this morning against
+this ticket specifically: `ENG-015` was sitting at `designed`
+*un-designed*, not cap-held-after-completion. As of this pass it's
+genuinely the latter.
+
+**0 transitions** — ticket stays at `designed`; the cap, not the hop
+budget, is what stopped it. Machine WIP unaffected (still 4/1, `ENG-015`
+was never inside the counted range). Approver-facing WIP and approval cap
+both unaffected — no gate raised.
+
+`chained: none` — held by the machine WIP cap (4/1:
+`ENG-008`/`ENG-009`/`ENG-010`/`ENG-013` occupying), one of the documented
+no-chain conditions. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-015`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
 

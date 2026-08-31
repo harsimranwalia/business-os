@@ -12,6 +12,48 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-008: review+quality combined hop, round 2 — PASS, now in-qa
+
+`continue` event pass, context `ENG-008`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+Ran the code-review-gate and quality gates fresh, re-deriving both diffs
+from disk rather than trusting the prior pass's own account (clean diff
+against each repo's own merge-base, no main-drift pollution). Automatic-
+failure scan: 0/10 open — both round-1 findings independently re-verified:
+hand-traced all 19 `Deno.test` cases in `influencers.test.ts` against
+`influencers.ts` at HEAD (no `deno` on this host), and independently
+re-confirmed the frontend null-coalescing fix by re-reading the migration's
+additive backfill, not by trusting the fix-pass's own claim. One new,
+non-blocking (P3) finding from this round's own full review — not a round-1
+regression: `handleSaveInfluencer` can write a stale `min_visit_payment`
+after `accepts_paid` is toggled off, since the two fields are sent
+independently of each other. Named in the review receipt rather than filed,
+per this board's practice for a single-occurrence, non-blocking finding at
+this scale. Full detail: `agents/principal-engineer/reviews/ENG-008.md`,
+`agents/qa/test-plans/ENG-008.md`, and the ticket's own log.
+
+**2 transitions** (`building→in-review→in-qa`), well under the cap of 4 —
+stopped deliberately, not by the cap: security is a separate hop by design
+(`sequential_after_quality`), needing this pass's own just-written QA plan,
+and a fresh session is what `eng_build_loop.md` calls for there. `machine_wip`
+unaffected (`ENG-008` stays inside the counted `ready`..`ready-to-ship`
+range — now at `in-qa`, alongside `ENG-013`). Approver-facing WIP and
+approval cap both unaffected — no gate raised.
+
+Also populated `time_estimate`/`time_spent`/`time_remaining` on this ticket
+for the first time — round 1's own observation had flagged these as never
+carried despite `definition-of-done.md` calling for them from `building`
+onward; closed here rather than left for another pass to re-notice.
+
+`chained: ENG-008` — `in-qa` is agent-owned (security next, fresh session),
+not the approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — scheduled (launchd): three broken chains repaired (ENG-014/015/025), attempt 2/3 on this event
 
 `scheduled` event pass, context `launchd` — the four-times-daily safety-net
