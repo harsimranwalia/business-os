@@ -12,6 +12,57 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-30 — continue ENG-013: the missing test already existed, found undocumented rather than written
+
+`continue` event pass, context `ENG-013` — the re-fire from the `scheduled`
+sweep above. Narrow scope per the event's own contract (resume this ticket
+from its current state; no board-wide sweep). Mode check clean. Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+whole-board: both exit 0, clean.
+
+Went to write the Deno test file round 1's code review asked for and found
+one already on the branch: `foodswipe.test.ts`, commit `c95b25b`, same
+automation identity (`businesspilotcare-gif`) as the ticket's own recorded
+build commit, already pushed. Nothing in tracked state knew about it — not
+this ticket's own log, not `business-os`'s own `git log` (`main` confirmed
+0/0 with `origin/main`), not either dated trace log on this host. Root
+cause, per `proposals.md`'s existing 2026-08-29 row: this instance runs on
+two hosts and `traces/` is host-local and `.gitignore`d, so a pass that ran
+on the other host, did the work, and pushed it leaves nothing here if it
+never reached (or never pushed) its own ticket-log update. `deno` isn't
+installed on this Mac host at all, so verification was by hand: read both
+files in full and traced all 17 new test cases against the live handler
+logic, confirming they correctly cover the three gaps round 1 named
+(access-gate negative case, stage validation, `source='foodswipe'`
+tenant-scoping) with no bugs found. Accepted the existing commit rather than
+duplicating it; added a short PR-body addendum on the ticket noting the
+file and two small additive fixes it carries (exported types, a
+`Boolean(...)` wrap with no behavior change). Full investigation and
+verification detail on `ENG-013`'s own ticket log.
+
+**0 net frontmatter transitions** — `state` was `building` at pass start and
+remains `building`: the work was already complete before this pass began,
+so there was no further machine-owned state to advance into within this
+same session regardless (`eng_build_loop.md`'s "a pass stops after
+`building` on purpose" is state-based, not effort-based). `machine_wip`,
+approver-facing WIP, and approval cap all unaffected — no gate raised or
+resolved.
+
+**Proposal filed** (`proposals.md`): a build hop has no step that checks a
+ticket's recorded commit hash(es) against its remote branch before assuming
+code still needs writing — cheap to add (`git log {hash}..origin/{branch}`
+per linked repo), and would have surfaced this in one command instead of a
+multi-step investigation. Distinct from the existing 2026-08-29 row (that
+one is about a dropped-event incident item lacking detail; this is about a
+pass that finished correctly and left no incident at all).
+
+`chained: ENG-013` — `building` is agent-owned (the review+quality combined
+hop is next), not the approver, not blocked, not terminal, not held by a
+cap. Fired `/bin/zsh departments/engineering/lib/eng-trigger.sh continue
+ENG-013` before exiting. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-30 — continue ENG-008: code review round 1 FAIL, bounced to building
 
 `continue` event pass, context `ENG-008` — this fire's own turn at the front

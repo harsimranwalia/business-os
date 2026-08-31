@@ -44,7 +44,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | building | | eng-manager | M | 2026-08-31 |
 | ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
-| ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | building | | eng-manager | M | 2026-08-30 |
+| ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | in-qa | | eng-manager | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-29 |
 | ENG-015 | Agency/reseller (partner) users — brand-scoped locations and a working add-location path | aiorders-admin-hub | designed | | architect | M | 2026-08-29 |
 | ENG-016 | Catering page — self-serve quote generator, with automatic stage update | config-site-builder | shaped | | product-manager | L | 2026-08-29 |
@@ -99,57 +99,6 @@ Cap: 3 across all gates. **0/3, fully clear.** `ENG-011`'s L1 merge request
 decision. `ENG-016` through `ENG-021` are also G1-drafted and ready to
 raise, deliberately left for a future pass rather than filling every open
 slot in one sweep — see `ENG-023`'s own ticket log for the reasoning.
-
-## 2026-08-30 — continue ENG-013: the missing test already existed, found undocumented rather than written
-
-`continue` event pass, context `ENG-013` — the re-fire from the `scheduled`
-sweep above. Narrow scope per the event's own contract (resume this ticket
-from its current state; no board-wide sweep). Mode check clean. Pre-pass
-`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
-whole-board: both exit 0, clean.
-
-Went to write the Deno test file round 1's code review asked for and found
-one already on the branch: `foodswipe.test.ts`, commit `c95b25b`, same
-automation identity (`businesspilotcare-gif`) as the ticket's own recorded
-build commit, already pushed. Nothing in tracked state knew about it — not
-this ticket's own log, not `business-os`'s own `git log` (`main` confirmed
-0/0 with `origin/main`), not either dated trace log on this host. Root
-cause, per `proposals.md`'s existing 2026-08-29 row: this instance runs on
-two hosts and `traces/` is host-local and `.gitignore`d, so a pass that ran
-on the other host, did the work, and pushed it leaves nothing here if it
-never reached (or never pushed) its own ticket-log update. `deno` isn't
-installed on this Mac host at all, so verification was by hand: read both
-files in full and traced all 17 new test cases against the live handler
-logic, confirming they correctly cover the three gaps round 1 named
-(access-gate negative case, stage validation, `source='foodswipe'`
-tenant-scoping) with no bugs found. Accepted the existing commit rather than
-duplicating it; added a short PR-body addendum on the ticket noting the
-file and two small additive fixes it carries (exported types, a
-`Boolean(...)` wrap with no behavior change). Full investigation and
-verification detail on `ENG-013`'s own ticket log.
-
-**0 net frontmatter transitions** — `state` was `building` at pass start and
-remains `building`: the work was already complete before this pass began,
-so there was no further machine-owned state to advance into within this
-same session regardless (`eng_build_loop.md`'s "a pass stops after
-`building` on purpose" is state-based, not effort-based). `machine_wip`,
-approver-facing WIP, and approval cap all unaffected — no gate raised or
-resolved.
-
-**Proposal filed** (`proposals.md`): a build hop has no step that checks a
-ticket's recorded commit hash(es) against its remote branch before assuming
-code still needs writing — cheap to add (`git log {hash}..origin/{branch}`
-per linked repo), and would have surfaced this in one command instead of a
-multi-step investigation. Distinct from the existing 2026-08-29 row (that
-one is about a dropped-event incident item lacking detail; this is about a
-pass that finished correctly and left no incident at all).
-
-`chained: ENG-013` — `building` is agent-owned (the review+quality combined
-hop is next), not the approver, not blocked, not terminal, not held by a
-cap. Fired `/bin/zsh departments/engineering/lib/eng-trigger.sh continue
-ENG-013` before exiting. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
-whole-board: both exit 0, clean, no `WAIVED:` lines.
 
 ## 2026-08-31 — continue ENG-023: tech design written, held at `designed` by the WIP cap
 
@@ -266,4 +215,48 @@ not held by a cap. Fired
 `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
 before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 scoped (`ENG-008`) and whole-board: see below.
+
+## 2026-08-31 — continue ENG-013: review+quality combined hop, round 2 — PASS, now in-qa
+
+`continue` event pass, context `ENG-013`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+Ran the code-review-gate and quality gates fresh — no receipt existed for
+either at pass start, so unlike `ENG-007`'s/`ENG-011`'s own recovery passes
+this was a real first execution, not a discovery of already-completed work.
+Automatic-failure scan: 0/10 open — round 1's #10 (no failure-case test on
+the new authz-gated write path) is closed by `foodswipe.test.ts`, with the
+`source='foodswipe'` scoping test confirmed mutation-sensitive (a fake
+client records every `.eq()` call, so removing that scoping line would fail
+the test for the reason it exists, not incidentally). `npm run
+lint`/`npm run build` (`aiorders-admin-hub`) reproduced fresh, both clean
+against this ticket's own recorded baseline. `deno test` could not execute
+on this host (deno absent, `aiorders-api` has no registered suite command)
+— hand-traced all 17 cases against the code at HEAD instead, independently
+of the prior pass's own trace, zero discrepancies, named plainly as
+corroborating evidence rather than a green run. QA plan written covering
+all five acceptance criteria. Full detail: `agents/principal-engineer/reviews/ENG-013.md`,
+`agents/qa/test-plans/ENG-013.md`, and the ticket's own log.
+
+**2 transitions** (`building→in-review→in-qa`), well under the cap of 4 —
+stopped deliberately, not by the cap: `config.yaml`'s `combined_hop`
+licenses exactly `[code_review, quality]` together; security is a
+separate hop by design (`sequential_after_quality`), needing QA's just-
+written plan, and a fresh session is what `eng_build_loop.md` calls for
+there. `machine_wip` unaffected (`ENG-013` stays inside the counted
+`ready`..`ready-to-ship` range). Approver-facing WIP and approval cap both
+unaffected — no gate raised.
+
+**Observation filed** (`observations.md`): the existing Supabase-MCP
+substitute-verification proposal (2026-08-29) does not cover this ticket's
+own deno-unavailable gap — different tool, no substitute execution path
+exists; a prior pass's note conflated the two.
+
+`chained: ENG-013` — `in-qa` is agent-owned (security next), not the
+approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
 
