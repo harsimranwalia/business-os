@@ -12,6 +12,97 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — scheduled (launchd): three broken chains repaired (ENG-014/015/025), attempt 2/3 on this event
+
+`scheduled` event pass, context `launchd` — the four-times-daily safety-net
+sweep, whole-board per this event's own contract. This fire is attempt 2/3
+of the `scheduled` event: attempt 1 (02:45–02:56) ran a real 647s
+investigation, reached the same conclusion below, then died exit 1 on the
+account's monthly spend limit at the moment it tried to act — correctly not
+treated as "never started" (real output, real duration) and correctly
+re-queued rather than dropped. This pass independently re-verified
+everything from disk rather than trusting that narrative, per this
+instance's own standing practice.
+
+Mode check clean (business-os `.env` → `MODE=active`; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Gate returns:** `inbox/` holds one item, `2026-08-30-eng-events-dropped.md`
+(incident, no `decision:` field) — already self-investigated same-day,
+concluding the two causes (OAuth token revoked, transient DNS failure) were
+host/network issues unrelated to `ENG-023`. Left in place, not archived:
+every prior `eng-events-dropped` item on this board (`decision-journal.md`
+rows 22, 35) moved to `_handled/` only once the approver actually answered
+it; this one never has, and "never infer approval from silence" applies to
+archiving an incident item as much as to advancing a ticket. Not blocking
+anything — `gate: incident` items don't occupy the approver-facing WIP or
+approval-cap counts. PM inbox and EM inbox both empty (only `_handled/`) —
+nothing for business or technical intake this pass.
+
+**Merge detection:** no ticket currently at `state: blocked` (confirmed by
+grepping every ticket's own frontmatter, not the board header) — nothing to
+check against `origin/main`.
+
+**Dead-end sweep — the substantive finding.** Investigated
+`agents/architect/designs/` directly after the `continue ENG-023` entry
+above filed an observation that `ENG-014`/`ENG-015` were cited as
+`designed`-by-WIP-cap precedent without actually having a design file.
+Confirmed and extended: **`ENG-014`, `ENG-015`, and `ENG-025` all have no
+design file, and none of them has ever had a `continue` pass actually run**
+— grepped every `traces/eng-loop-*.log` this instance has ever written for
+`pass start: continue (ENG-014|ENG-015|ENG-025)` (exact format confirmed
+live against `ENG-008`'s and `ENG-013`'s own successful runs earlier today):
+zero matches, for any of the three, ever. `ENG-014` and `ENG-015` each
+carry a ticket-log entry from 2026-08-29 that already found and repaired
+this once (the original `watch`-pass fire died before launching; a later
+`decision` pass re-fired it and confirmed it landed in `traces/.pending`)
+— so this is a *second*, different loss of the same two chains, this time
+between a confirmed append and an actual drain, with no code read yet that
+explains how. `ENG-025` never had that intermediate repair at all. None of
+the three ever produced an `eng-events-dropped` incident, because that
+mechanism only fires on a launch that fails or never-starts — this loss
+happens earlier, between append and drain, so today's board-reading safety
+net is currently the only thing that catches it, and it took two days on a
+`P1` security ticket (`ENG-015`).
+
+**Action taken.** `continue ENG-014` was already sitting in
+`traces/.pending` at this pass's start — left alone rather than double-fired
+(collapses harmlessly at worst; firing blind into a possibly-already-stuck
+entry doesn't diagnose anything). `continue ENG-015` and `continue ENG-025`
+were not queued — fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015` and
+`continue ENG-025` directly, each confirmed on `traces/.pending` afterward
+rather than assumed. All three now queue behind `ENG-008`/`ENG-013`
+(already queued, unrelated) and will drain one pass at a time once this
+pass releases the lock. Full reasoning on each of the three tickets' own
+logs.
+
+**Filed, not fixed:** `agents/eng-manager/proposals.md` — the dispatch gap
+itself (append confirmed, drain never happens, no drop-notice either) is
+department machinery, not a ticket-shaped change, and this instance's own
+rule reserves that class of fix for the approver's sign-off. Corroborating
+row in `observations.md`, cross-referencing the architect's own `ENG-023`
+observation this same day.
+
+**Notify sweep:** nothing new to raise — no gate opened this pass, and the
+one open incident item is well past any nudge threshold but explicitly
+exempt (see Gate returns above; it isn't a decision awaiting an answer in
+the G1/G2/G3/merge sense the nudge rule targets). Approval cap 0/3, not
+full — no stall.
+
+**Caps, re-verified fresh:** machine WIP still 4/1 (`ENG-008`/`ENG-013`
+`building`, `ENG-009`/`ENG-010` `ready`) — unaffected by any action this
+pass (all three repairs stay at `designed`, below the cap's own range).
+Approver-facing WIP 0/2, approval cap 0/3 — both unaffected, no gate raised
+or answered.
+
+`chained: ENG-015`, `chained: ENG-025` — both fired and confirmed queued
+this pass (see ticket logs). `chained: none` for `ENG-014` — already
+queued; a second fire would not be a repair. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — continue ENG-013: review+quality combined hop, round 2 — PASS, now in-qa
 
 `continue` event pass, context `ENG-013`. Narrow scope per the event's own

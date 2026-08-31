@@ -16,15 +16,15 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-31
 branch:
 depends_on: []
 blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-014-restaurant-qr-media-self-service.md
-  design:
-  adrs: []
+  design: agents/architect/designs/ENG-014-restaurant-qr-media-self-service.md
+  adrs: [ADR-005]
   review:
   test_plan:
   security_review:
@@ -359,3 +359,95 @@ Append-only. One line per state transition, newest last.
   `chained: none` — the ticket already has a queued fire; adding another
   is not a repair. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-014`) and whole-board: both exit 0, clean.
+
+- `2026-08-31` `designed` (no state change — design work actually done this
+  time), `continue` event pass, context `ENG-014`. Narrow scope per the
+  event's own contract (resume this ticket from its current state; no
+  board-wide sweep). This session is the dedicated `continue ENG-014` run
+  three prior passes recorded chaining to and none of them actually reached —
+  confirmed at pass start: `ENG-014` is absent from `traces/.pending`
+  (already drained to launch this session), and the 2026-08-31 `scheduled`
+  entry above independently found zero `pass start: continue (ENG-014)` lines
+  in any trace log, ever, before now. Mode check clean (business-os `.env` →
+  `MODE=active`; instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-014`) and
+  whole-board: both exit 0, clean.
+
+  **Design work done, for real this time.** Read the actual code across all
+  three repos this ticket touches rather than trusting the PRD's own summary:
+  `aiorders-api`'s `url-shortener/index.ts` (confirmed the blanket
+  `verifyAdminAccess` gate and the existing `redirect` public carve-out),
+  `_shared/restaurantAccess.ts` and `brand-portal/utils.ts` (two independent
+  copies of `verifyRestaurantAccess`, confirmed why: `_shared`'s own comment
+  says it exists so functions that deploy independently don't cross-import),
+  `brand-portal/restaurants.ts` and `index.ts` (the `get_custom_reports`
+  pattern this design's new action mirrors), and on the frontend side
+  `qrUtils.ts`, `BagInsertGenerator.tsx`, and `A4PosterGenerator.tsx` in
+  `aiorders-admin-hub` (found the same list-then-create QR logic hand-rolled
+  three separate times, each building its own `destination_url`), plus
+  `RestaurantDetails.tsx` (exact props passed to each generator) and
+  `restaurant-portal`'s own `RestaurantContext.tsx`, `brandPortalApi.ts`, and
+  `Sidebar.tsx`/`App.tsx` (confirmed `currentRestaurant` carries no
+  `website`/`logo_url` today — a real gap the design has to close, not an
+  assumption).
+
+  **Design written:**
+  `agents/architect/designs/ENG-014-restaurant-qr-media-self-service.md`. One
+  new restaurant-scoped action on `url-shortener`
+  (`get_or_create_restaurant_qr`, gated by `verifyRestaurantAccess` instead of
+  admin, computing its own `destination_url` server-side rather than trusting
+  one from the caller — the detail that actually makes the scoping mean
+  something); one new read action on `brand-portal`
+  (`get_restaurant_media_info`) for the two fields the portal's existing
+  restaurant data doesn't carry; both generator components ported into
+  `restaurant-portal` (no shared package exists across these four repos to
+  import from instead). `touches_data: false` — no migration, no new table or
+  column. `touches_models: false` — no AI/LLM surface in this ticket.
+
+  **One ADR, no G2.** `ADR-005` records narrowing `url-shortener`'s trust
+  boundary per-action rather than per-function — a real "why on earth" a
+  future engineer would ask, but reversible and following an existing
+  in-repo pattern (`_shared/restaurantAccess.ts`), so decided and logged
+  rather than escalated. No new datastore, vendor, or auth model; no one-way
+  door. **Moves straight through `designed`, no G2** — same precedent
+  `ENG-011`/`ENG-013` set.
+
+  **Stays at `designed` anyway — held by the machine WIP cap, not a gate.**
+  Verified fresh from each ticket's own frontmatter rather than the board's
+  cached header: `ENG-008` (`in-qa`), `ENG-009` (`ready`), `ENG-010`
+  (`ready`), and `ENG-013` (`ready-to-ship`) are all currently inside the
+  counted `ready`..`ready-to-ship` range — **machine WIP 4/1, over cap** — and
+  `_index.md`'s own header already names `ENG-014` through `ENG-025` as held
+  by it until that count clears. This design does not attempt to push
+  `ENG-014` into `ready` on top of that; per `eng_build_loop.md` step 6,
+  shaping/design work is exempt from the cap, but entering `ready` is not.
+
+  **Closes the specific ambiguity flagged against this ticket.** The
+  architect's own `ENG-023` observation (2026-08-31) and the `scheduled`
+  sweep above both named `ENG-014`/`ENG-015` as sitting at `designed`
+  *un-designed*, not cap-held-after-completion — the two sub-states
+  `designed` conflates. That's resolved for `ENG-014` specifically as of this
+  pass: the design file now exists and is real; `ENG-014` is now genuinely in
+  the cap-held-after-completion sub-state. `ENG-015` is untouched (out of
+  scope — this event names `ENG-014` only) and remains in the other
+  sub-state until its own `continue` pass runs.
+
+  **Dead-end sweep (scoped to this ticket only, per this event's own
+  contract):** none needed beyond the cap re-verification above.
+
+  **Notify sweep:** nothing raised — no gate opened this pass (no G2), so
+  nothing to notify or nudge. Approval cap unaffected.
+
+  **Observations filed** (`observations.md`): closing the loop on the
+  architect's own 2026-08-31 `ENG-023` observation for `ENG-014` specifically;
+  the admin-hub QR/media destination-URL construction being hand-rolled three
+  times independently, and this design adding a fourth (server-side, this
+  time) rather than consolidating all four — named as a pre-existing,
+  out-of-proportion-to-this-ticket pattern, not fixed here.
+
+  `chained: none` — held by the machine WIP cap (4/1: `ENG-008`/`ENG-009`/
+  `ENG-010`/`ENG-013` occupying), not waiting on the approver and not
+  blocked, but explicitly one of the documented no-chain conditions
+  ("held by a cap (WIP or approvals)"). Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-014`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
