@@ -8,17 +8,17 @@ time_estimate: half a day to a couple of days
 time_spent: not separately clocked — build, review, QA, security and the
   database gate all completed in an unrecorded prior pass (see Log); read as
   most of the estimate consumed
-time_remaining: ~0 build time; merge and verify remain
+time_remaining: 0 — merged both repos, verified, terminal
 severity: P3
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: product-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-30
 branch: feat/ENG-011-client-stage-health-visibility (same name, both repos)
 depends_on: []
 blocks: []
@@ -30,7 +30,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-011.md
   test_plan: agents/qa/test-plans/ENG-011.md
   security_review: agents/security/reviews/ENG-011.md
-  release:
+  release: agents/devops/releases/2026-08-30-ENG-011-aiorders-api-and-admin-hub.md
   pr: "aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/3 | aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/3"
 ---
 
@@ -622,3 +622,92 @@ Append-only. One line per state transition, newest last.
   the approver merges one or both PRs or replies to the gate item. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
   whole-board: see pass notes.
+
+- `2026-08-30` `blocked → shipped → verified` (`scheduled` event pass,
+  context `launchd`) — merge detection, per `eng_build_loop.md` step 5.
+  Neither PR's own merge-request item text required a reply ("Merge whenever
+  suits you on GitHub directly... the next build-loop pass detects each merge
+  itself") and none came — `decision:` is still empty on
+  `inbox/2026-08-29-eng011-merge-request.md`. The approver merged both
+  directly instead, exactly as that item invited.
+
+  **Both repos confirmed independently, mechanically, before anything else
+  moved** — per step 5's own "a multi-repo ticket advances only once every
+  repo's branch has merged":
+  ```
+  # aiorders-api
+  $ git merge-base --is-ancestor origin/feat/ENG-011-client-stage-health-visibility origin/main
+  YES ancestor
+  $ gh pr view 3 --json state,mergedAt   → MERGED, 2026-08-30T00:12:50Z
+
+  # aiorders-admin-hub
+  $ git fetch origin feat/ENG-011-client-stage-health-visibility
+  $ git merge-base --is-ancestor origin/feat/ENG-011-client-stage-health-visibility origin/main
+  YES ancestor
+  $ gh pr view 3 --json state,mergedAt   → MERGED, 2026-08-30T00:13:30Z
+  ```
+  Both merged within 40 seconds of each other — the approver working through
+  both PRs back to back, same evening as `ENG-007`'s own out-of-band merge on
+  the other repo. **Only once both confirmed** did this pass treat the ticket
+  as shippable — one repo merging without the other would have left it
+  `blocked`, per the ticket's own multi-repo status (`ENG-011` is this
+  board's first two-repo ticket).
+
+  **Verified all three gate receipts fresh from disk**:
+  `agents/principal-engineer/reviews/ENG-011.md`,
+  `agents/qa/test-plans/ENG-011.md`, `agents/security/reviews/ENG-011.md`, plus
+  the migration receipt (`agents/database/migrations/ENG-011-client-stage-health-visibility.md`)
+  named in the merge-request item — all present.
+  `departments/engineering/lib/eng-gate-check.sh ENG-011`: exit 0, clean,
+  checked before advancing past `blocked`, not after.
+
+  **Acted as devops, closing `shipped`'s exit condition for what two L1
+  projects with no CI/CD can actually attest to.** `.github/workflows/`
+  absent from both `origin/main`s — no auto-deploy on either repo. Neither
+  worktree has deploy credentials (no `SUPABASE_ACCESS_TOKEN` for the API
+  side; no Cloudflare token for admin-hub), so whether either side is
+  actually live is genuinely unknown from here — recorded as unknown on both,
+  not inferred, same discipline `ENG-005` and `ENG-006` used for their own
+  Cloudflare/Supabase gaps. One release record for both repos (this is one
+  ticket, not two — same "one gate item per ticket" reasoning the merge
+  request itself used): `agents/devops/releases/2026-08-30-ENG-011-aiorders-api-and-admin-hub.md`.
+
+  **Acted as product-manager, confirming acceptance criteria against both
+  merged trees** (`agents/product-manager/specs/ENG-011-client-stage-health-visibility.md`):
+  AC1/3/4/6 (stage displayed, filter applies, filter clears, non-staff
+  rejected) are exercised by the 12/12 unit tests QA already ran, unchanged
+  on either `origin/main` (`git diff` against each reviewed branch tip:
+  empty on both repos). AC2 (stage alone tells staff "is this a client")
+  is a read of the same stage field, not separately testable. **AC5 (health
+  indicator) carries the same gap QA and security already named at their own
+  gates** — no live Brands-page load or live frontend session was exercised
+  pre-merge (host has no Docker/psql/supabase CLI, admin-hub worktree has no
+  `.env`), and nothing available to this department post-merge closes that
+  gap either. Carried forward explicitly, not silently claimed — same
+  standard `ENG-006` applied to its own OTP-dependent ACs. PRD
+  `status: designed → verified`.
+
+  **Gate item closed out.** `inbox/2026-08-29-eng011-merge-request.md` moved
+  to `inbox/_handled/` with a processed footer — `decision:` stays empty on
+  record (never answered), the merge itself is what's recorded as the
+  decision, matching `ENG-002`'s precedent exactly. Journaled in
+  `agents/eng-manager/config/decision-journal.md`.
+
+  **2 transitions** (`blocked → shipped → verified`), well under the cap of
+  4. Approver-facing WIP 1/2 → 0/2 (this was the one occupied slot).
+  Approval cap 1/3 → 0/3 (this was the one occupied slot — both caps now
+  fully clear). `machine_wip`: `ENG-011` was already outside the counted
+  `ready..ready-to-ship` range (`blocked`), so no change there, but combined
+  with `ENG-007` leaving the same sweep, the board's over-cap count is now
+  materially closer to its limit of 1.
+
+  **Observation filed** (`observations.md`): fourth occurrence of a direct,
+  out-of-band GitHub merge (`ENG-002`, `ENG-006`, `ENG-007` earlier this same
+  sweep, now this) and the second multi-repo confirmation this department has
+  ever had to do — both PRs merged 40 seconds apart suggests the approver
+  reviews a ticket's linked PRs together as one unit, matching how this
+  department already presents them (one merge-request item, both PR links).
+
+  `chained: none` — `verified` is terminal. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.

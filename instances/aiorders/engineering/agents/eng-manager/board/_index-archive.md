@@ -12,6 +12,88 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — continue ENG-011: both L1 PRs opened, ready-to-ship → blocked
+
+`continue` event pass, context `ENG-011` — this fire's own turn at the front
+of `traces/.pending`. Narrow scope per the event's own contract (resume this
+ticket from its current state; no board-wide sweep). Mode check clean
+(business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+`mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-011`) and whole-board: both exit 0, clean.
+
+Read the current `skills/release-runner/SKILL.md` rather than the release-
+window question this ticket's own prior log entry had left open: the skill
+was corrected earlier today to state that the window check is L2/L3-only and
+never applies to L1, and both of this ticket's projects are L1 — so no hold
+applied. Verified all four upstream gates fresh from their own receipt files
+(migration, code review, quality, security — all **pass**, one named
+non-blocking gap on the missing live-Postgres run). Re-checked both `_eng`
+worktrees before touching them (both were sitting on `ENG-008`'s branch, not
+this ticket's — confirmed clean first so nothing of `ENG-008`'s was at risk),
+checked out `feat/ENG-011-client-stage-health-visibility` in both, confirmed
+commit hashes matched every receipt exactly, checked for an already-open PR
+on each repo (none), then opened both: `aiorders-api`
+https://github.com/harsimranwalia/aiorders-api/pull/3,
+`aiorders-admin-hub` https://github.com/harsimranwalia/aiorders-admin-hub/pull/3.
+Restored both worktrees to `ENG-008`'s branch afterward. Wrote the merge
+request (`inbox/2026-08-29-eng011-merge-request.md`), ran `eng-notify.sh
+raise` (hit the same standing `SLACK_WEBHOOK_URL unset` gap every gate item
+today has hit — not new), stamped `notified:` by hand. Ticket →
+`ready-to-ship → blocked`, `blocked_on: approver`, `blocked_from:
+ready-to-ship`, owner `devops → approver`. Full detail on the ticket's own
+log.
+
+**1 transition**, well under the cap of 4. `machine_wip` 6/1 → 5/1 (`ENG-011`
+now outside the counted range). Approver-facing WIP 1/2 → 2/2 (at the limit,
+not over — an already-gated ticket reaching its next gate, not a new start,
+same reasoning `ENG-005` used at this identical boundary). Approval cap
+1/3 → 2/3.
+
+One observation filed (`observations.md`): the skill correction and this
+ticket's own prior log entry disagreed on an open policy question, and the
+current skill file is what should win — worth a future pass trusting that
+ordering rather than re-litigating a stale ticket-log note.
+
+`chained: none` — `blocked`, `blocked_on: approver`; the human gate this hop
+was driving toward. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-011`) and whole-board: exit 0, clean, no `WAIVED:` lines.
+
+## 2026-08-29 — continue ENG-024: shaped, held — machine WIP still 6/1 over cap, no slot free
+
+`continue` event pass, context `ENG-024` — its own chain fire from the
+`intake` pass that shaped it. Narrow scope per this event's own contract:
+this ticket only. Mode check clean (business-os `.env` → `MODE=` empty;
+instance `config/config.yaml` → `mode:` empty). Pre-pass gate check: exit
+0, clean, both scoped (`ENG-024`) and whole-board.
+
+Re-checked fresh rather than trusted the board's cached header: all six
+machine-WIP tickets' own frontmatter (`ENG-007` ready-to-ship, `ENG-008`
+building, `ENG-009` ready, `ENG-010` ready, `ENG-011` ready-to-ship,
+`ENG-013` building) — count unchanged at 6/1, still over the cap of 1. Per
+`eng_build_loop.md` step 6, the To-do column is the only place a new start
+is drawn from, and "there is exactly one slot [that] does not free until
+the ticket occupying it reaches `shipped`" — `ENG-024` (severity P1, fast
+lane, `shaped`) cannot enter `building` this pass regardless of severity;
+nothing in the loop's dispatch rule exempts P1 from the WIP cap. Only the
+unrelated proposal-batching P0 carve-out (step 3) mentions P0 at all, and
+that gate doesn't apply here since ENG-024 already has an approved ticket.
+`agents/eng-manager/inbox/` empty — no technical-intake item for this
+ticket; G1 was already correctly auto-skipped (bug type, fast lane), so
+there is no gate item to check either. Ticket correctly stays at `shaped`.
+
+**0 transitions.** `chained: none` — held by the machine WIP cap (6/1, no
+free slot); one of the explicit do-not-chain conditions. Recorded on the
+ticket's own log.
+
+One observation filed (`observations.md`): the `intake` pass that shaped
+this ticket fired its chain without checking the machine-WIP cap, which was
+already known full at the time (six tickets already in flight) — this pass
+is the cost of that gap, one hop spent to re-derive a hold the shaping pass
+could have recognized itself.
+
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-024`) and whole-board: exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-29 — continue ENG-022: architect's design written, shaped → designed
 
 `continue` event pass, context `ENG-022` — this fire's own turn at the

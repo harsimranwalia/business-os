@@ -758,3 +758,12 @@ Append-only. One line per state transition, newest last.
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`
   lines.
+
+- `2026-08-30` (dead-end sweep, no state change) `scheduled` event pass,
+  context `launchd`. Ticket still `building`/`eng-manager`, missing test not
+  yet added, unchanged since the entry above. Same finding as `ENG-008`'s
+  identical row today: no `continue (ENG-013)` drain appears in either day's
+  trigger log, only `ENG-023`'s two failed attempts and this pass. Re-firing:
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`.
+  Collapsing makes this safe even if the original fire is still queued
+  somewhere rather than lost. `chained: ENG-013`.

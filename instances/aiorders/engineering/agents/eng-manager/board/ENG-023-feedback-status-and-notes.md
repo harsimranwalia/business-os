@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P2
 priority:
-state: awaiting-scope
-owner: approver
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
@@ -223,3 +223,85 @@ approver asked in their own words ("any actions taken").
   guard never fires on a ticket waiting on a human. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
   whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
+
+- `2026-08-29` `awaiting-scope → designed` (product-manager → architect,
+  `watch` event pass, context `launchd`) — swept all three watched inboxes
+  per the event's own contract; found `inbox/2026-08-29-eng023-g1-scope.md`
+  answered (**approved**, `decided: 2026-08-29T23:38:32.834274+00:00`, no
+  additional comment beyond the bare decision) since the last pass touched
+  it. Mode check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` not checked to override — falls through).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-023`) and whole-board: both exit 0, clean.
+
+  **Found the repo mid-recovery from an unrelated, unresolved `git stash
+  pop` conflict** (`stash@{0}: On main: local instance state before
+  marketing port pull`, touching `_index.md`, `_index-archive.md`,
+  `observations.md`) — resolved by someone/something else to a clean
+  working tree matching `HEAD` (`ad4c6c4`) between this pass's first and
+  second `git status` check, stash left intact and untouched. Not this
+  pass's to resolve — out of scope for a `watch` event, and the stash's own
+  survival looks deliberate. Flagged in `observations.md`, not acted on
+  further.
+
+  PRD `status: approved`
+  (`agents/product-manager/specs/ENG-023-feedback-status-and-notes.md`),
+  Decision section filled in. Gate item moved to `inbox/_handled/` with a
+  processed footer. Journaled in
+  `agents/eng-manager/config/decision-journal.md`.
+
+  **Handed to the architect at `designed`, design work itself not started
+  this pass** — same reasoning `ENG-014`'s own `watch`-event G1 processing
+  used: `designed`'s exit condition ("tech design written") is the
+  architect's own output, and this ticket's write path (a new
+  `update_feedback` action modeled on `catering.ts`'s
+  `update_catering_request`, plus two new columns on `restaurant_feedback`)
+  is implementation-adjacent work against a project with real customer
+  data, not board bookkeeping — it belongs in a dedicated `continue
+  ENG-023` session.
+
+  **Worth flagging for that session directly: machine WIP is currently
+  5/1, over the board's own cap.** Per `_index.md`'s own header and the
+  `ENG-014`/`ENG-015` precedent already sitting at `designed` for the same
+  reason, even a clean design with no one-way door should hold at
+  `designed` rather than advance to `ready` until the count clears —
+  `designed` and `awaiting-scope` aren't gated by this cap, `ready` is.
+
+  **Capacity freed, not spent on anything else this pass** — same
+  precedent `ENG-014`'s `watch` entry set: dispatching the freed
+  approver-facing WIP/approval-cap slot onto a different waiting ticket is
+  left for a future `scheduled`/`watch`/`continue` pass, out of scope for a
+  `watch` event scoped to the inbox items it found changed. `ENG-011`'s L1
+  merge request, the board's other open gate item, remains unanswered
+  (`decision:` empty) — checked fresh, nothing to act on, never inferring
+  approval from silence.
+
+  **Dead-end sweep (scoped to this event's own contract):** the other two
+  watched inboxes (`agents/product-manager/inbox/`,
+  `agents/eng-manager/inbox/`) hold only `.gitkeep` — nothing new. No
+  broken chain found on this ticket's own prior log entries.
+
+  `chained: ENG-023` — `designed`, owned by `architect`, an agent-owned
+  state; firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-023`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
+
+- `2026-08-30` (broken chain, no state change) `scheduled` event pass,
+  context `launchd` — the safety-net sweep this exact scenario exists for.
+  This ticket's own `continue ENG-023` chain, fired at the end of the entry
+  above, did run — twice — but never got past reading files: attempt 2
+  (02:13:55) failed with `401 OAuth access token has been revoked` before
+  touching any file; attempt 3 (09:31:19) read this ticket, the board index,
+  and two other files, then failed with a DNS error (`ENOTFOUND`) before
+  writing anything. **No tech design was produced by either attempt** — the
+  frontmatter and this log are unchanged from the `designed`/`architect`
+  state the prior entry left them in. Event dropped after 3 attempts total
+  (`inbox/2026-08-30-eng-events-dropped.md`, notified this same pass).
+  Root-caused before re-firing, per that item's own recommendation: both
+  failures are infra-level (auth token, DNS), neither implicates this
+  ticket's own content, and this pass's own working tool access suggests
+  both have since cleared. Re-firing:
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-023`.
+  `chained: ENG-023`.

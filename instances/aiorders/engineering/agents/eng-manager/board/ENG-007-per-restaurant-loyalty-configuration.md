@@ -6,17 +6,17 @@ type: feature
 size: S
 time_estimate: S (a few hours to half a day, per PRD Cost section)
 time_spent: not separately clocked — build, review, QA and security all completed in an unrecorded prior pass (see Log); read as most of the estimate consumed
-time_remaining: ~0 build time; PR-open, merge and verify remain as gate/administrative steps, not development work
+time_remaining: 0 — merged, verified, terminal
 severity: P3
 priority:
-state: ready-to-ship
-owner: devops
+state: verified
+owner: product-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-28
-updated: 2026-08-29
+updated: 2026-08-30
 branch: loyalty-system
 depends_on: []
 blocks: []
@@ -28,8 +28,8 @@ links:
   review: agents/principal-engineer/reviews/ENG-007.md
   test_plan: agents/qa/test-plans/ENG-007.md
   security_review: agents/security/reviews/ENG-007.md
-  release:
-  pr:
+  release: agents/devops/releases/2026-08-30-aiorders-api-ENG-007.md
+  pr: "https://github.com/harsimranwalia/aiorders-api/pull/4"
 ---
 
 ## Input
@@ -664,3 +664,92 @@ Append-only. One line per state transition, newest last.
   and leaves the release for Monday." Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
   whole-board: both run clean.
+
+- `2026-08-30` `ready-to-ship → shipped → verified` (`scheduled` event pass,
+  context `launchd`) — found already merged, not by anything this department
+  fired. **The Saturday window-hold above is now moot, and never had to be
+  waited out**: `skills/release-runner/SKILL.md` was corrected the same day
+  (2026-08-29, per this ticket's own prior entry and `ENG-011`'s) to state the
+  release window is L2/L3-only and never applies to L1, and `aiorders-api` is
+  L1 — the board's own cached header already flagged this ticket by name for
+  "a fresh look next pass rather than assuming Monday." That fresh look found
+  the question overtaken: no PR-open step was ever needed from this
+  department, because PR #4 was opened and merged directly on GitHub without
+  the department raising an L1 merge request at all — the first time that's
+  happened on this board with *no* gate item ever existing to bypass (contrast
+  `ENG-002`/`ENG-006`, both of which had a merge-request item sitting unread).
+
+  **Confirmed on two independent signals, neither trusted alone:**
+  ```
+  $ git fetch origin   # ~eng/aiorders-api
+  $ git merge-base --is-ancestor origin/loyalty-system origin/main
+  YES ancestor
+  $ git log -1 --format="%H %P" origin/main
+  93617c6 eb2ed89 2aec86f   # merge commit, second parent = this ticket's own reviewed commit
+  $ gh pr view 4 --json state,mergedAt,headRefName,mergedBy
+  {"state":"MERGED","mergedAt":"2026-08-30T02:38:08Z","headRefName":"loyalty-system", ...}
+  ```
+  `origin/loyalty-system`'s head (`2aec86f`, "Add per-restaurant loyalty
+  configuration (ENG-007)") is exactly the commit this ticket's own prior log
+  entry recorded at `ready-to-ship` — no drift, no rebase, nothing landed
+  alongside it. PR #4's own body already carries a full gate table (code
+  review/quality/security/migration, all **pass**, with the same
+  no-live-Postgres gap this ticket's own migration receipt already named) —
+  consistent with this department's own PR-body convention closely enough
+  that the PR was very likely opened by an earlier, unlogged pass rather than
+  hand-written by the approver, but the merge itself is definitely not
+  ours: `mergedBy` is the approver's own account, not a service identity, and
+  no pass in `traces/eng-loop-2026-08-29.log` or `-30.log` records opening or
+  merging it. Not investigated further — the outcome is verified correct on
+  its own terms regardless of exactly which pass opened it.
+
+  **Verified all four gate receipts fresh from disk before advancing**, not
+  trusted from the PR body's own claims: `agents/principal-engineer/reviews/ENG-007.md`,
+  `agents/qa/test-plans/ENG-007.md`, `agents/security/reviews/ENG-007.md`,
+  `agents/database/migrations/ENG-007-per-restaurant-loyalty-configuration.md`
+  — all present. `departments/engineering/lib/eng-gate-check.sh ENG-007`:
+  exit 0, clean. Per `eng_build_loop.md` step 5 ("a merge is not a gate"),
+  this check ran *before* advancing past `ready-to-ship`, not after.
+
+  **Acted as devops, closing `shipped`'s exit condition** ("Deployed, health
+  checks green, release record written") **for what an L1 project with no
+  CI/CD can actually attest to** — same boundary `ENG-006` named on this same
+  repo two days ago. `.github/workflows/` absent from `origin/main`: no
+  auto-deploy exists, so the merge itself is the only department-visible
+  event. This worktree still has no `SUPABASE_ACCESS_TOKEN` and isn't linked
+  (`supabase migration list --linked` → "Cannot find project ref"), so
+  whether the migration has actually been pushed live is genuinely unknown
+  from here, not inferred either way. Recorded honestly rather than guessed.
+  Release record written: `agents/devops/releases/2026-08-30-aiorders-api-ENG-007.md`.
+
+  **Acted as product-manager, confirming acceptance criteria against the
+  merged tree** (`agents/product-manager/specs/ENG-007-per-restaurant-loyalty-configuration.md`):
+  ACs 1–4 (current-config resolution, effective-dated supersession, as-of
+  querying, not-enrolled default) are all pure, DB-free decision logic with
+  direct unit coverage (44/44, per QA's receipt) unchanged on the merged tree
+  — `git diff origin/loyalty-system origin/main` empty, so the reviewed
+  source is what's live in `main` verbatim. No AC depends on a live Supabase
+  call to exercise, unlike `ENG-006`'s OTP-provider gap — this ticket's own
+  design was DB-free by construction, so nothing is being carried forward as
+  unverifiable. PRD `status: designed → verified`.
+
+  **No gate item to close** — none was ever raised for this ticket (the
+  window hold blocked it before one could be), so there is nothing in
+  `inbox/` or `inbox/_handled/` to move. Noted in `decision-journal.md`
+  anyway, matching `ENG-002`'s precedent of journaling a silent GitHub merge
+  even without a tracked reply.
+
+  **2 transitions** (`ready-to-ship → shipped → verified`), well under the
+  cap of 4. `machine_wip`: `ENG-007` leaves the counted `ready..ready-to-ship`
+  range entirely (terminal) — one step toward the board's own over-cap count
+  recovering. No approver-facing WIP or approval-cap change — this ticket
+  never occupied either (no gate item was ever open on it).
+
+  **Observation filed** (`observations.md`): third occurrence of a direct,
+  out-of-band GitHub merge (`ENG-002`, `ENG-006`, now this), and the first
+  with no gate item at all to bypass — worth a heavier read given `ENG-011`,
+  discovered the same sweep, is a fourth.
+
+  `chained: none` — `verified` is terminal. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.

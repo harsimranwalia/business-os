@@ -603,3 +603,16 @@ Append-only. One line per state transition, newest last.
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-008`) and whole-board: see board index.
+
+- `2026-08-30` (dead-end sweep, no state change) `scheduled` event pass,
+  context `launchd`. Ticket still `building`/`eng-manager`, unchanged since
+  the entry above. That entry's own `continue ENG-008` fire is not visible
+  in any drain of `traces/eng-loop-2026-08-29.log` or `-30.log` — the only
+  `continue` that actually ran on either day was `ENG-023`'s (twice, both
+  failed on infra, see `inbox/2026-08-30-eng-events-dropped.md`) and this
+  pass itself. No evidence the code-review-plus-quality hop this ticket is
+  waiting on ever ran. Re-firing rather than leaving it starved:
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`.
+  Safe regardless of whether the original fire is genuinely lost or merely
+  still queued — duplicate `<event> <context>` lines collapse to one before
+  each pop, so this cannot double-run the hop. `chained: ENG-008`.

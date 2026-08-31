@@ -11,6 +11,19 @@ notified: 2026-08-29T17:04:29
 decision:
 ---
 
+---
+
+**Processed 2026-08-30**, `scheduled` event pass (context `launchd`). Never
+answered — `decision:` stays empty on record. This item's own text told the
+approver a reply wasn't required ("merge whenever suits you on GitHub
+directly"), and they took exactly that path: both PRs merged directly,
+confirmed independently via git ancestry and `gh pr view` on both repos
+(`aiorders-api` PR #3 merged 2026-08-30T00:12:50Z, `aiorders-admin-hub` PR #3
+merged 2026-08-30T00:13:30Z). `ENG-011` advanced `blocked → shipped →
+verified` this same pass. Full detail on the ticket's own log and
+`agents/devops/releases/2026-08-30-ENG-011-aiorders-api-and-admin-hub.md`.
+Journaled in `decision-journal.md`.
+
 # Merge request — Client stage & health visibility on the Brands admin page (ENG-011)
 
 First two-repo ticket on this board — one ticket, two PRs, both opened this pass.

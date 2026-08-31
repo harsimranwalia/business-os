@@ -1,11 +1,11 @@
 ---
 ticket: ENG-023
 project: restaurant-portal
-status: draft
+status: approved
 size: S
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-08-29T23:38:32.834274+00:00
 ---
 
 # Feedback board: status and notes per item, so the restaurant can act on feedback and show it did
@@ -155,6 +155,6 @@ On the brand portal's Feedback page, a restaurant can:
 
 Filled in after G1.
 
-- **The approver's answer:**
-- **Date:**
-- **Notes:**
+- **The approver's answer:** approved
+- **Date:** 2026-08-29T23:38:32.834274+00:00
+- **Notes:** No additional comment recorded beyond the bare approval.
