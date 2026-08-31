@@ -13,7 +13,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-30
 branch: feat/ENG-008-influencer-admin-management (aiorders-api@e240767, aiorders-admin-hub@f2ea36c)
 depends_on: []
 blocks: []
@@ -616,3 +616,125 @@ Append-only. One line per state transition, newest last.
   Safe regardless of whether the original fire is genuinely lost or merely
   still queued — duplicate `<event> <context>` lines collapse to one before
   each pop, so this cannot double-run the hop. `chained: ENG-008`.
+
+- `2026-08-30` **code review round 1: FAIL — automatic-failure #10, plus a
+  real null-handling bug** (principal-engineer, `continue` event pass,
+  context `ENG-008` — this fire's own turn at the front of
+  `traces/.pending`, re-fired by the 2026-08-30 `scheduled` sweep above
+  after the original 2026-08-29 fire never ran). Narrow scope per the
+  event's own contract (resume this ticket only; no board-wide sweep). Mode
+  check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Read the diff correctly, not naively.** Both branches
+  (`aiorders-api@e240767`, `aiorders-admin-hub@f2ea36c`) were cut before
+  `ENG-007` and `ENG-011` merged directly to `main` (2026-08-30 `scheduled`
+  sweep, above); a raw `git diff origin/main..{commit}` therefore shows both
+  tickets' shipped work as spurious deletions (`loyalty-config.test.ts`,
+  `brands.ts`'s `deriveStage`/`deriveHealth`, `Brands.tsx`'s stage/health UI,
+  `.github/workflows/deploy-cf.yml`) that ENG-008 never touched. Confirmed
+  via `git show --stat` on each commit (3 files / 197 insertions on
+  `aiorders-api`; 1 file / 190 insertions on `aiorders-admin-hub`, matching
+  the build entry's own account exactly) and via merge-base diffing
+  (`git merge-base origin/main {commit}`) that these are 100% main-drift
+  artifacts, not this ticket's changes — reviewed the isolated single-commit
+  patch on each branch instead of the polluted two-dot diff.
+
+  **Automatic failure #10 — zero test coverage on the new admin-gated write
+  path**, same class that failed `ENG-013`'s own round 1 one cycle earlier on
+  this identical repo (`observations.md` row 130).
+  `supabase/functions/admin-portal/handlers/influencers.ts`:
+  `hasInfluencerAdminAccess` (line 22) and `updateInfluencer` (line 97) carry
+  no test at all. No test proves a non-admin/sub-admin caller is rejected —
+  PRD acceptance criterion 8, verbatim: "Given a non-admin/non-staff request
+  to any of the above write paths, then it's rejected." No test proves
+  `staff_rating` outside 1–5 or a negative `collaboration_count` is rejected.
+  No test proves the field allowlist (`EDITABLE_FIELDS`, line 13) actually
+  restricts what a caller can write. Direct, exact precedent in this same
+  repo: `loyalty-config.test.ts` (44 tests, including the identical
+  access-check shape — admin, sub-admin, wrong role, missing profile) and
+  `brands.test.ts`. Not this repo's baseline (there is none — no
+  `deno.json`, per `config/projects.md`) but this *board's* baseline, twice
+  now in two days.
+
+  **A second, independent finding: a real correctness bug, not a style
+  preference.** `src/pages/Influencers.tsx`, `openInfluencer` (line 92),
+  specifically lines 96–97:
+  ```
+  accepts_paid: influencer.accepts_paid ?? !influencer.barter_visit,
+  accepts_barter: influencer.accepts_barter ?? !!influencer.barter_visit,
+  ```
+  For the 51/306 influencer rows where `barter_visit` was `null` in
+  production (the exact figure this ticket's own `building` entry pulled
+  from Supabase), the migration correctly backfills `accepts_paid`/
+  `accepts_barter` to `null` on both — preserving "unknown" as the design
+  doc explicitly requires ("null must stay distinguishable from a real
+  value," design → Data). This line then silently discards that: `null ??
+  !null` evaluates `!null`, and `!null === true` in JavaScript — so opening
+  the edit dialog on any of these 51 influencers computes `accepts_paid:
+  true, accepts_barter: false` as if known. `handleSaveInfluencer` (line
+  104) includes both fields in the `PATCH` body unconditionally, with no
+  dirty-tracking — so staff saving *any* unrelated field (a rating, a
+  collaboration count) on one of these records silently writes a fabricated
+  "Paid only" preference into the database. This is exactly the failure
+  mode the migration's own backfill was written to avoid, one layer up.
+  **The fix belongs with the missing test above**: default both to `false`
+  (or track which the user actually touched) when the source is null, and
+  add the regression test — an influencer with `accepts_paid`/
+  `accepts_barter`/`barter_visit` all null, open the dialog, confirm neither
+  checkbox pre-checks and neither is written unless the user checks it.
+
+  **One unrelated line, flagged but not blocking by itself**:
+  `Influencers.tsx` line 539, `<Button variant="secondary">` on the existing
+  "Contact" button — a cosmetic change to code this ticket had no reason to
+  touch (automatic-failure #7 territory, but trivial and zero-risk; worth
+  dropping to keep the diff to exactly what the ticket describes, not worth
+  a round on its own).
+
+  **One heads-up for whoever opens the PR, not a review finding**:
+  `aiorders-api`'s `index.ts` has a genuine adjacent-line addition from both
+  this ticket and `ENG-007` (now on `main`) at the same anchor (the
+  router's `else if` chain, right after `foodswipe`) — each branch's own
+  single-commit diff is independently correct, and a real three-way merge
+  should interleave both cleanly, but worth confirming rather than assuming
+  when `release-runner` rebases this branch before opening the PR, since the
+  merge-base is now two tickets behind `main`.
+
+  **Genuinely good work, worth saying plainly**: the build hop's own
+  step-6b artifact-enumeration grep (already logged in the `ready →
+  building` entry above) caught a real CORS/`PATCH` bug before it ever
+  reached this gate — exactly what that step exists for, and it means this
+  review found two remaining issues instead of three.
+
+  **Verdict: FAIL, round 1.** No receipt written
+  (`agents/principal-engineer/reviews/ENG-008.md` stays absent, per
+  `skills/code-review-gate/SKILL.md` step 8 — a receipt is written on `pass`
+  only). QA's hop not run this round — discarded per the combined-hop
+  design, no test-plan file written. Findings logged here and in
+  `agents/principal-engineer/notebook/2026-08-30-review-log.md`.
+
+  **0 net transitions** — `state`/`owner` unchanged (`building`/
+  `eng-manager`), matching this board's own `ENG-013` round-1 precedent: the
+  gate is reached and routed back on the fail verdict without a persisted
+  `in-review` frontmatter state. `machine_wip` unaffected, still 4/1.
+  Approver-facing WIP and approval cap both unaffected — a code-review
+  failure is not an approver-facing gate.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing raised (a review failure
+  isn't a gate item; it routes back to `building`, not to the approver).
+  **Observations filed** (`observations.md`): the second occurrence, same
+  day, same repo, of the identical automatic-failure-#10 shape (ties to row
+  130); a genuine gap found but not fixed here — this ticket's own
+  frontmatter has never carried `time_estimate`/`time_spent`/
+  `time_remaining` despite `definition-of-done.md` and the ticket template
+  both calling for them from `building` onward.
+
+  `chained: ENG-008` — `building` is agent-owned (the two findings above are
+  the next hop's work), not the approver, not blocked, not terminal, not
+  held by a cap. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: see board index.

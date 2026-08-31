@@ -12,6 +12,40 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — continue ENG-013: code review round 1 FAIL, bounced to building
+
+`continue` event pass, context `ENG-013` — this fire's own turn at the front
+of `traces/.pending` finally reached. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+Read the actual diff fresh from both worktrees via `git diff`/`git show`
+against the branch (`aiorders-api@ac4efba`, `aiorders-admin-hub@a1c3bdf`)
+rather than checking either worktree out — both were sitting on `ENG-008`'s
+branch, same as the building pass itself found. Ran the code-review gate's
+automatic-failure scan before any deeper review: hit **#10** — the two new
+authz-gated write actions (`setStageOverride`/`resetStageOverride` in
+`foodswipe.ts`, tenant-scoped by `.eq('source', 'foodswipe')`, the diff's
+own "review hardest" line) carry **zero test coverage**, against direct
+precedent from `ENG-007`/`ENG-011` on this same repo. No receipt written;
+verdict and finding logged on the ticket and in
+`agents/principal-engineer/notebook/2026-08-29-review-log.md`. QA's hop not
+run this round — discarded per the combined-hop design.
+
+**0 net frontmatter transitions** — `state`/`owner` unchanged
+(`building`/`eng-manager`); the gate was reached and immediately routed
+back on the fail verdict. `machine_wip` unaffected, still 5/1.
+Approver-facing WIP and approval cap both unaffected. One observation filed
+(`observations.md`): first code-review failure recorded on this board.
+
+`chained: ENG-013` — `building` is agent-owned (the missing test is the
+next hop's work), not the approver, not blocked, not terminal, not held by
+a cap. Fired `/bin/sh departments/engineering/lib/eng-trigger.sh continue
+ENG-013` before exiting. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-29 — continue ENG-011: both L1 PRs opened, ready-to-ship → blocked
 
 `continue` event pass, context `ENG-011` — this fire's own turn at the front
