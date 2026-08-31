@@ -7,14 +7,13 @@ size: M
 time_estimate: half a day to a couple of days
 time_spent: ~3h build, two code-review rounds (round 1 fail, round 2 pass),
   plus the QA quality gate — all machine time; see log
-time_remaining: ~30min-1h machine time — the security gate (fresh session,
-  now has a finished QA plan to check negative-authz coverage against),
-  then release-readiness (devops opens the PR). After that it's the
-  approver's own merge, on their own schedule (L1). No approver time_impact.
+time_remaining: ~10-20min machine time — release-readiness (devops opens
+  the PR). After that it's the approver's own merge, on their own schedule
+  (L1). No approver time_impact.
 severity: P2
 priority:
-state: in-qa
-owner: eng-manager
+state: ready-to-ship
+owner: devops
 lane: full
 blocked_on:
 blocked_from:
@@ -31,7 +30,7 @@ links:
   adrs: []
   review: agents/principal-engineer/reviews/ENG-013.md
   test_plan: agents/qa/test-plans/ENG-013.md
-  security_review:
+  security_review: agents/security/reviews/ENG-013.md
   release:
   pr:
 ---
@@ -1010,6 +1009,117 @@ Append-only. One line per state transition, newest last.
 
   `chained: ENG-013` — `in-qa` is agent-owned (security next), not the
   approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`
+  lines.
+
+- `2026-08-31` `in-qa → ready-to-ship`: security gate — **PASS**
+  (security, `continue` event pass, context `ENG-013`, this fire's own
+  turn at the front of `traces/.pending` finally reached). Narrow scope
+  per the event's own contract (resume this ticket from its current
+  state; no board-wide sweep). Mode check clean (business-os `.env` →
+  `MODE=active`; instance `config/config.yaml` → `mode:` empty, falls
+  through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+  **Confirmed this is a genuinely fresh security pass, not a rediscovery.**
+  `agents/security/reviews/ENG-013.md` was absent at pass start (checked
+  fresh, not trusted from any prior pass's account) — first execution of
+  this gate for this ticket, same footing the round-2 code-review/QA pass
+  had for its own gates.
+
+  **Ran `skills/security-gate/SKILL.md` in full, against both branches at
+  their currently-recorded commits** (`aiorders-api@c95b25b`,
+  `aiorders-admin-hub@a1c3bdf` — fetched fresh, confirmed no further
+  commits since the round-2 review). Both worktrees were sitting on
+  `ENG-008`'s branch, same shape every prior pass on this ticket found —
+  reviewed via `git diff origin/main...origin/feat/ENG-013-...` and `git
+  show`, without checking either out.
+
+  **Threat-modelled the change** (four questions, full reasoning in the
+  receipt): new input is `profileId`/`stage` on two new POST routes, both
+  behind the existing bearer-auth middleware and the handler's existing
+  admin/sub-admin gate; new capability is write access to one enum field,
+  granted only to the population that could already read every row; new
+  data exposed is that same enum value, already computed and returned as
+  `stage` today; blast radius on full compromise is integrity-only (a
+  mislabeled, fully-reversible kanban card), not confidentiality or
+  financial, since read access to this data was already available to the
+  same compromised token.
+
+  **Walked OWASP A01–A10.** 8 of 10 marked `n/a` with a reason (no crypto,
+  no new dependency, no session/auth-token logic, no deserialization of
+  untrusted data, no SSRF-shaped fetch). Two reviewed in full:
+  - **A01 Broken Access Control** — clean. Both new write routes share the
+    one existing gate call the read already used (checked before any path
+    branch, so the three routes can't drift apart), and both additionally
+    scope their `UPDATE` to `.eq('id', profileId).eq('source',
+    'foodswipe')` — the same tenant boundary the existing read already
+    enforced, not a new one. Verified the tenant-scoping test is
+    mutation-sensitive by construction (a fake client records every
+    `.eq()` call; deleting the `source` scoping fails the assertion for
+    the reason it exists), not just shape-checked — independently
+    confirmed this claim from round 2's code review by reading the test
+    file myself rather than trusting the citation.
+  - **A05 Security Misconfiguration** — found one **non-blocking** item:
+    both new write actions return `error.message` verbatim in a 500 body.
+    Weighed rather than waved through: unreachable pre-role-check, copied
+    from this same file's pre-existing `GET` catch (not a new posture this
+    diff introduces), and nothing secret in what such a message could
+    contain here. Logged as the **first tracked occurrence** of this
+    finding class in `agents/security/notebook/2026-08-31-findings.md`
+    (three-strike tracking) — not escalated, not blocking.
+
+  **Checked all three of the baseline's negative-auth cases, not just the
+  two with dedicated tests.** Wrong-role: 403 before any DB call, proven
+  by a `Proxy` that throws if `adminSupabase` is touched at all (3 tests).
+  Wrong-tenant: 404, proven by the mutation-sensitive `.eq()` recording
+  (2 tests). **No-token: read `admin-portal/index.ts` fresh rather than
+  assume it from other tickets' precedent** — confirmed `authenticate()`
+  returns 401 before any handler (including this one) is ever reached,
+  unmodified by this diff. All three covered; only the third has no
+  dedicated test in *this* diff, because it's enforced upstream of it.
+
+  **Scanned for secrets** — the full diff plus all three unique commits
+  across both branches (`ac4efba`, `c95b25b`, `a1c3bdf`) for key/secret/
+  token/password/bearer/PEM/AWS/service-role patterns. Zero matches.
+
+  **SOC 2 evidence trail confirmed complete**: ticket → PRD → design
+  (no G2) → migration review → code review (PASS, round 2) → QA plan
+  (PASS) → this verdict → release record (pending). No gap.
+
+  **Receipt written** (pass-only, per `config.yaml` →
+  `machine_gates.receipts.pass_verdict_only`):
+  `agents/security/reviews/ENG-013.md`. `links.security_review` set on
+  this ticket in the same edit as the state change. `time_spent`/
+  `time_remaining` updated in frontmatter.
+
+  **1 transition this pass** (`in-qa → ready-to-ship`), well under the cap
+  of 4. Stopped here deliberately, not by the cap: `release_readiness` is
+  a separate hop after `security` per `config.yaml`'s
+  `sequential_after_quality: [security, release_readiness]` (not
+  `combined_hop`, which licenses only `[code_review, quality]`), and this
+  was a fresh security session with no receipt to recover — the same
+  reasoning the round-2 review+quality pass used to justify not also
+  running security in that same session. **Consequence:** `machine_wip`
+  unaffected — `ENG-013` was and remains inside the counted
+  `ready`..`ready-to-ship` range (`ready-to-ship` is its far end).
+  Approver-facing WIP and approval cap both unaffected — `ready-to-ship`
+  raises no gate; devops's own release-readiness hop is what will open the
+  PR and raise the `merge_request` item next.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  `ENG-008` has its own already-fired `continue` event queued separately;
+  not this event's contract.
+
+  **Notify sweep:** nothing to raise this pass — `ready-to-ship` itself
+  raises no approver gate for an L1 project; the merge-request item comes
+  from devops's next hop, once a PR actually opens. Nothing to nudge.
+
+  `chained: ENG-013` — `ready-to-ship` is agent-owned (devops's
+  release-readiness hop next: open the PR, raise the merge request), not
+  the approver, not blocked, not terminal, not held by a cap. Fired
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`

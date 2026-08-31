@@ -12,6 +12,50 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-013: review+quality combined hop, round 2 — PASS, now in-qa
+
+`continue` event pass, context `ENG-013`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+Ran the code-review-gate and quality gates fresh — no receipt existed for
+either at pass start, so unlike `ENG-007`'s/`ENG-011`'s own recovery passes
+this was a real first execution, not a discovery of already-completed work.
+Automatic-failure scan: 0/10 open — round 1's #10 (no failure-case test on
+the new authz-gated write path) is closed by `foodswipe.test.ts`, with the
+`source='foodswipe'` scoping test confirmed mutation-sensitive (a fake
+client records every `.eq()` call, so removing that scoping line would fail
+the test for the reason it exists, not incidentally). `npm run
+lint`/`npm run build` (`aiorders-admin-hub`) reproduced fresh, both clean
+against this ticket's own recorded baseline. `deno test` could not execute
+on this host (deno absent, `aiorders-api` has no registered suite command)
+— hand-traced all 17 cases against the code at HEAD instead, independently
+of the prior pass's own trace, zero discrepancies, named plainly as
+corroborating evidence rather than a green run. QA plan written covering
+all five acceptance criteria. Full detail: `agents/principal-engineer/reviews/ENG-013.md`,
+`agents/qa/test-plans/ENG-013.md`, and the ticket's own log.
+
+**2 transitions** (`building→in-review→in-qa`), well under the cap of 4 —
+stopped deliberately, not by the cap: `config.yaml`'s `combined_hop`
+licenses exactly `[code_review, quality]` together; security is a
+separate hop by design (`sequential_after_quality`), needing QA's just-
+written plan, and a fresh session is what `eng_build_loop.md` calls for
+there. `machine_wip` unaffected (`ENG-013` stays inside the counted
+`ready`..`ready-to-ship` range). Approver-facing WIP and approval cap both
+unaffected — no gate raised.
+
+**Observation filed** (`observations.md`): the existing Supabase-MCP
+substitute-verification proposal (2026-08-29) does not cover this ticket's
+own deno-unavailable gap — different tool, no substitute execution path
+exists; a prior pass's note conflated the two.
+
+`chained: ENG-013` — `in-qa` is agent-owned (security next), not the
+approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — continue ENG-008: round 1's findings fixed, chained for review round 2
 
 `continue` event pass, context `ENG-008`. Narrow scope per the event's own

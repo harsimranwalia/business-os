@@ -10,8 +10,9 @@ advanced by one shallow step per pass.** This was 12 (the `max_5x` tier value)
 earlier the same day; see that file for the full rationale.
 
 **Currently 4/1 — over the new cap, but shrinking.** `ENG-009` and `ENG-010`
-sit at `ready`; `ENG-008` and `ENG-013` both sit at `in-qa` (security next for
-both, fresh sessions) — all were already
+sit at `ready`; `ENG-008` sits at `in-qa` (security next, fresh session);
+`ENG-013` passed its security gate this pass and now sits at
+`ready-to-ship` (devops's release-readiness hop next) — all were already
 in flight when the cap changed and are **not** being reverted or paused; they
 drain naturally as each reaches `shipped`. `ENG-007` left this range this
 pass — found already merged on GitHub (no gate item ever raised; the
@@ -45,7 +46,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | in-qa | | eng-manager | M | 2026-08-31 |
 | ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
-| ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | in-qa | | eng-manager | M | 2026-08-31 |
+| ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | ready-to-ship | | devops | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-29 |
 | ENG-015 | Agency/reseller (partner) users — brand-scoped locations and a working add-location path | aiorders-admin-hub | designed | | architect | M | 2026-08-29 |
 | ENG-016 | Catering page — self-serve quote generator, with automatic stage update | config-site-builder | shaped | | product-manager | L | 2026-08-29 |
@@ -100,50 +101,6 @@ Cap: 3 across all gates. **0/3, fully clear.** `ENG-011`'s L1 merge request
 decision. `ENG-016` through `ENG-021` are also G1-drafted and ready to
 raise, deliberately left for a future pass rather than filling every open
 slot in one sweep — see `ENG-023`'s own ticket log for the reasoning.
-
-## 2026-08-31 — continue ENG-013: review+quality combined hop, round 2 — PASS, now in-qa
-
-`continue` event pass, context `ENG-013`. Narrow scope per the event's own
-contract (resume this ticket from its current state; no board-wide sweep).
-Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-013`) and whole-board: both exit 0, clean.
-
-Ran the code-review-gate and quality gates fresh — no receipt existed for
-either at pass start, so unlike `ENG-007`'s/`ENG-011`'s own recovery passes
-this was a real first execution, not a discovery of already-completed work.
-Automatic-failure scan: 0/10 open — round 1's #10 (no failure-case test on
-the new authz-gated write path) is closed by `foodswipe.test.ts`, with the
-`source='foodswipe'` scoping test confirmed mutation-sensitive (a fake
-client records every `.eq()` call, so removing that scoping line would fail
-the test for the reason it exists, not incidentally). `npm run
-lint`/`npm run build` (`aiorders-admin-hub`) reproduced fresh, both clean
-against this ticket's own recorded baseline. `deno test` could not execute
-on this host (deno absent, `aiorders-api` has no registered suite command)
-— hand-traced all 17 cases against the code at HEAD instead, independently
-of the prior pass's own trace, zero discrepancies, named plainly as
-corroborating evidence rather than a green run. QA plan written covering
-all five acceptance criteria. Full detail: `agents/principal-engineer/reviews/ENG-013.md`,
-`agents/qa/test-plans/ENG-013.md`, and the ticket's own log.
-
-**2 transitions** (`building→in-review→in-qa`), well under the cap of 4 —
-stopped deliberately, not by the cap: `config.yaml`'s `combined_hop`
-licenses exactly `[code_review, quality]` together; security is a
-separate hop by design (`sequential_after_quality`), needing QA's just-
-written plan, and a fresh session is what `eng_build_loop.md` calls for
-there. `machine_wip` unaffected (`ENG-013` stays inside the counted
-`ready`..`ready-to-ship` range). Approver-facing WIP and approval cap both
-unaffected — no gate raised.
-
-**Observation filed** (`observations.md`): the existing Supabase-MCP
-substitute-verification proposal (2026-08-29) does not cover this ticket's
-own deno-unavailable gap — different tool, no substitute execution path
-exists; a prior pass's note conflated the two.
-
-`chained: ENG-013` — `in-qa` is agent-owned (security next), not the
-approver, not blocked, not terminal, not held by a cap. Fired
-`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
-before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
 
 ## 2026-08-31 — scheduled (launchd): three broken chains repaired (ENG-014/015/025), attempt 2/3 on this event
 
@@ -277,4 +234,54 @@ not the approver, not blocked, not terminal, not held by a cap. Fired
 `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
 before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 scoped (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+## 2026-08-31 — continue ENG-013: security gate — PASS, now ready-to-ship
+
+`continue` event pass, context `ENG-013`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+Ran the security gate fresh — no receipt existed at pass start, a real
+first execution. Threat-modelled the change (new input: `profileId`/`stage`
+on two new POST routes, both behind the existing bearer-auth middleware and
+the handler's existing admin/sub-admin gate; new capability: write access
+to one enum field, granted only to the population that could already read
+every row; blast radius on full compromise: integrity-only, reversible, no
+new confidentiality or financial exposure). Walked OWASP A01–A10, 8 `n/a`
+with reason, 2 reviewed in full. A01 clean — both new write routes reuse the
+one existing gate call and additionally scope every write to
+`source='foodswipe'`, the same tenant boundary the existing read already
+enforced; independently re-verified the tenant-scoping test is
+mutation-sensitive by construction, not just shape-checked. A05 found one
+non-blocking item — both new actions return a raw `error.message` on a
+500 — weighed (role-gated before either function runs, copied from this
+file's own pre-existing `GET` catch, nothing secret in what it could
+contain) and logged as the first tracked occurrence of this finding class
+in `agents/security/notebook/2026-08-31-findings.md`, not escalated.
+Checked all three of the baseline's negative-auth cases, not just the two
+with dedicated tests — read `admin-portal/index.ts` fresh to confirm the
+no-token case 401s upstream of this handler entirely, unmodified by this
+diff. Secret-scanned the diff and all three unique commits across both
+branches: zero matches. SOC 2 evidence trail confirmed complete. Full
+detail: `agents/security/reviews/ENG-013.md`, and the ticket's own log.
+
+**1 transition** (`in-qa → ready-to-ship`), well under the cap of 4 —
+stopped deliberately, not by the cap: `release_readiness` is a separate
+hop after `security` per `config.yaml`'s `sequential_after_quality`, and
+this was a fresh security session with no receipt to recover. `machine_wip`
+unaffected (`ENG-013` stays inside the counted `ready`..`ready-to-ship`
+range, now at its far end). Approver-facing WIP and approval cap both
+unaffected — `ready-to-ship` raises no gate for an L1 project; devops's
+release-readiness hop is what opens the PR and raises the merge request.
+
+`chained: ENG-013` — `ready-to-ship` is agent-owned (devops's
+release-readiness hop next), not the approver, not blocked, not terminal,
+not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+before exiting — confirmed queued (not lost): the trigger's own log shows
+it queued behind the still-active `scheduled launchd` fire's lock rather
+than launching immediately, same FIFO shape every prior hop on this ticket
+has used. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
 
