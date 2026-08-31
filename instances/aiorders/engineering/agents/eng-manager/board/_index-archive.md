@@ -12,6 +12,68 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-29 — watch (launchd): ENG-023's G1 answered and processed, awaiting-scope → designed
+
+`watch` event pass, context `launchd`. Mode check clean (business-os `.env`
+→ `MODE=active`; instance `config/config.yaml` → `mode:` not set, falls
+through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-023`) and whole-board: both exit 0, clean — run fresh, not taken on
+any prior pass's own account.
+
+**Swept all three watched inboxes per this event's own contract.**
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
+`.gitkeep` — nothing new. `inbox/` held exactly two live items:
+`2026-08-29-eng023-g1-scope.md`, found answered (**approved**, `decided:
+2026-08-29T23:38:32.834274+00:00`, no additional comment) since the last
+pass touched it; and `2026-08-29-eng011-merge-request.md`, re-checked fresh
+and still unanswered (`decision:` empty) — never inferring approval from
+silence, nothing to act on there.
+
+**Found the repo mid-recovery from an unrelated `git stash pop` conflict**
+on `_index.md`/`_index-archive.md`/`observations.md`
+(`stash@{0}: On main: local instance state before marketing port pull`),
+resolved to a clean tree matching `HEAD` by something else between this
+pass's first and second `git status` check, mid-sweep. Out of scope for
+this event — not touched; the stash itself is untouched too. Full detail in
+`observations.md` and on `ENG-023`'s own ticket log.
+
+Processed `ENG-023`'s G1: PRD `status: approved`
+(`agents/product-manager/specs/ENG-023-feedback-status-and-notes.md`), gate
+item moved to `inbox/_handled/` with a processed footer, journaled in
+`agents/eng-manager/config/decision-journal.md`. Ticket `awaiting-scope →
+designed`, `owner: approver → architect`. **Design work itself not started
+this pass** — same reasoning `ENG-014`'s own `watch`-event G1 processing
+used: implementation-adjacent work against a project with real customer
+data belongs in a dedicated `continue ENG-023` session, not this event's
+inbox-sweep scope. Full detail on `ENG-023`'s own ticket log.
+
+**1 transition** (`awaiting-scope → designed`), well under the cap of 4.
+Approver-facing WIP 2/2 → 1/2 (`ENG-023` off the count; `ENG-011`'s merge
+request the one remaining slot). Approval cap 2/3 → 1/3 (`ENG-023`'s gate
+item now in `inbox/_handled/`). Machine WIP unaffected, still 5/1 —
+`designed` isn't in the counted range, and the cap already holds
+`ENG-014`/`ENG-015` at `designed` for the same reason, so `ENG-023` joining
+them there (rather than `ready`) once its design lands is expected, not a
+new constraint.
+
+**Capacity freed, not spent on anything else this pass** — same precedent
+`ENG-014`'s `watch` entry set: dispatching the freed approver-facing
+WIP/approval-cap slot onto a different waiting ticket (`ENG-016` through
+`ENG-021`, all G1-drafted) is left for a future `scheduled`/`watch`/
+`continue` pass.
+
+One observation filed (`observations.md`): the concurrent git-stash-conflict
+recovery found mid-sweep, and the reminder that this instance's board files
+can change under a pass from outside the build loop entirely, not just via
+the approver answering a gate.
+
+`chained: ENG-023` — `designed`, owned by `architect`, an agent-owned
+state; not the approver, not blocked, not terminal, not held by a cap
+(design/shaping work is exempt from the machine-WIP limit). Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-023`
+before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-023`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-29 — continue ENG-013: code review round 1 FAIL, bounced to building
 
 `continue` event pass, context `ENG-013` — this fire's own turn at the front

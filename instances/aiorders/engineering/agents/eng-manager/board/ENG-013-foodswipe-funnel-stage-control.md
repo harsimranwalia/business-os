@@ -5,15 +5,16 @@ project: aiorders-admin-hub
 type: feature
 size: M
 time_estimate: half a day to a couple of days
-time_spent: ~3h build (unchanged this pass — no new code written) plus one
-  code-review round (principal-engineer)
-time_remaining: ~2.5-4.5h — round 1 of code review found a real gap (no
-  automated test on the new authz-gated write path) and bounced the ticket
-  back to building; add one colocated Deno test file (access-gate negative
-  case, stage validation, the source='foodswipe' tenant-scoping) before
-  re-entering review, then in-qa/in-security/ready-to-ship/release admin as
-  before. The added test-writing (~30-60min) is closing a definition-of-done
-  gap, not new PRD scope, so no approver time_impact
+time_spent: ~3h build, one code-review round (principal-engineer), plus the
+  test-writing round 1 asked for — done by an untracked pass on the other
+  host, discovered and independently verified (not redone) this pass; see log
+time_remaining: ~1.5-3h — round 1's finding (no automated test on the new
+  authz-gated write path) is closed: `foodswipe.test.ts` exists on the
+  pushed branch and this pass traced every case against the live handler by
+  hand, confirming it covers the access-gate negative case, stage
+  validation, and the source='foodswipe' tenant-scoping. Remaining is a
+  fresh review+quality hop, then in-security/ready-to-ship/release admin as
+  before. No approver time_impact.
 severity: P2
 priority:
 state: building
@@ -23,7 +24,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-30
 branch: feat/ENG-013-foodswipe-funnel-stage-control (same name, both repos)
 depends_on: []
 blocks: []
@@ -588,6 +589,15 @@ Append-only. One line per state transition, newest last.
     six-value write from landing on an arbitrary profile id, since the DB
     constraint alone would allow it. Also: `stage` validated server-side
     against `VALID_STAGES` rather than relying on the DB `CHECK` alone.
+  - *Addendum, 2026-08-30:* `foodswipe.test.ts` now exists on the branch
+    (commit `c95b25b`) — see this ticket's own log for provenance and
+    verification. It also exports `AuthenticatedRequest`/`hasFoodswipeAccess`
+    (additive, needed for the tests to import them) and wraps
+    `hasFoodswipeAccess`'s return in `Boolean(...)` so a profile with no
+    `additional_roles` returns `false` rather than `undefined` — same
+    truthiness at the sole call site, no behavior change, caught by the new
+    tests. What to review hardest is unchanged; it now has direct test
+    coverage.
 
   ***`aiorders-admin-hub`***
   - *What it does:* Adds a "Set stage" / "Reset to automatic" dropdown to
@@ -767,3 +777,125 @@ Append-only. One line per state transition, newest last.
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`.
   Collapsing makes this safe even if the original fire is still queued
   somewhere rather than lost. `chained: ENG-013`.
+
+- `2026-08-30` **the missing test already existed — found undocumented, not
+  written this pass** (eng-manager, `continue` event pass, context
+  `ENG-013`, this fire's own turn reached — the re-fire from the entry
+  above). Narrow scope per the event's own contract (resume this ticket from
+  its current state; no board-wide sweep). Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` not set,
+  falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: both exit 0, clean.
+
+  **Went to the worktree expecting to write the test file the ticket's own
+  `time_remaining` named, and found one already there.** Real worktree paths
+  are `~/Documents/projects/_eng/{project}` (`config/projects.md`), not the
+  `~/Documents/_eng/...` shorthand earlier entries on this ticket used —
+  neither existed at that literal path; not a regression, just an imprecise
+  path in prose. Fetched and checked out
+  `feat/ENG-013-foodswipe-funnel-stage-control` in `aiorders-api` (untouched,
+  clean, sitting on an unrelated branch beforehand — no mid-work found).
+  `git log` showed a second commit already on top of this ticket's recorded
+  `ac4efba`: `c95b25b`, *"Add missing test coverage for foodswipe
+  stage-override write path (ENG-013)"*, already pushed
+  (`origin/feat/ENG-013-...` 0 ahead/0 behind).
+
+  **Investigated rather than trusted, per this instance's own established
+  practice, because a commit nobody logged is exactly the shape of thing
+  that should not be taken on faith.** Author on both `ac4efba` and `c95b25b`
+  is the same identity (`businesspilotcare-gif`) — the department's own
+  automation account, not the approver's personal one (`Harsimran
+  <walia.harsimran@gmail.com>`, used for his own direct commits elsewhere in
+  this same `git log`) and not an unknown third party — so this is the
+  department's own prior work, not something to treat as suspicious in
+  origin. But it is genuinely undocumented: grepped every
+  `traces/eng-loop-2026-08-29.log` / `-30.log` line for `ENG-013` and found
+  no pass between the code-review-fail entry and this one; this ticket's own
+  log had no entry for it; `business-os`'s own `git log`/`git fetch` showed
+  `main` exactly in sync with `origin/main` (0/0), ruling out an unpulled
+  business-os-side commit from elsewhere. `proposals.md`'s 2026-08-29 row
+  (filed investigating the dropped-events incident) already names the
+  mechanism: **this instance runs on two hosts (Mac, Windows since
+  `168cb89`), and `traces/` is `.gitignore`d and host-local** — so a
+  `continue ENG-013` pass most likely ran on the Windows host, wrote and
+  pushed this exact commit, and either never reached or never pushed the
+  ticket-log/board update before ending. Reasoned, not confirmed — the
+  Windows host isn't reachable from here to check its own local `traces/`.
+
+  **Verified the commit's content rather than assuming a plausible-sounding
+  message meant correct code.** No live way to self-test the normal way:
+  `deno` isn't installed on this Mac host at all (not on `PATH`, not in
+  `~/.deno/bin`) — a new, sharper data point on the same tool-availability
+  split `proposals.md`'s 2026-08-29 row already names for `docker`/`psql`/
+  `supabase` (that row's fix, formally adopting a documented substitute
+  verification path, would cover this too; not re-filed as a fresh proposal
+  for that reason — same root cause, same open fix). Read
+  `foodswipe.ts` and `foodswipe.test.ts` in full and traced every one of the
+  17 new test cases against the live handler logic by hand: method-before-
+  role ordering (`DELETE` → 405 before any role check), all three routes'
+  403 on a non-admin/sub-admin role, `hasFoodswipeAccess`'s five cases
+  including the `Boolean(...)` fix (confirmed the pre-fix `undefined` return
+  was genuinely truthiness-equivalent to `false` at its one call site — a
+  real but inert bug, exactly as the commit message claims, not a cover
+  story), `profileId`/`stage` validation on both actions including the exact
+  joined `VALID_STAGES` error string, and the two-`.eq()`-call recording fake
+  proving the `source='foodswipe'` scoping is exercised by construction (the
+  assertion on `calls` would fail if that `.eq()` were removed, which is
+  what the commit message's own "mutation-tested... during this pass" claims
+  — verified by construction, not by re-running their test). All three gaps
+  round 1 named — access-gate negative case, stage validation, the
+  source='foodswipe' tenant-scoping — are covered, correctly, against the
+  code as it stands on this branch today. Nothing left to add.
+
+  **Decision: accept the existing commit, do not duplicate it.** Writing a
+  second test file (or amending this one) over correct, already-pushed work
+  would be pure waste and would risk disagreeing with tests already proven
+  correct by hand. Added a short addendum to this ticket's own PR-body notes
+  above (`aiorders-api` section) recording the file's existence and the two
+  additive fixes, so devops's eventual PR description doesn't omit them.
+  `time_spent`/`time_remaining` updated in frontmatter to stop describing
+  finished work as pending.
+
+  **Step 6b not run.** Nothing this pass wrote establishes or relies on a
+  new rule about an artifact path/state name/config key — it records a
+  discovery and corrects stale prose, the same category step 6b itself
+  calls "usually fine" for a location reference.
+
+  **0 net frontmatter transitions** — `state` was `building` at pass start
+  and remains `building`: the code (including its test coverage) was
+  already complete before this pass began, so there was no "reaches
+  `in-review`" moment for this session to stop short of. Per
+  `eng_build_loop.md`'s "a pass stops after `building` on purpose," running
+  the review hop itself in this same session would still be wrong even
+  though this pass wrote no code — the rule is state-based, not
+  effort-based, and improvising past it is exactly what this event's own
+  instructions rule out. `machine_wip` unaffected (`ENG-013` remains inside
+  the counted `ready`..`ready-to-ship` range). Approver-facing WIP and
+  approval cap both unaffected — no gate raised or resolved.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  `ENG-008`/`ENG-023` each have their own already-queued `continue` fires
+  from the `scheduled` sweep two entries above; not this event's contract.
+
+  **Notify sweep:** nothing to raise — no gate this pass. Nothing to nudge.
+
+  **Proposal filed** (`agents/eng-manager/proposals.md`, Open table): a build
+  hop that finds a ticket at `building` currently has no step that checks
+  the ticket's own remote branch(es) for commits beyond what its log last
+  recorded, so cross-host work that completes and pushes but dies before its
+  business-os-side commit lands is invisible until someone happens to `git
+  log` the branch directly, as this pass did. Distinct from the existing
+  2026-08-29 row (that one is about a *dropped-event incident item* not
+  carrying enough detail cross-host; this is about *no incident existing at
+  all* for a pass that actually finished its real work and only lost the
+  bookkeeping) — filed separately rather than folded in.
+
+  `chained: ENG-013` — `building` is agent-owned (the review+quality
+  combined hop is next), not the approver, not blocked, not terminal, not
+  held by a cap. A *fresh* session is exactly what that hop needs, same
+  reasoning every prior entry on this ticket has used. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+  before exiting. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
