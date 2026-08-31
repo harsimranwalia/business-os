@@ -12,6 +12,56 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-023: tech design written, held at `designed` by the WIP cap
+
+`continue` event pass, context `ENG-023`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean (business-os `.env` → `MODE=active`; instance
+`config/config.yaml` → `mode:` empty). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
+whole-board: both exit 0, clean.
+
+Picked up the hand-off the 2026-08-29 `designed`-entry left for this exact
+session: the tech design itself, not yet written. Investigated the live
+code first (`restaurant-portal`'s feedback page and API client,
+`aiorders-api`'s `feedback.ts`/`catering.ts`/`utils.ts`/`index.ts`, the
+`restaurant_feedback` migration history and its closest sibling precedent)
+and confirmed first-hand the `getFeedback` tenant-isolation bug `ENG-022`
+already found (wrong argument order into `verifyRestaurantAccess`, plus a
+truthy-object check that never actually denies). Wrote
+`agents/architect/designs/ENG-023-feedback-status-and-notes.md`: two new
+columns on `restaurant_feedback` (`status`, `notes`), a new `update_feedback`
+action modeled on `catering.ts`'s fetch→verify→update→return shape while
+keeping `feedback.ts`'s own throw convention for failures (reasoned
+explicitly against an apparent PRD/`ENG-022` conflict that resolves cleanly
+once shape and error-convention are treated as separate questions), and a
+non-blocking sequencing note with `ENG-022` on the access-check helper's
+live name. One-way doors: none — status vocabulary and the no-audit-log
+choice both decided directly, both reversible. No ADR: no one-way door, no
+standards deviation, no accepted risk. Full detail on the ticket's own log.
+
+**0 net frontmatter transitions** — `state`/`owner` unchanged
+(`designed`/`architect`). The exit condition for `designed` is now met, and
+with no one-way door this ticket's next stop would be `ready` directly, no
+G2 — **not taken this pass.** Machine WIP re-verified fresh from every
+ticket file's own frontmatter, not the cached header: `ENG-008`/`ENG-013`
+`building`, `ENG-009`/`ENG-010` `ready` — 4/1, still over cap, still
+draining naturally. Same precedent already on record for `ENG-014`/`ENG-015`:
+a clean, one-way-door-free design still holds at `designed` until the count
+clears. `ENG-023` now joins `ENG-014`/`ENG-015`/`ENG-025` there.
+
+**Notify sweep:** nothing raised — no gate opened this pass. **Dead-end
+sweep** (scoped to this event's contract): no broken chain on this ticket's
+own prior entries beyond the one this pass resumed.
+
+`chained: none` — `designed`, held by the machine WIP cap (4/1, re-verified
+above), not blocked and not waiting on a human specifically, but firing
+`continue ENG-023` now would only re-discover the same cap with no new work
+to do. Re-check once a `scheduled`/`watch`/`continue` pass drains
+`ENG-008`/`ENG-009`/`ENG-010`/`ENG-013` below the cap. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-30 — continue ENG-013: the missing test already existed, found undocumented rather than written
 
 `continue` event pass, context `ENG-013` — the re-fire from the `scheduled`

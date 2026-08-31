@@ -241,3 +241,35 @@ Append-only. One line per state transition, newest last.
   before this pass exits. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-025`) and
   whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
+
+- `2026-08-31` `designed` (no state change), `scheduled` event pass, context
+  `launchd`. Whole-board safety-net sweep. Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-025`) and whole-board: both exit 0, clean.
+
+  **The 2026-08-29 chain fire never actually ran — same shape as `ENG-014`/
+  `ENG-015`, found while investigating those two.** Unlike `ENG-014`/
+  `ENG-015`, this ticket's own log never recorded a confirmed-queued
+  re-verification — only the original `chained: ENG-025` claim from the
+  `scheduled` pass that raised it. Grepped every `traces/eng-loop-*.log`
+  this instance has ever written for `pass start: continue (ENG-025)`
+  against the confirmed-working format (`ENG-008`/`ENG-013` today): zero
+  matches, ever. No design file exists at `agents/architect/designs/
+  ENG-025-*.md`. Same not-the-redundant-dispatch-race reasoning as
+  `ENG-014`'s entry this pass — the design was never written, not merely
+  re-processed after completion.
+
+  **Action taken:** `continue ENG-025` was not in `traces/.pending` at this
+  pass's start — re-fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-025`
+  directly and confirmed rather than assumed: `traces/.pending` now carries
+  `1 continue ENG-025`, queued behind this still-running pass.
+
+  **Filed:** `agents/eng-manager/proposals.md` (this pass, filed once
+  against `ENG-014`'s entry, covers all three tickets) — the dispatch gap
+  itself is department machinery, not a ticket-shaped fix.
+
+  `chained: ENG-025` — re-fired this pass and confirmed on the queue.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-025`) and whole-board: both exit 0, clean.

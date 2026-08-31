@@ -336,3 +336,34 @@ Append-only. One line per state transition, newest last.
   pass's unfulfilled one. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
   whole-board: exit 0, clean.
+
+- `2026-08-31` `designed` (no state change), `scheduled` event pass, context
+  `launchd`. Whole-board safety-net sweep. Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-015`) and whole-board: both exit 0, clean.
+
+  **The 2026-08-29 re-fire, confirmed queued that day, never actually ran —
+  same shape as `ENG-014`, found while investigating that ticket.** Grepped
+  every `traces/eng-loop-*.log` this instance has ever written for `pass
+  start: continue (ENG-015)`: zero matches, in any log, ever, against a
+  confirmed-working format (`ENG-008`/`ENG-013` today). No design file
+  exists at `agents/architect/designs/ENG-015-*.md`. This ticket is
+  security-typed (`P1`, live cross-tenant data exposure — see this ticket's
+  own Problem section) and has now sat undesigned for two full days behind
+  a chain record that said otherwise. Not the known redundant-dispatch
+  race (two events chasing a completed action) — the design was never
+  written at all. Root cause not fully determined; see `ENG-014`'s own
+  entry this same pass for the parallel reasoning, and
+  `agents/eng-manager/proposals.md` (this pass) for the filed gap.
+
+  **Action taken:** unlike `ENG-014` (already sitting queued at this pass's
+  start), `continue ENG-015` was **not** in `traces/.pending` — re-fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  directly and confirmed rather than assumed: `traces/.pending` now carries
+  `1 continue ENG-015`, queued behind this still-running pass (lock owner
+  `34458`, this pass's own PID).
+
+  `chained: ENG-015` — re-fired this pass and confirmed on the queue.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-015`) and whole-board: both exit 0, clean.

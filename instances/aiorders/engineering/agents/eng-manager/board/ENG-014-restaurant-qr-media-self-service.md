@@ -315,3 +315,47 @@ Append-only. One line per state transition, newest last.
   pass's unfulfilled one. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-014`) and
   whole-board: exit 0, clean.
+
+- `2026-08-31` `designed` (no state change), `scheduled` event pass, context
+  `launchd`. Whole-board safety-net sweep. Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-014`) and whole-board: both exit 0, clean.
+
+  **The 2026-08-29 re-fire, confirmed queued that day, never actually ran —
+  a second, different break in the same chain.** Grepped every
+  `traces/eng-loop-*.log` this instance has ever written for `pass start:
+  continue (ENG-014)` (the exact format confirmed against `ENG-008`'s/
+  `ENG-013`'s own known-good runs today): zero matches, in any log, ever.
+  No design file exists at `agents/architect/designs/ENG-014-*.md`. This
+  ticket's own architect-owned observation filed on `ENG-023` this same day
+  ("`designed` conflates 'handed to architect, undesigned' and 'design
+  complete, cap-held' — `ENG-014`/`ENG-015` turned out to be the former")
+  independently corroborates the same finding from the other direction.
+  This is not the known redundant-dispatch race (`observations.md`,
+  multiple 2026-08-26/27 rows) — that race is two events chasing a
+  **completed** action; here the action itself was never done. Root cause
+  not fully determined — `traces/` is local and this instance runs on two
+  hosts, and the 2026-08-29 confirmation only proves the append happened,
+  not that the subsequent drain preserved or ran it.
+
+  **Action taken:** did not re-fire — `continue ENG-014` already sits in
+  `traces/.pending` at this pass's start (verified fresh, not assumed;
+  likely the same entry `ENG-008`'s `continue` pass queued behind
+  earlier today, though the log gives no way to distinguish that from a
+  surviving remnant of the 2026-08-29 append). Firing a second `continue
+  ENG-014` here would either collapse into it harmlessly or, if the
+  existing entry is in fact stuck, double queue depth without fixing
+  anything — left as one entry, to drain naturally behind `ENG-008`/
+  `ENG-013` once this pass releases the lock.
+
+  **Filed, not fixed here:** `agents/eng-manager/proposals.md` (this
+  pass) — the dispatch gap itself (a confirmed-queued event that can
+  vanish before draining, with no `eng-events-dropped`-style notice ever
+  raised, unlike a pass that fails and is properly retried/dropped) is
+  department machinery, not a ticket-shaped fix, and not P0 on an
+  internal-lane process.
+
+  `chained: none` — the ticket already has a queued fire; adding another
+  is not a repair. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-014`) and whole-board: both exit 0, clean.
