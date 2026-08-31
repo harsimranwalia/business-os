@@ -12,6 +12,54 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-025: design actually written — PASS, stays at designed (WIP-capped)
+
+`continue` event pass, context `ENG-025`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+This is the dedicated `continue ENG-025` session the prior `scheduled` pass
+recorded chaining to and never reached — confirmed at pass start: `ENG-025`
+absent from `traces/.pending` (already drained to launch this session; only
+`ENG-008` and `ENG-013` remain queued behind it); no design file existed at
+`agents/architect/designs/ENG-025-*.md`. Mode check clean. Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-025`) and
+whole-board: both exit 0, clean.
+
+Read the real code (`aiorders-api`'s `brand-portal/feedback.ts`,
+`restaurant-portal`'s `brandPortalApi.ts` and `feedback/Index.tsx`) rather
+than trusting the PRD's summary — confirmed `get_feedback` already returns
+the restaurant's entire history with `type`/`sub_type`/`nature` on every row,
+already rendered per-card today. Wrote
+`agents/architect/designs/ENG-025-feedback-recurring-issues.md`: one new
+presentational component (`RecurringIssuesSummary.tsx`, pure client-side
+aggregation via `useMemo` over data the page already fetches), one render-call
+edit to `Index.tsx`. No new backend action, no migration. `ADR-007` records
+the two calls the PRD left open (all-time window, >1 threshold for
+"recurring"); judged reversible and not a one-way door, same precedent
+`ADR-005`/`ADR-006` set — **no G2**.
+
+**Stays at `designed` regardless — held by the machine WIP cap, not a gate.**
+Re-verified fresh from each ticket's own frontmatter: `ENG-008` (`in-qa`),
+`ENG-009`/`ENG-010` (`ready`), `ENG-013` (`ready-to-ship`) — four tickets
+inside the counted `ready`..`ready-to-ship` range against a cap of 1,
+unchanged since this morning's `scheduled` sweep. Design work itself is
+exempt from this cap; entering `ready` is not, so this pass does not attempt
+it — no branch created, no code written.
+
+Closes the chain gap the 2026-08-31 `scheduled` sweep flagged against this
+ticket — the third and last of the three (`ENG-014`, `ENG-015`, `ENG-025`)
+it found sitting at `designed` *un-designed*. All three are now genuinely
+cap-held-after-completion.
+
+**0 transitions** — ticket stays at `designed`; the cap, not the hop budget,
+is what stopped it. Machine WIP unaffected (still 4/1, `ENG-025` was never
+inside the counted range). Approver-facing WIP and approval cap both
+unaffected — no gate raised.
+
+`chained: none` — held by the machine WIP cap (4/1: `ENG-008`/`ENG-009`/
+`ENG-010`/`ENG-013` occupying), one of the documented no-chain conditions.
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-025`)
+and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — continue ENG-015: design actually written — PASS, stays at designed (WIP-capped)
 
 `continue` event pass, context `ENG-015`. Narrow scope per the event's own

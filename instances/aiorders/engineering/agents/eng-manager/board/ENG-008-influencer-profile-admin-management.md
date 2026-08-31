@@ -8,16 +8,16 @@ time_estimate: half a day to a couple of days
 time_spent: ~1 day machine time — build, two code-review rounds (round 1
   fail, round 2 pass), the QA quality gate, plus the security gate; all
   machine time, see log
-time_remaining: ~15-30min machine time — release-readiness (devops opens
-  the PR). After that it's the approver's own merge, on their own schedule
-  (L1). No approver time_impact.
+time_remaining: 0 machine time — release-readiness done, both PRs open. What's
+  left is the approver's own merge, on their own schedule (L1). No approver
+  time_impact beyond that merge.
 severity: P3
 priority:
-state: ready-to-ship
-owner: devops
+state: blocked
+owner: approver
 lane: full
-blocked_on:
-blocked_from:
+blocked_on: approver
+blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
 updated: 2026-08-31
@@ -34,6 +34,10 @@ links:
   security_review: agents/security/reviews/ENG-008.md
   release:
   pr:
+    - repo: aiorders-api
+      url: https://github.com/harsimranwalia/aiorders-api/pull/6
+    - repo: aiorders-admin-hub
+      url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/5
 ---
 
 ## Input
@@ -1094,3 +1098,96 @@ Append-only. One line per state transition, newest last.
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-008`) and whole-board: see board index.
+
+- `2026-08-31` **release-readiness: both PRs opened, now blocked on the
+  approver** (devops, `continue` event pass, context `ENG-008` — this
+  fire's own turn at the front of `traces/.pending`, queued by the
+  immediately preceding security-gate pass and drained right behind
+  `continue (ENG-013)`, per that ticket's own board-index entry). Narrow
+  scope per the event's own contract (resume this ticket only; no
+  board-wide sweep). Mode check clean (business-os `.env` → `MODE=active`;
+  instance `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Verified all four upstream gates fresh from the receipt files**, not
+  assumed from the frontmatter alone: migration
+  (`agents/database/migrations/ENG-008-influencer-profile-admin-management.md`,
+  pass), code review (`agents/principal-engineer/reviews/ENG-008.md`, round
+  2, pass), quality (`agents/qa/test-plans/ENG-008.md`, pass), security
+  (`agents/security/reviews/ENG-008.md`, pass). Both worktrees confirmed
+  clean, on `feat/ENG-008-influencer-admin-management`, at the exact commits
+  this ticket's own frontmatter records (`aiorders-api@57f8c4b`,
+  `aiorders-admin-hub@63be255`), already pushed to `origin` (no ahead/behind
+  against the remote branch). `gh pr list --search ENG-008` on both repos
+  confirmed no PR already existed — not a duplicate open.
+
+  **Both projects registered L1** (`config/projects.md`) — step 1's window
+  check does not apply; went straight to step 4. **Step 3 readiness checks**,
+  same interpretation this board already established for `ENG-007`/`ENG-013`
+  given no live Postgres CLI reachable from either build host:
+  - Rollback: SQL written and reasoned through in the migration doc (not
+    live-tested — the named, carried-forward gap every migration on this
+    instance shares), paired with reverting the handler/router/frontend
+    edit form in the same rollback, same shape `ENG-007`/`ENG-013` already
+    used at this identical gate.
+  - Observability: both new failure branches log via `console.error` before
+    responding (confirmed directly in the security review's A09 line),
+    surfaced through Supabase's existing function logs — no new mechanism
+    needed.
+  - Cost: **$0/month delta** — no new vendor, no new dependency on either
+    repo (security review's own Dependencies section, re-confirmed here).
+  - Window: n/a, L1.
+
+  **Opened both PRs** (`aiorders-api` first, since `aiorders-admin-hub`'s
+  edit form depends on its endpoint): `aiorders-api` PR #6
+  (https://github.com/harsimranwalia/aiorders-api/pull/6),
+  `aiorders-admin-hub` PR #5
+  (https://github.com/harsimranwalia/aiorders-admin-hub/pull/5). Each PR
+  body states what it does, the four gates passed with receipt paths, and
+  the named non-blocking gaps (raw `error.message` on 500 — 2nd tracked
+  occurrence; no frontend test harness on `aiorders-admin-hub`;
+  `min_visit_payment` stale-value-on-uncheck, P3) rather than leaving them
+  for the approver to discover unaided. Neither worktree needed restoring
+  to a different ticket's branch afterward — both were already sitting on
+  this ticket's own branch going in, unlike `ENG-013`'s hop which had to
+  switch away and back.
+
+  **Wrote the L1 merge-request item**
+  (`inbox/2026-08-31-eng008-merge-request.md`), `pr_urls:` as a YAML list of
+  `{repo, url}` pairs per `skills/release-runner/SKILL.md` step 4 (one item
+  covering both repos, never one per repo). Ran
+  `departments/engineering/lib/eng-notify.sh raise` — sent cleanly
+  (`traces/eng-notify-2026-08-31.log`: `sent: active
+  2026-08-31-eng008-merge-request.md`); stamped `notified:
+  2026-08-31T11:15:29` on the item by hand, since the script itself doesn't
+  write its own frontmatter back.
+
+  State `ready-to-ship → blocked`, `blocked_on: approver`,
+  `blocked_from: ready-to-ship`, owner `devops → approver`. No release
+  record yet, per `release-runner`'s own step 7/step 4 split — that's
+  written only once the build loop's merge-detection confirms both PRs
+  merged, same as `ENG-013`'s current position.
+
+  **1 transition** (`ready-to-ship → blocked`). **Consequence:** `machine_wip`
+  3/1 → 2/1 (`ENG-008` leaves the counted `ready`..`ready-to-ship` range —
+  `ENG-009`/`ENG-010` at `ready` remain the only two left inside it).
+  Approver-facing WIP 1/2 → 2/2 (`ENG-013` plus this ticket now occupy both
+  slots — **cap reached**). Approval cap 1/3 → 2/3.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** this pass's own item raised and
+  stamped above; nothing else to nudge. Approver-facing WIP is now at cap
+  (2/2) but the approval cap itself is not (2/3) — no stall notice per
+  `lib/eng-notify.sh stall`'s own trigger condition (approval cap full, not
+  WIP-cap full). **Observations/proposals filed:** none new — every named
+  gap above is already tracked elsewhere (the frontend-test-harness
+  proposal, the raw-error-message security-notebook entry).
+
+  `chained: none` — `blocked`, `blocked_on: approver`. This is the human
+  gate the whole hop was driving toward; firing `continue ENG-008` again
+  would only queue against a ticket with nothing left for a machine to do,
+  same reasoning `ENG-013`'s own immediately preceding entry already
+  recorded at this identical state. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
