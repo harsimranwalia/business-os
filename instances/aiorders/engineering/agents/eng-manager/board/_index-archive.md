@@ -12,6 +12,56 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-013: security gate — PASS, now ready-to-ship
+
+`continue` event pass, context `ENG-013`. Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+Ran the security gate fresh — no receipt existed at pass start, a real
+first execution. Threat-modelled the change (new input: `profileId`/`stage`
+on two new POST routes, both behind the existing bearer-auth middleware and
+the handler's existing admin/sub-admin gate; new capability: write access
+to one enum field, granted only to the population that could already read
+every row; blast radius on full compromise: integrity-only, reversible, no
+new confidentiality or financial exposure). Walked OWASP A01–A10, 8 `n/a`
+with reason, 2 reviewed in full. A01 clean — both new write routes reuse the
+one existing gate call and additionally scope every write to
+`source='foodswipe'`, the same tenant boundary the existing read already
+enforced; independently re-verified the tenant-scoping test is
+mutation-sensitive by construction, not just shape-checked. A05 found one
+non-blocking item — both new actions return a raw `error.message` on a
+500 — weighed (role-gated before either function runs, copied from this
+file's own pre-existing `GET` catch, nothing secret in what it could
+contain) and logged as the first tracked occurrence of this finding class
+in `agents/security/notebook/2026-08-31-findings.md`, not escalated.
+Checked all three of the baseline's negative-auth cases, not just the two
+with dedicated tests — read `admin-portal/index.ts` fresh to confirm the
+no-token case 401s upstream of this handler entirely, unmodified by this
+diff. Secret-scanned the diff and all three unique commits across both
+branches: zero matches. SOC 2 evidence trail confirmed complete. Full
+detail: `agents/security/reviews/ENG-013.md`, and the ticket's own log.
+
+**1 transition** (`in-qa → ready-to-ship`), well under the cap of 4 —
+stopped deliberately, not by the cap: `release_readiness` is a separate
+hop after `security` per `config.yaml`'s `sequential_after_quality`, and
+this was a fresh security session with no receipt to recover. `machine_wip`
+unaffected (`ENG-013` stays inside the counted `ready`..`ready-to-ship`
+range, now at its far end). Approver-facing WIP and approval cap both
+unaffected — `ready-to-ship` raises no gate for an L1 project; devops's
+release-readiness hop is what opens the PR and raises the merge request.
+
+`chained: ENG-013` — `ready-to-ship` is agent-owned (devops's
+release-readiness hop next), not the approver, not blocked, not terminal,
+not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+before exiting — confirmed queued (not lost): the trigger's own log shows
+it queued behind the still-active `scheduled launchd` fire's lock rather
+than launching immediately, same FIFO shape every prior hop on this ticket
+has used. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — continue ENG-008: review+quality combined hop, round 2 — PASS, now in-qa
 
 `continue` event pass, context `ENG-008`. Narrow scope per the event's own
