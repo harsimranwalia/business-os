@@ -108,8 +108,57 @@ cost in their hours, in the proposal, every time.
    `$MKT_INSTANCE/content/shipped/`. Both, because a ship skill *moves* a file
    — on a one-piece week the lone draft can already have published and left
    `drafts/` before the catch-up looks, and checking `drafts/` alone triggers a
-   phantom re-run that doubles the week's output. Complete → log one line and
-   exit.
+   phantom re-run that doubles the week's output. Complete → the plan stands;
+   do not re-run the chain. Incomplete → this run is the week's plan. Either
+   way you are not finished, because a second check runs regardless.
+
+   That first check is necessary and not sufficient, and the reason is subtle
+   enough to be worth stating: **it can only audit the plan the primary run
+   chose.** A channel the allocation gave nothing to is not a channel it looks
+   at, so that channel passes vacuously, silently, every time. The allocation
+   is a decision made at one moment, and the world does not hold still
+   afterwards — a channel can be switched on later that same evening, a cadence
+   can widen, drafts can be rejected. Not hypothetical: in the system this
+   department was ported from, a channel went live barely two hours after a
+   planning run finished; the next day's check passed clean because the plan it
+   was auditing had allocated that channel nothing, and a live channel with a
+   ship routine firing every morning sat with an empty queue through all three
+   of its publishing days, unnoticed for four days.
+
+   So run a **second check, on every catch-up, whatever the first one said.**
+   Re-read the channel registry in `$MKT_INSTANCE/config/config.yaml`
+   **fresh** — the whole point is that the config may have moved since the
+   brief was written — and for each enabled channel ask whether the queue
+   covers the rest of this week. Count across **all three pre-shipped stages**:
+   `$MKT_INSTANCE/content/drafts/`, `$MKT_INSTANCE/content/ready-to-send/` and
+   `$MKT_INSTANCE/content/approved/`. Checking `drafts/` alone reads a full
+   pipeline as empty and briefs fresh pieces on top of a queue that already
+   exists — the exact doubled week the backstop exists to prevent, walking in
+   through the door built to catch it. A piece belongs to a channel by its
+   `channel` frontmatter field, never by which stage folder it is sitting in.
+
+   The two config shapes ask two different questions. A channel with
+   `weekly_plan.publishing_days` has fixed recurring slots: keep the days still
+   ahead this week and check each one for a piece on that channel dated that
+   day. A channel without `publishing_days` has no recurring pattern to check,
+   so check it against `weekly_plan.post_count` instead — are there that many
+   pieces for that channel dated this week. A channel at `post_count: 0` has
+   nothing to check and is **not short**; reading it as "zero queued, brief
+   some" restarts a cadence somebody stopped on purpose. And never invent a
+   default day list for a channel whose config has none — a channel carrying
+   neither `publishing_days` nor a non-zero `post_count` is not short, and the
+   honest output is a log line saying exactly that.
+
+   Anything found short gets briefed now, through that channel's own briefing
+   route. The catch-up is silent only when **both** checks pass, which is still
+   the normal week.
+
+   The limit is worth naming rather than hiding: this is a next-day check. It
+   closes the gap for anything that changed since the primary run, and shrinks
+   the worst case from a silent week to the slots before the next catch-up —
+   but a channel enabled mid-week still waits. Closing that needs a
+   config-change trigger, a new mechanism with new failure modes of its own,
+   and it is not worth building until a mid-week change actually happens.
 
 2. **The quarterly narrative.** Keep a running answer to: what story are the
    next dozen pieces building? Archetype rotation is a rhythm, not a strategy.

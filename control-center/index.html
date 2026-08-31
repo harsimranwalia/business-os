@@ -130,6 +130,29 @@
     .stat b { display: block; font-size: 20px; color: var(--text); font-weight: 500; }
     .stat.over b { color: #fbbf24; }
 
+    /* ── Marketing: channel pills + the settings rows ── */
+    .chan-h { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+    .chan-name { font-size: 14px; font-weight: 500; color: var(--text); }
+    .tier { font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-light);
+      color: var(--muted-mid); letter-spacing: .04em; }
+    .tier.c0 { border-color: var(--border-light); color: var(--muted); }
+    .tier.c1 { border-color: rgba(251,191,36,.5); color: #fbbf24; }
+    .tier.c2 { border-color: rgba(52,211,153,.5); color: #34d399; }
+    .set-row { display: grid; grid-template-columns: 150px 1fr; gap: 8px 14px; align-items: start;
+      margin-top: 12px; font-size: 12px; }
+    .set-row label { color: var(--muted); padding-top: 4px; }
+    .set-locked { color: var(--muted-mid); padding-top: 4px; }
+    .set-in { width: 110px; padding: 4px 8px; font-size: 12px; font-family: inherit; }
+    .set-days { display: flex; gap: 4px; flex-wrap: wrap; }
+    .set-day, .set-toggle { padding: 4px 9px; font-size: 11px; font-family: inherit; cursor: pointer;
+      border-radius: 5px; border: 1px solid var(--border-light); background: var(--surface);
+      color: var(--muted-mid); }
+    .set-day.on, .set-toggle.on { border-color: rgba(52,211,153,.6); color: #34d399; }
+    .set-saved { font-size: 11px; color: #34d399; }
+    .set-err { font-size: 11px; color: #f87171; }
+    .set-src { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
+    .quiet { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+
     /* ── Engineering board lanes ── */
     .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
     .lane { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
@@ -283,16 +306,48 @@
 <!-- ── Marketing ── -->
 <div class="view active" id="marketing-view">
   <div class="toolbar">
-    <button class="filter-btn active" data-mf="PENDING" onclick="setMktFilter('PENDING')">Pending</button>
-    <button class="filter-btn" data-mf="APPROVED" onclick="setMktFilter('APPROVED')">Approved</button>
-    <button class="filter-btn" data-mf="POSTED" onclick="setMktFilter('POSTED')">Posted</button>
-    <button class="filter-btn" data-mf="DISCARDED" onclick="setMktFilter('DISCARDED')">Discarded</button>
-    <button class="filter-btn" data-mf="FAILED" onclick="setMktFilter('FAILED')">Failed</button>
-    <button class="filter-btn" data-mf="" onclick="setMktFilter('')">All</button>
+    <select class="instance-select" id="mkt-instance" onchange="setMktInstance(this.value)"
+            title="Which business's marketing department"></select>
+    <!-- Channel is the marketing analogue of the Engineering tab's instance
+         selector, and it scopes the whole tab — deciding on a channel and
+         looking at that channel should not be two acts of remembering. -->
+    <select class="instance-select" id="mkt-channel" onchange="setMktChannel(this.value)"
+            title="Which channel"></select>
+    <button class="filter-btn active" data-mview="decide" onclick="setMktView('decide')">Decide</button>
+    <button class="filter-btn" data-mview="content" onclick="setMktView('content')">Content</button>
+    <!-- The Reddit pipeline. Its own system of record (Twenty), so its own
+         view — but under Marketing, because it is one channel and not the
+         department. -->
+    <button class="filter-btn" data-mview="reddit" onclick="setMktView('reddit')">Reddit</button>
+    <!-- Marketing's own configuration, not the system's. Everything in it is
+         a channel setting, so the channel dropdown above scopes it too. -->
+    <button class="filter-btn" data-mview="settings" onclick="setMktView('settings')">Settings</button>
+    <!-- Status filters belong to the Content view only. Shown with it, hidden
+         with it — a filter that does nothing on the visible view is worse
+         than no filter. The Reddit view brings its own, for the same reason:
+         they are Twenty's statuses, not the department's. -->
+    <span id="mkt-phase-filters" style="display:none">
+      <button class="filter-btn active" data-cf="" onclick="setContentFilter('')">All</button>
+      <button class="filter-btn" data-cf="drafting" onclick="setContentFilter('drafting')">Drafting</button>
+      <button class="filter-btn" data-cf="awaiting" onclick="setContentFilter('awaiting')">Awaiting</button>
+      <button class="filter-btn" data-cf="queued" onclick="setContentFilter('queued')">Approved</button>
+      <button class="filter-btn" data-cf="shipped" onclick="setContentFilter('shipped')">Shipped</button>
+    </span>
+    <span id="mkt-reddit-filters" style="display:none">
+      <button class="filter-btn active" data-mf="PENDING" onclick="setRedditFilter('PENDING')">Pending</button>
+      <button class="filter-btn" data-mf="APPROVED" onclick="setRedditFilter('APPROVED')">Approved</button>
+      <button class="filter-btn" data-mf="POSTED" onclick="setRedditFilter('POSTED')">Posted</button>
+      <button class="filter-btn" data-mf="DISCARDED" onclick="setRedditFilter('DISCARDED')">Discarded</button>
+      <button class="filter-btn" data-mf="FAILED" onclick="setRedditFilter('FAILED')">Failed</button>
+      <button class="filter-btn" data-mf="" onclick="setRedditFilter('')">All</button>
+    </span>
     <div class="toolbar-spacer"></div>
-    <button class="refresh-btn" onclick="loadMarketing()" title="Refresh">↻</button>
+    <button class="refresh-btn" onclick="mktRefresh()" title="Refresh">↻</button>
   </div>
   <div class="scroll" id="mkt-scroll"><div class="empty">Loading…</div></div>
+  <div class="scroll" id="content-scroll" style="display:none"><div class="empty">Loading…</div></div>
+  <div class="scroll" id="reddit-scroll" style="display:none"><div class="empty">Loading…</div></div>
+  <div class="scroll" id="settings-scroll" style="display:none"><div class="empty">Loading…</div></div>
 </div>
 
 <!-- ── Sales ── -->
@@ -560,43 +615,329 @@ function switchTab(tab) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// Marketing — Twenty CRM "Marketing Content" lifecycle
+// Marketing — the marketing department, per business instance
 // ══════════════════════════════════════════════════════════════════════════
-let mktFilter = 'PENDING';
-let mktItems = [];
+// Four views under one tab. DECIDE is the department's M2 gate and the only
+// recurring human step in the whole system, so it shows what is actually due
+// and nothing else. CONTENT is the library. REDDIT is the Twenty CRM pipeline,
+// folded in here because it is one channel rather than the department.
+// SETTINGS is the channel config — configuration, separated from work.
 
-function setMktFilter(f) {
-  mktFilter = f;
-  document.querySelectorAll('[data-mf]').forEach(b =>
-    b.classList.toggle('active', b.dataset.mf === f));
-  loadMarketing();
+let mktView = 'decide';
+let mktData = null;
+let contentItems = [];
+let contentFilter = '';
+// Remembered across visits. Re-picking on every open is the recurring manual
+// step this system exists to remove, and the Engineering tab's instance
+// selector already set that precedent.
+let mktInstance = localStorage.getItem('mkt-instance') || '';
+let mktChannel = localStorage.getItem('mkt-channel') || '';
+
+const MKT_PHASE_LABEL = {
+  drafting: 'drafting', awaiting: 'awaiting your approval',
+  queued: 'approved, waiting to ship', shipped: 'shipped',
+};
+
+function setMktInstance(id) {
+  mktInstance = id;
+  localStorage.setItem('mkt-instance', id);
+  // Every view is scoped to the instance, so all of them are now stale.
+  contentItems = []; settingsData = null;
+  mktRefresh();
+}
+
+function setMktChannel(id) {
+  mktChannel = id;
+  localStorage.setItem('mkt-channel', id);
+  if (mktData) renderMarketing();
+  if (contentItems.length) renderContent();
+  // The dropdown scopes the whole tab, settings included — picking one channel
+  // and reading another's cadence underneath it is the mismatch this filter
+  // exists to prevent.
+  if (settingsData) renderSettings();
+}
+
+function inChannel(x) { return !mktChannel || x.channel === mktChannel; }
+
+function setMktView(v) {
+  mktView = v;
+  document.querySelectorAll('[data-mview]').forEach(b =>
+    b.classList.toggle('active', b.dataset.mview === v));
+  document.getElementById('mkt-scroll').style.display = v === 'decide' ? '' : 'none';
+  document.getElementById('content-scroll').style.display = v === 'content' ? '' : 'none';
+  document.getElementById('reddit-scroll').style.display = v === 'reddit' ? '' : 'none';
+  document.getElementById('settings-scroll').style.display = v === 'settings' ? '' : 'none';
+  document.getElementById('mkt-phase-filters').style.display = v === 'content' ? 'contents' : 'none';
+  document.getElementById('mkt-reddit-filters').style.display = v === 'reddit' ? 'contents' : 'none';
+  // The channel dropdown scopes the department's own views. Reddit's records
+  // live in Twenty and carry no department channel, so it would filter them
+  // all away — hide it there rather than leave a control that empties the view.
+  document.getElementById('mkt-channel').style.display = v === 'reddit' ? 'none' : '';
+  if (v === 'decide' && mktData) renderMarketing();
+  // Loaded on first visit rather than with the tab: these are the views opened
+  // least often, and reading the library or the config on every Marketing open
+  // would be work nobody asked for.
+  if (v === 'content') { contentItems.length ? renderContent() : loadContent(); }
+  if (v === 'reddit') { redditItems.length ? renderReddit() : loadReddit(); }
+  if (v === 'settings') { settingsData ? renderSettings() : loadSettings(); }
+}
+
+// One refresh button, four views. Refreshing settings by reloading the library
+// would look identical and do nothing.
+function mktRefresh() {
+  if (mktView === 'settings') loadSettings();
+  else if (mktView === 'content') loadContent();
+  else if (mktView === 'reddit') loadReddit();
+  else loadMarketing();
+}
+
+function mktQ(extra) {
+  const p = new URLSearchParams();
+  if (mktInstance) p.set('instance', mktInstance);
+  Object.entries(extra || {}).forEach(([k, v]) => { if (v) p.set(k, v); });
+  const q = p.toString();
+  return q ? '?' + q : '';
+}
+
+function renderMktInstances(list) {
+  const sel = document.getElementById('mkt-instance');
+  sel.innerHTML = (list || []).map(i =>
+    `<option value="${escAttr(i.id)}"${i.id === mktInstance ? ' selected' : ''}>${esc(i.label)}</option>`
+  ).join('');
+  sel.style.display = (list || []).length > 1 ? '' : 'none';
+}
+
+function renderMktChannels(list) {
+  const sel = document.getElementById('mkt-channel');
+  const opts = ['<option value="">All channels</option>'].concat((list || []).map(c =>
+    `<option value="${escAttr(c.id)}"${c.id === mktChannel ? ' selected' : ''}>` +
+    `${esc(c.label)}${c.enabled ? '' : ' (off)'}</option>`));
+  sel.innerHTML = opts.join('');
+  // A channel since removed from config must not strand the tab on a filter
+  // that matches nothing forever.
+  if (mktChannel && !(list || []).some(c => c.id === mktChannel)) setMktChannel('');
 }
 
 async function loadMarketing() {
   const el = document.getElementById('mkt-scroll');
-  el.innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const q = mktFilter ? '?status=' + encodeURIComponent(mktFilter) : '';
-    const r = await fetch('/api/marketing' + q);
+    const r = await fetch('/api/marketing' + mktQ());
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || r.status);
-    mktItems = d.items || [];
+    mktData = d;
+    mktInstance = d.instance || '';
+    renderMktInstances(d.instances);
+    renderMktChannels(d.channels);
     renderMarketing();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Error loading marketing: ${esc(String(e))}</div>`;
+  }
+}
+
+function mktPieceCard(p, opts) {
+  opts = opts || {};
+  const chan = (mktData && (mktData.channels || []).find(c => c.id === p.channel));
+  const tags = [];
+  if (p.channel) tags.push(`<span class="tag">${esc(chan ? chan.label : p.channel)}</span>`);
+  if (p.archetype) tags.push(`<span class="tag">${esc(p.archetype)}</span>`);
+  if (p.has_carousel) tags.push('<span class="tag">carousel</span>');
+  else if (p.format) tags.push(`<span class="tag">${esc(p.format)}</span>`);
+  if (p.series_stage) tags.push(`<span class="tag">stage ${esc(p.series_stage)}</span>`);
+  if (opts.gate) tags.push('<span class="tag gate">M2</span>');
+  return '<div class="card' + (opts.gate ? ' accent' : '') + '">' +
+    `<div class="row"><span class="title">${esc(p.title)}</span>${tags.join('')}</div>` +
+    `<div class="meta">${p.date ? 'planned ' + esc(p.date) : 'no planned date'}` +
+    (opts.meta ? ' · ' + esc(opts.meta) : '') + '</div>' +
+    // Full body, never truncated. Someone is approving this text; a cut-off
+    // preview is the difference between reading a piece and glancing at one.
+    (opts.body ? `<div class="body-text">${esc(p.body) || '—'}</div>` : '') +
+    (opts.actions || '') + '</div>';
+}
+
+function renderMarketing() {
+  const el = document.getElementById('mkt-scroll');
+  const d = mktData;
+  if (d.empty) { el.innerHTML = `<div class="empty">${esc(d.empty)}</div>`; return; }
+  const due = d.due.filter(inChannel);
+  const queued = d.queued.filter(inChannel);
+  // The stats strip counts what the dropdown is showing. A header that keeps
+  // reporting every channel while the body shows one is the kind of quiet
+  // mismatch that makes a dashboard untrustworthy.
+  const chan = mktChannel ? (d.channels.find(c => c.id === mktChannel) || null) : null;
+  let h = '';
+
+  h += '<div class="stats">' +
+    `<div class="stat${due.length ? ' over' : ''}"><b>${due.length}</b>due for approval</div>` +
+    `<div class="stat"><b>${queued.length}</b>approved, waiting to ship</div>` +
+    (chan
+      ? `<div class="stat"><b>${esc(chan.next_slot || '—')}</b>next ${esc(chan.label)} slot</div>`
+      : `<div class="stat"><b>${d.stats.shipped_30d}</b>shipped in 30 days</div>` +
+        `<div class="stat"><b>${d.stats.channels_live}</b>channels live</div>`) +
+    '</div>';
+
+  h += '<div class="section"><div class="h">Due for your approval ' +
+       `<span class="count">${due.length}</span></div>`;
+  if (!due.length) {
+    h += '<div class="card"><div class="body-text">Nothing needs you' +
+         (mktChannel ? ' on this channel' : '') + '. Anything else written is ' +
+         'dated further out — approve those when they come due, not now.</div></div>';
+  }
+  due.forEach(p => {
+    const actions = '<div class="actions">' +
+      `<button class="btn yes" onclick="mktApprove('${escAttr(p.path)}')">Approve</button>` +
+      `<button class="btn" onclick="mktOpenInContent('${escAttr(p.path)}')">Open in Content</button>` +
+      '</div>';
+    h += mktPieceCard(p, {
+      gate: true, body: true, actions,
+      meta: 'nothing publishes without this',
+    });
+  });
+  // Deliberately a sentence, not a list. These are written, dated, and not
+  // anyone's problem yet; the point of the window is that they stay that way.
+  // Only shown unfiltered — the count is across all channels, and captioning
+  // it with one channel's name would be a small lie.
+  if (!mktChannel && d.later_count) {
+    h += `<div class="quiet">${d.later_count} more written and dated beyond the ` +
+         `next ${d.window_days} days` +
+         (d.later_first ? `, starting ${esc(d.later_first)}` : '') +
+         '. They are under Content when you want them.</div>';
+  }
+  h += '</div>';
+
+  if (queued.length) {
+    h += '<div class="section"><div class="h">Approved, shipping itself ' +
+         `<span class="count">${queued.length}</span></div>`;
+    queued.slice(0, 6).forEach(p => {
+      h += mktPieceCard(p, { meta: "goes out on its channel's next slot" });
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="section"><div class="h">Give the department something to write</div>' +
+    '<div class="intake-box">' +
+    '<input id="mkt-topic" placeholder="A topic worth a piece" />' +
+    '<textarea id="mkt-topic-note" rows="2" placeholder="Why it fits, or the real story behind it (optional)"></textarea>' +
+    '<div class="row"><button class="btn yes" onclick="mktAddTopic()">Add to the topic bank</button>' +
+    '<span class="note-text" id="mkt-topic-out">The CMO reads the bank on its next ' +
+    "planning run and picks the archetype — you don't have to classify it.</span></div>" +
+    '</div></div>';
+
+  el.innerHTML = h;
+}
+
+async function mktApprove(path) {
+  const r = await fetch('/api/mkt/approve', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, instance: mktInstance }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { alert(d.error || 'Approve failed'); return; }
+  contentItems = [];   // the piece moved folders; the library is stale
+  loadMarketing();
+}
+
+async function mktOpenInContent(path) {
+  // Decide shows what needs deciding; Content shows everything. Both are views
+  // of the same tab, so this is a view switch rather than a tab switch.
+  setMktView('content');
+  if (!contentItems.length) { try { await loadContent(); } catch (e) { /* the view shows its own error */ } }
+  const el = document.getElementById('piece-' + cssId(path));
+  if (el) el.scrollIntoView({ block: 'center' });
+}
+
+async function mktAddTopic() {
+  const t = document.getElementById('mkt-topic');
+  const n = document.getElementById('mkt-topic-note');
+  const out = document.getElementById('mkt-topic-out');
+  if (!t.value.trim()) { t.focus(); return; }
+  const r = await fetch('/api/mkt/topic', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic: t.value, note: n.value, instance: mktInstance }),
+  });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(e.error || 'Failed'); return; }
+  t.value = ''; n.value = '';
+  out.textContent = 'In the bank. The CMO picks it up on its next planning run — ' +
+    'nothing else for you to do with it.';
+}
+
+// ── Content — the library ─────────────────────────────────────────────────
+// Everything, every phase. Looking, not deciding: no approve button here, so
+// there is exactly one place an approval happens.
+
+function cssId(path) { return path.replace(/[^A-Za-z0-9]/g, '-'); }
+
+function setContentFilter(f) {
+  contentFilter = f;
+  document.querySelectorAll('[data-cf]').forEach(b =>
+    b.classList.toggle('active', b.dataset.cf === f));
+  renderContent();
+}
+
+async function loadContent() {
+  const el = document.getElementById('content-scroll');
+  try {
+    const r = await fetch('/api/content' + mktQ());
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    if (d.empty) { el.innerHTML = `<div class="empty">${esc(d.empty)}</div>`; return; }
+    contentItems = d.items || [];
+    renderContent();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Error loading content: ${esc(String(e))}</div>`;
+  }
+}
+
+function renderContent() {
+  const el = document.getElementById('content-scroll');
+  const items = contentItems.filter(inChannel)
+    .filter(i => !contentFilter || i.phase === contentFilter);
+  if (!items.length) { el.innerHTML = '<div class="empty">Nothing here.</div>'; return; }
+  el.innerHTML = items.map(p =>
+    `<div id="piece-${cssId(p.path)}">` +
+    mktPieceCard(p, { body: true, meta: MKT_PHASE_LABEL[p.phase] || p.phase }) +
+    '</div>').join('');
+}
+
+// ── Reddit — the Twenty CRM community pipeline ────────────────────────────
+// Its own system of record, so its own view and its own statuses. It only ever
+// moves Twenty's `status`, the same field scripts/content_loop.py drives over
+// Telegram — two approval surfaces, one truth.
+
+let redditFilter = 'PENDING';
+let redditItems = [];
+
+function setRedditFilter(f) {
+  redditFilter = f;
+  document.querySelectorAll('[data-mf]').forEach(b =>
+    b.classList.toggle('active', b.dataset.mf === f));
+  loadReddit();
+}
+
+async function loadReddit() {
+  const el = document.getElementById('reddit-scroll');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const q = redditFilter ? '?status=' + encodeURIComponent(redditFilter) : '';
+    const r = await fetch('/api/reddit' + q);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    redditItems = d.items || [];
+    renderReddit();
   } catch (e) {
     el.innerHTML = `<div class="empty">Could not load Marketing Content from Twenty: ${esc(String(e))}<br>
       <span style="font-size:11px">Check TWENTY_BASE_URL / TWENTY_API_KEY in .env.</span></div>`;
   }
 }
 
-function renderMarketing() {
-  const el = document.getElementById('mkt-scroll');
-  if (!mktItems.length) {
-    el.innerHTML = `<div class="empty">Nothing ${mktFilter ? mktFilter.toLowerCase() : ''}.</div>`;
+function renderReddit() {
+  const el = document.getElementById('reddit-scroll');
+  if (!redditItems.length) {
+    el.innerHTML = `<div class="empty">Nothing ${redditFilter ? redditFilter.toLowerCase() : ''}.</div>`;
     return;
   }
-  el.innerHTML = mktItems.map(it => {
+  el.innerHTML = redditItems.map(it => {
     const pending = it.status === 'PENDING';
-    const bodyId = 'mkt-body-' + it.id;
+    const bodyId = 'rd-body-' + it.id;
     return `<div class="mkt-card">
       <div class="mkt-head">
         <div class="mkt-title-wrap">
@@ -613,34 +954,213 @@ function renderMarketing() {
       ${it.posted_url ? `<a class="mkt-link" href="${esc(it.posted_url)}" target="_blank">Open posted thread →</a>` : ''}
       ${it.permalink && !it.posted_url ? `<a class="mkt-link" href="${esc(it.permalink)}" target="_blank">Open target thread →</a>` : ''}
       ${pending ? `<div class="actions">
-          <button class="btn yes" onclick="mktAction('${escAttr(it.id)}','edit_approve','${bodyId}')">Approve</button>
-          <button class="btn no" onclick="mktSkip('${escAttr(it.id)}')">Skip</button>
+          <button class="btn yes" onclick="redditAction('${escAttr(it.id)}','edit_approve','${bodyId}')">Approve</button>
+          <button class="btn no" onclick="redditSkip('${escAttr(it.id)}')">Skip</button>
         </div>` : ''}
     </div>`;
   }).join('');
 }
 
-async function mktAction(id, action, bodyId) {
+async function redditAction(id, action, bodyId) {
   const body = bodyId ? document.getElementById(bodyId).value : undefined;
-  const r = await fetch('/api/marketing/action', {
+  const r = await fetch('/api/reddit/action', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, action, body }),
   });
   const d = await r.json();
   if (!r.ok) { alert(d.error || 'Failed'); return; }
-  loadMarketing();
+  loadReddit();
 }
 
-async function mktSkip(id) {
+async function redditSkip(id) {
   const reason = prompt('Reason for skipping (optional):', '');
   if (reason === null) return;
-  const r = await fetch('/api/marketing/action', {
+  const r = await fetch('/api/reddit/action', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, action: 'skip', reason }),
   });
   const d = await r.json();
   if (!r.ok) { alert(d.error || 'Failed'); return; }
-  loadMarketing();
+  loadReddit();
+}
+
+// ── Settings — the channel config ─────────────────────────────────────────
+// Everything here was previously a hand edit to a YAML file, which is exactly
+// the recurring manual step this system exists to remove. Sections, not a flat
+// channel list: channels are the only section today and will not be the last.
+
+let settingsData = null;
+
+async function loadSettings() {
+  const el = document.getElementById('settings-scroll');
+  try {
+    const r = await fetch('/api/settings' + mktQ());
+    if (!r.ok) {
+      el.innerHTML = '<div class="empty">' + (r.status === 404
+        ? 'This view needs a server restart — the running process predates /api/settings.'
+        : 'Error loading settings (' + r.status + ').') + '</div>';
+      return;
+    }
+    settingsData = await r.json();
+    if (settingsData.empty) { el.innerHTML = `<div class="empty">${esc(settingsData.empty)}</div>`; return; }
+    renderSettings();
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Error loading settings.</div>';
+  }
+}
+
+function renderSettings() {
+  const el = document.getElementById('settings-scroll');
+  let h = '';
+  (settingsData.sections || []).forEach(sec => {
+    if (sec.id !== 'channels') return;   // the only renderer that exists yet
+    // Keyed on `id`, not `channel` — a settings row IS a channel rather than a
+    // piece that belongs to one, so inChannel() is the wrong shape here.
+    const shown = (sec.channels || []).filter(c => !mktChannel || c.id === mktChannel);
+    h += '<div class="section">' +
+      `<div class="h">${esc(sec.label)}</div>` +
+      `<div class="note-text">${esc(sec.note)}</div>` +
+      `<div class="set-src">${esc(sec.source)}</div>`;
+    if (!shown.length) {
+      h += '<div class="empty">' + (sec.channels.length
+        ? 'No settings for this channel.' : 'No channels configured.') + '</div>';
+    }
+    shown.forEach(c => h += settingsChannelCard(c, sec.weekdays));
+    h += '</div>';
+  });
+  el.innerHTML = h;
+}
+
+function settingsChannelCard(c, weekdays) {
+  const id = escAttr(c.id);
+  const days = c.publishing_days || [];
+  const can = f => (c.editable || []).includes(f);
+
+  // Cadence renders one of two ways, and which one is a fact about the channel
+  // rather than a presentation choice.
+  //
+  //   config   — publishing_days IS the schedule. The ship skill reads this
+  //              list every run and stops on any day not in it, so these
+  //              buttons change what actually publishes.
+  //   schedule — the ship routine's own cron decides and this config has no day
+  //              list to read. Read-only, because a day list written here would
+  //              be a setting nobody reads — and the server would refuse the
+  //              write anyway, so the buttons would only ever produce an error.
+  const cadence = c.cadence_source === 'config'
+    ? '<label>Publishing days</label><div>' +
+        '<div class="set-days">' +
+        weekdays.map(d =>
+          `<button class="set-day${days.includes(d) ? ' on' : ''}" ` +
+          `onclick="toggleChannelDay('${id}','${d}')">${d.slice(0, 3)}</button>`).join('') +
+        '</div></div>' +
+      '<label>Publishing time</label><div>' +
+        `<input class="set-in" value="${esc(c.publishing_time)}" placeholder="HH:MM" ` +
+        `onchange="setChannelField('${id}','publishing_time',this.value)" />` +
+        `<span class="meta">${c.next_slot ? ' next: ' + esc(c.next_slot) : ''}</span></div>`
+    : '<label>Cadence</label>' +
+      `<div class="set-locked">${esc(c.schedule_human || 'set by its ship routine, not by this config')}` +
+      `${c.next_slot ? ' · next: ' + esc(c.next_slot) : ''}` +
+      '<div class="meta">Not set here — this channel has no day list in the marketing ' +
+      'config, and its ship routine would not read one. ' +
+      `${c.schedule_file ? 'Changing it is an edit to <code>' + esc(c.schedule_file) + '</code>. ' : ''}` +
+      'Which piece goes out on a given day is its own planned date, oldest first, one a day.</div></div>';
+
+  return '<div class="card">' +
+    '<div class="chan-h">' +
+      `<span class="chan-name">${esc(c.label)}</span>` +
+      `<span class="tier ${esc(c.tier.toLowerCase())}">${esc(c.tier)}</span>` +
+      `<span class="set-saved" id="set-msg-${id}"></span>` +
+    '</div>' +
+    `<div class="meta">${esc(c.tier_why)}</div>` +
+    '<div class="set-row">' +
+      '<label>Channel</label><div>' +
+        (can('enabled')
+          ? `<button class="set-toggle${c.enabled ? ' on' : ''}" ` +
+            `onclick="setChannelField('${id}','enabled',${c.enabled ? 'false' : 'true'})">` +
+            `${c.enabled ? 'On' : 'Off'}</button>`
+          : `<span class="set-locked">${c.enabled ? 'On' : 'Off'}</span>`) + '</div>' +
+      '<label>Pieces per week</label><div>' +
+        (can('post_count')
+          ? `<input class="set-in" type="number" min="0" max="50" value="${esc(c.post_count)}" ` +
+            `onchange="setChannelField('${id}','post_count',this.value)" />`
+          : `<span class="set-locked">${esc(c.post_count)}</span>`) +
+        // A paused channel's 0 is a decision with a reason, not a blank. Saying
+        // so stops the number reading as something to "fix".
+        (c.paused_for && String(c.post_count) === '0'
+          ? '<span class="meta"> paused — see below</span>' : '') + '</div>' +
+      cadence +
+      '<label>Publishes via</label>' +
+      `<div class="set-locked">${esc(c.publish_path)}</div>` +
+      '<label>Per-piece approval</label>' +
+      // Deliberately not a toggle. Turning this off means content publishes
+      // with nobody reading it first — that belongs in the config file where it
+      // takes a deliberate edit, not one click here. The friction is the point.
+      `<div class="set-locked"><b>${c.require_approval ? 'Required' : 'NOT REQUIRED'}</b>` +
+      ' — changing this is an edit to the config file, on purpose</div>' +
+      '<label>Voice corpus</label>' +
+      `<div class="set-locked">${esc(c.voice_have)}/${esc(c.voice_need)} samples` +
+      (Number(c.voice_have) < Number(c.voice_need) ? ' · below the floor' : '') + '</div>' +
+      (c.paused_for ? '<label>Paused</label>' +
+        `<div class="set-locked">for <b>${esc(c.paused_for)}</b></div>` : '') +
+      (c.playbook ? '<label>Playbook</label>' +
+        `<div class="set-locked">${esc(c.playbook)}</div>` : '') +
+    '</div></div>';
+}
+
+// One write at a time. Every day button computes the NEW list from the
+// currently-rendered one, and that list is only refreshed after the server
+// round-trip — so two quick clicks would both read the same pre-write state and
+// the second would recompute the first's change away. Ignoring a click
+// mid-write is the honest behaviour: the alternative is a click that appears to
+// register and silently does not, on the config that decides what publishes.
+let settingsBusy = false;
+
+async function toggleChannelDay(channel, day) {
+  if (settingsBusy) return;
+  const sec = (settingsData.sections || []).find(x => x.id === 'channels');
+  const c = sec && sec.channels.find(x => x.id === channel);
+  if (!c) return;
+  const days = (c.publishing_days || []).slice();
+  const i = days.indexOf(day);
+  if (i >= 0) days.splice(i, 1); else days.push(day);
+  await setChannelField(channel, 'publishing_days', days);
+}
+
+async function setChannelField(channel, field, value) {
+  if (settingsBusy) return;
+  settingsBusy = true;
+  const msg = document.getElementById('set-msg-' + channel);
+  if (msg) { msg.className = 'set-saved'; msg.textContent = 'saving…'; }
+  try {
+    const r = await fetch('/api/settings/channel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel, field, value, instance: mktInstance }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      // The server refuses rather than writing a config it could not verify, so
+      // a rejection means nothing changed on disk. Say what was wrong and leave
+      // the UI showing the real, unchanged state.
+      if (msg) { msg.className = 'set-err'; msg.textContent = j.error || 'not saved'; }
+    } else if (msg) {
+      msg.className = 'set-saved'; msg.textContent = 'saved';
+    }
+  } catch (e) {
+    if (msg) { msg.className = 'set-err'; msg.textContent = 'not saved: ' + e.message; }
+  } finally {
+    // Re-read rather than patching local state. The file is the truth, the
+    // server normalises what it writes (days come back Monday-first), and
+    // showing anything else would make the view disagree with what actually
+    // runs. It happens on the refusal path too — a rejection is exactly when
+    // the on-screen state most needs to be the file's.
+    await loadSettings();
+    // Cadence changed under the Decide view's feet — its next-slot line and
+    // channel list are now stale.
+    if (mktData) loadMarketing();
+    // Released only after the redraw, so the next click computes its day list
+    // from what the file now says rather than from the list it just replaced.
+    settingsBusy = false;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════

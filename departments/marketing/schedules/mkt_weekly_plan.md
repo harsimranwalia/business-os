@@ -28,7 +28,7 @@ drift, and the draft passes the one that got stale.
 | Fire | When | Purpose |
 |---|---|---|
 | primary | the instance's planning slot, weekly | The week's plan |
-| catch-up | the same time, the next day | Backstop. Runs the same routine; the agent decides whether the primary actually completed |
+| catch-up | the same time, the next day | Backstop. Runs the same routine; the agent decides whether the primary actually completed, and whether every live channel is actually covered |
 
 **Capability required:** something that can start an unattended CLI session on
 a weekly cadence and again a day later. On an always-on host, cron. On a
@@ -58,8 +58,9 @@ Each run, in order:
 1. **Mode check.** `.env` → `MODE`. On a halt value, log one line and exit.
    Nothing below runs, including the report.
 
-2. **Did the primary already complete?** Only meaningful on the catch-up fire,
-   but harmless on both, so it runs on both.
+2. **Did the primary complete, and is the week actually covered?** Two checks,
+   not one. Only meaningful on the catch-up fire, but harmless on both, so both
+   run on both.
 
    Compute the primary run's date **fresh** — never from a stored weekday
    label — then look in **both** `content/drafts/` and `content/shipped/` for
@@ -74,8 +75,28 @@ Each run, in order:
    skill, so its presence proves only that the run started — which is exactly
    the partial failure this backstop exists to catch.
 
-   Complete → log one line and exit. Incomplete → this run *is* this week's
-   plan; execute the full chain below for whichever channels are short.
+   Complete → the plan stands, and the chain below does not re-run.
+   Incomplete → this run *is* this week's plan; execute the full chain below
+   for whichever channels are short.
+
+   **Then, either way, the second check.** The first one can only audit the
+   plan the primary run wrote, so a channel the allocation gave nothing to
+   passes it vacuously — including a channel that went live in the hours
+   between the two fires, which is how the original found this gap. The second
+   check re-reads the channel config **fresh** and asks whether every enabled
+   channel has a piece queued for each of its remaining publishing slots this
+   week, counting across all three pre-shipped stages — `content/drafts/`,
+   `content/ready-to-send/` and `content/approved/` — so that a piece already
+   reviewed or already approved is never miscounted as missing. Whatever comes
+   back short is briefed now, through that channel's own briefing route.
+   **The run is silent only when both checks pass** — which is still the
+   normal week.
+
+   What counts as short is a judgment with real edges — which config shape is
+   asked which question, why a channel with no cadence and no piece count is
+   not short, why a channel deliberately at zero must not be restarted. Those
+   rules live in the CMO's entry with the rest of the check, deliberately not
+   here.
 
 3. **Read the ground.** The CMO reads `../knowledge/business-profile.md`
    fresh, last week's `performance/` and baselines, each channel's playbook in
@@ -146,7 +167,9 @@ Each run, in order:
 - **Run a second full batch when the primary succeeded.** A blind catch-up
   rerun doubles the week's pipeline, which was considered and rejected: the
   completion check exists precisely so the backstop can be silent when it has
-  nothing to do.
+  nothing to do. The coverage check does not reopen that door — it briefs the
+  slots it finds empty and nothing else, and it counts the queue across every
+  pre-shipped stage so a piece that has moved on is never re-briefed.
 - **Fill the calendar to hit a number.** The allocation is a ceiling, not a
   quota.
 
@@ -157,11 +180,13 @@ Each run, in order:
 | Halt mode set | Exits at step 1, silently, by design | One log line. Clearing `MODE` resumes with nothing to reinstall |
 | Machine asleep / host down at the primary slot | Nothing runs | The catch-up fire the next day finds no drafts and runs the full chain |
 | Crash partway through the chain | Partial output — some pieces drafted, some not | The catch-up's drafts check sees the shortfall per channel and drafts only what is missing |
+| The primary completed correctly, then the facts changed — a channel switched on, a cadence widened, drafts rejected after the run | Those slots go unqueued, and the completion check passes clean, because the plan it audits never allocated them | The catch-up's second check re-reads the channel config fresh and briefs whatever is short. A change made after the last catch-up still waits until the next weekly fire |
 | **Both fires miss** | **A week with no content queued** | Nothing inside this department notices. This is the routine's real failure mode and it is unmonitored — see below |
 | Voice corpus below the floor | Drafting still happens; the gap is recorded on the draft | The draft says so, and M2 carries more weight that week |
 | A channel's playbook missing | That channel is skipped, with a line in the report | The weekly report's channel section is absent for it |
 
-**The unmonitored case is the last one, and it is named rather than hidden.**
+**The unmonitored case is the doubled miss, and it is named rather than
+hidden.**
 Two consecutive silent misses produce a quiet week that looks exactly like a
 week where the CMO decided to publish nothing — which is a legitimate outcome
 this department deliberately allows. Distinguishing them needs something
@@ -186,3 +211,15 @@ with the agent. **Do not move it back into the prompt** — a scheduler fires
 things on a timer, agents decide what to do about it, and every rule that
 leaks into a scheduler prompt is a rule that has to be re-pasted somewhere to
 change.
+
+The catch-up gained its second check on 2026-08-31, after the system this was
+ported from ran into the case the first check cannot see. A channel went live
+about two hours after a planning run finished; the next day's completion check
+passed clean, because the plan it was auditing had allocated that channel
+nothing; and a live channel with a ship routine firing every morning sat with
+an empty queue for four days. Completion and coverage are different questions,
+and the first cannot answer the second — so the coverage check runs even when
+completion passes, and silence now means both came back clean. **This file
+still describes both and specifies neither**: the config shapes, the fields
+read, and the short/not-short judgment stay in the CMO's entry, which is the
+same reason the completion check was never allowed into the scheduler prompt.
