@@ -12,6 +12,104 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-30 — scheduled (launchd): two silent merges shipped, three broken chains resumed
+
+`scheduled` event pass, context `launchd`, the 15:30 safety-net slot (fired
+15:46, delayed by an in-flight `continue ENG-023` attempt that ran until
+13:00 and a lock hand-off after). Mode check clean (business-os `.env` →
+`MODE=active`). This pass's own transcript was interrupted once mid-run by
+the host machine sleeping — resumed from the same session, nothing lost.
+
+**Found a rough day on disk before touching anything.** `git status` showed
+six files uncommitted from the 2026-08-29 `watch` pass that processed
+`ENG-023`'s G1 (never committed before this pass started) — read in full via
+`git diff` before proceeding, confirmed coherent and already fully described
+by that pass's own ticket-log and journal entries, left as-is to commit
+together with this pass's own work rather than committed prematurely
+mid-investigation. `traces/eng-loop-2026-08-30.log` showed `continue ENG-023`
+had failed twice today (`401 OAuth access token has been revoked` at 02:13;
+`ENOTFOUND` at 09:31, after only 5 file reads) and been **dropped after 3
+attempts total** (across both days) — `inbox/2026-08-30-eng-events-dropped.md`
+raised automatically by the trigger script itself, unnotified (its own first
+notify attempt hit the same `ENOTFOUND` class of failure).
+
+**Merge detection (step 5) run against every ticket sitting on an L1 PR or
+possible PR, not just the one named by the failed `continue`** — this is
+what a `continue` event's own narrower contract can never do, and exactly
+why today's two failed `ENG-023` attempts left this undetected for hours:
+
+- `ENG-007` (`ready-to-ship`, no gate item ever raised — blocked by a
+  Saturday window-hold the same-day L1 correction had already made moot):
+  `git merge-base --is-ancestor` **MERGED**; independently confirmed via
+  `gh pr view 4` (`mergedAt: 2026-08-30T02:38:08Z`, approver's own account).
+  Receipts verified fresh from disk (all 4 present), `eng-gate-check.sh
+  ENG-007` exit 0. Carried `ready-to-ship → shipped → verified`. Release
+  record: `agents/devops/releases/2026-08-30-aiorders-api-ENG-007.md`.
+- `ENG-011` (`blocked`, merge request raised 2026-08-29, never answered —
+  its own text told the approver a reply wasn't required): both repos
+  checked independently — `aiorders-api` PR #3 **MERGED** 00:12:50Z,
+  `aiorders-admin-hub` PR #3 **MERGED** 00:13:30Z, git ancestry confirmed on
+  both before treating the ticket as shippable (first two-repo merge
+  detection on this board). Receipts verified (3 + migration, all present),
+  `eng-gate-check.sh ENG-011` exit 0. Carried `blocked → shipped →
+  verified`. Merge-request item closed to `inbox/_handled/`. Release record:
+  `agents/devops/releases/2026-08-30-ENG-011-aiorders-api-and-admin-hub.md`.
+
+Both close-outs done to the same standard `ENG-006` set two days ago:
+receipts checked before advancing (never trusted from the PR body alone),
+what an L1-with-no-CI/CD project can honestly attest to at `shipped`
+(deploy status recorded as unknown where no evidence exists, rather than
+inferred), and acceptance criteria re-confirmed against the merged tree with
+any live-only gap named and carried forward, not hidden. Both PRDs' `status`
+moved to `verified`. Both journaled in `decision-journal.md`.
+
+**Dead-end sweep found three broken chains, not one.** `ENG-023`'s own
+`continue` chain (fired correctly at the end of the 2026-08-29 `watch`
+entry above) is the one this pass was triggered to investigate — root-caused
+(both failures infra-level, neither implicating the ticket) and re-fired,
+with the diagnosis recorded in `inbox/2026-08-30-eng-events-dropped.md`
+before re-firing, per that item's own recommendation. Checking the rest of
+the board for the same shape (a ticket ending its last log entry with
+`chained: ENG-XXX` and no evidence the fire ever ran) surfaced two more:
+`ENG-008` (`building`, chained at end of its 2026-08-29 build entry, waiting
+on the combined review+quality hop) and `ENG-013` (`building`, chained at
+end of its code-review-fail entry, waiting on the missing test). Neither
+`continue (ENG-008)` nor `continue (ENG-013)` appears anywhere in
+`traces/eng-loop-2026-08-29.log` or `-30.log` — only `ENG-023`'s two failed
+attempts and this pass ever drained. All three re-fired; the trigger queue's
+own duplicate-collapse rule makes this safe even where a fire is merely
+still queued rather than genuinely lost, so no risk of double-running any
+hop. `ENG-007`'s own former hold (the Saturday window note in its prior log
+entry) resolved itself via the merge discovery above rather than needing a
+fourth chain-fire.
+
+**4 tickets touched, 5 net transitions** (`ENG-007` ×2, `ENG-011` ×2,
+`ENG-023` dead-end resume with no state change), all within per-ticket caps.
+`machine_wip` 5/1 → 4/1 (`ENG-007` left the counted range; still over cap,
+still draining naturally — `ENG-009`/`ENG-010`/`ENG-008`/`ENG-013` remain).
+Approver-facing WIP 1/2 → 0/2, fully clear. Approval cap 1/3 → 0/3, fully
+clear — both caps clear at once for the first time recorded on this board.
+
+**Notify sweep:** `inbox/2026-08-30-eng-events-dropped.md` raised and
+notified this pass (its own automatic first attempt had failed on the same
+network error it was reporting); `notified:` stamped. Nothing else new to
+raise or nudge.
+
+**Observations filed** (`observations.md`, two rows): merge detection's
+`continue`-vs-`scheduled`/`watch` coverage gap made concrete by today's
+timeline; fifth and sixth data points of this approver merging L1 PRs
+directly on GitHub rather than through the tracked channel.
+
+**Chained:** `ENG-007` — none, terminal (`verified`). `ENG-011` — none,
+terminal (`verified`). `ENG-008` — `ENG-008`, re-fired
+(`/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`).
+`ENG-013` — `ENG-013`, re-fired (`/bin/sh .../eng-trigger.sh continue
+ENG-013`). `ENG-023` — `ENG-023`, re-fired (`/bin/zsh .../eng-trigger.sh
+continue ENG-023`). All three fires happen after this board update and the
+commit that follows it, per this pass's own closing instructions. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: run clean
+before the fires below (see traces for the exact invocation and output).
+
 ## 2026-08-29 — watch (launchd): ENG-023's G1 answered and processed, awaiting-scope → designed
 
 `watch` event pass, context `launchd`. Mode check clean (business-os `.env`

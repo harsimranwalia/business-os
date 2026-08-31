@@ -16,14 +16,14 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-31
 branch:
 depends_on: []
 blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-023-feedback-status-and-notes.md
-  design:
+  design: agents/architect/designs/ENG-023-feedback-status-and-notes.md
   adrs: []
   review:
   test_plan:
@@ -305,3 +305,99 @@ approver asked in their own words ("any actions taken").
   both have since cleared. Re-firing:
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-023`.
   `chained: ENG-023`.
+
+- `2026-08-31` (no state change — held at `designed` by the machine WIP cap)
+  `continue` event pass, context `ENG-023` — resuming this ticket's own
+  design work per the prior pass's explicit hand-off (the 2026-08-29
+  `designed`-entry note: "design work itself not started this pass... belongs
+  in a dedicated `continue ENG-023` session"). Narrow scope per this event's
+  own contract (resume this ticket from its current state; no board-wide
+  sweep). Mode check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-023`) and
+  whole-board: both exit 0, clean.
+
+  **Investigated the live code before designing, same practice this board
+  uses throughout**: read `restaurant-portal`'s `src/pages/feedback/Index.tsx`,
+  `src/services/brandPortalApi.ts` (the `RestaurantFeedback` interface,
+  `callApi`, the existing `getCateringRequests`/`updateCateringRequest` pair
+  as the closest client-side precedent), `src/components/catering/CateringRequestCard.tsx`
+  (status-badge UI precedent); `aiorders-api`'s `brand-portal/feedback.ts`,
+  `catering.ts`, `utils.ts`, and `index.ts`'s routing switch; the
+  `restaurant_feedback` table's migration history (no tracked `CREATE TABLE`,
+  same untracked-base-schema gap every prior ticket touching this table has
+  found) and the closest sibling precedent,
+  `20260807000006_restaurant_claim_documents.sql` (`status TEXT NOT NULL
+  DEFAULT '...'` + `notes TEXT`, RLS enabled with no policies since access is
+  service-role-only — the exact shape this design reuses); and `ENG-022`'s
+  own design doc (same directory, unshipped) for its file-by-file convention
+  classification.
+
+  **Confirmed the `getFeedback` bug `ENG-022` already found**, first-hand:
+  `feedback.ts` calls `verifyRestaurantAccess(supabase, user.id,
+  restaurant_id)` — arguments in the wrong order against `utils.ts`'s real
+  signature `(restaurantId, supabase, user, options)` — and checks `if
+  (!hasAccess)` against the whole returned object rather than `.hasAccess`,
+  which is always truthy. Not this ticket's bug to fix; confirmed only so
+  the new `updateFeedback` path does not reuse this call site.
+
+  **Wrote the tech design**:
+  `agents/architect/designs/ENG-023-feedback-status-and-notes.md`. Summary:
+  two new columns (`status text not null default 'new'`, `notes text`) on
+  `restaurant_feedback`, modeled on the `restaurant_claim_documents`
+  precedent; one new `update_feedback` action in `feedback.ts` following
+  `catering.ts`'s `update_catering_request` *data-access shape* (fetch
+  record → resolve `restaurant_id` → verify access → update → return) while
+  keeping `feedback.ts`'s own **throw** convention for failures, rather than
+  importing `catering.ts`'s return-idiom wholesale — reasoned explicitly in
+  the design's Approach section, since the PRD's literal wording ("model it
+  on catering.ts") and `ENG-022`'s file classification (`feedback.ts` is a
+  throw-convention file) point in different directions until read together.
+  Flagged a real but non-blocking sequencing note: the correct access-check
+  helper exists today as `verifyRestaurantAccessLegacy`, becomes
+  `requireRestaurantAccess` once `ENG-022` ships — whichever ticket builds
+  second checks `utils.ts` for the live name, no `depends_on` needed (per the
+  PRD's own instruction on this point).
+
+  **One-way doors: none** — decided, not escalated. Two design questions the
+  PRD left open were resolved directly rather than punted: status vocabulary
+  is `new | in_progress | resolved` (the PRD's own suggested example), and no
+  per-change audit/attribution log — no sibling status field in this
+  codebase has one, and it's a pure additive table later if it turns out to
+  matter (design's Alternatives #2). Both reversible, so decided here rather
+  than raised as G2. **No ADR written** — no one-way door, no deviation from
+  `engineering-standards.md`, no accepted security risk; a small,
+  well-precedented additive change doesn't meet the architect's own bar for
+  a record (`agents/architect/agent.md`).
+
+  **State: unchanged, `designed` / `architect`.** The exit condition for
+  `designed` (tech design written; ADRs logged — none apply; one-way doors
+  decided — none exist) is now met, and with no one-way door this ticket's
+  next stop in the full lane is `ready` directly, no G2. **Not advanced there
+  this pass.** Re-verified machine WIP fresh from every ticket file's own
+  frontmatter rather than trusting the board index's cached header
+  (`ENG-008`/`ENG-013` `building`, `ENG-009`/`ENG-010` `ready` — 4/1,
+  confirmed, still over the cap and still draining naturally). Same
+  precedent this ticket's own prior log entry already flagged for
+  `ENG-014`/`ENG-015`: a clean design with no one-way door still holds at
+  `designed` rather than advancing to `ready` until the count clears —
+  `ready` is gated by the cap, `designed` is not. `ENG-023` now joins
+  `ENG-014`/`ENG-015`/`ENG-025` at `designed`, fully or partly design-ready,
+  queued behind the same cap.
+
+  **Dead-end sweep, scoped to this event's own contract**: no broken chain on
+  this ticket's own prior entries beyond the one this pass exists to resume
+  (already closed by writing the design). No new observation beyond what's
+  captured in the design doc itself.
+
+  **Notify sweep**: nothing raised this pass — no gate opened (no one-way
+  door), nothing to nudge on this ticket.
+
+  `chained: none` — `designed`, held by the machine WIP cap (4/1, re-verified
+  fresh above), not genuinely blocked and not waiting on a human for this
+  ticket specifically, but firing `continue ENG-023` now would only
+  re-discover the same cap with no new work to do, same reasoning this
+  ticket's own 2026-08-29 `shaped`-state entry used. Re-check once a
+  `scheduled`/`watch`/`continue` pass drains `ENG-008`/`ENG-009`/`ENG-010`/`ENG-013`
+  below the cap. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-023`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
