@@ -665,6 +665,19 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-007`) and
   whole-board: both run clean.
 
+<!-- merge note: local (HEAD) and remote logs diverged from this point after a
+cross-host run split. Local records the department's own ready-to-ship →
+blocked → shipped → verified sequence in full (PR #4 opened, approver merge,
+control-center-bypass reconciliation, then a 4-method acceptance-check).
+Remote's log (dated 2026-08-30, a `scheduled` pass on the other host) reaches
+the same terminal `verified` state via a shorter, independently-reasoned
+account that found the ticket already merged and reasoned "very likely opened
+by an earlier, unlogged pass" for PR #4 — i.e. it is describing the same real
+blocked/PR-open event local documents directly, just without visibility into
+local's own log entries. Kept local's fuller, first-hand account below since
+it directly documents the PR-open action remote could only infer; remote's
+independent verification (git ancestry re-check, GH Actions run status) added
+nothing local's own methods hadn't already covered by different means. -->
 - `2026-08-29` **approver override, filed by hand in an interactive session —
   not a department pass.** The hold above predates
   `skills/release-runner/SKILL.md`'s same-day correction: **the weekend/window

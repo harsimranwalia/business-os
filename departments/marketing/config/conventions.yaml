@@ -1,0 +1,329 @@
+# Marketing department — template contract
+#
+# This file is the seam between the shared department and a business that runs
+# it. The template is read-only at runtime; an instance is the only thing ever
+# written to. Every agent and skill in this department resolves its paths
+# through the two roots below and never hardcodes a repository path.
+#
+# Ported from life-os 2026-08-29, deliberately to the same shape the
+# engineering department was ported to on 2026-08-22. Two departments that
+# solve the same structural problem differently would double the number of
+# conventions anyone has to hold, for no gain — so where a decision was already
+# made over there (two roots, role vocabulary, MODE, the notify seam, agent-dir
+# layout), it is made the same way here. Read
+# departments/engineering/config/conventions.yaml alongside this; the
+# differences below are the ones that are real.
+
+template:
+  version: 1.0.0
+  layout: agent-dir        # agents/{name}/agent.md + config.yaml (not .claude/agents/*.md)
+  origin: life-os@2026-08-29
+  sibling: departments/engineering   # same contract shape, different domain
+
+# ---------------------------------------------------------------------------
+# The two roots. Everything else is relative to one of them.
+# ---------------------------------------------------------------------------
+roots:
+  dept:
+    env: MKT_DEPT
+    is: departments/marketing
+    writable: false        # a pass that writes here is a bug — change the template deliberately, via git
+  instance:
+    env: MKT_INSTANCE
+    is: instances/{business}/marketing
+    writable: true         # all plans, drafts, voice corpus, performance and memory
+
+# ---------------------------------------------------------------------------
+# Instance layout — what the department writes, always instance-relative.
+#
+# The shape follows the content lifecycle rather than the agent roster,
+# because that is what every skill in this department actually navigates: a
+# piece moves drafts -> ready-to-send -> approved -> shipped, and its stage is
+# a directory. Two agents write into the same stage folder and neither owns it.
+# ---------------------------------------------------------------------------
+instance_layout:
+  inbox:     inbox/                  # pieces and proposals awaiting the approver (was input/inbox/)
+  requests:  inbox/requests/         # topics filed by a filer, drained by the CMO at planning
+  traces:    traces/                 # run logs
+  reports:
+    root:  reports/                  # the weekly marketing report — the approver reads it or doesn't
+  content:
+    root:          content/
+    drafts:        content/drafts/           # written, not yet reviewed
+    ready_to_send: content/ready-to-send/    # reviewed, awaiting the approver's M2
+    approved:      content/approved/         # M2 passed — a ship skill will publish it
+    shipped:       content/shipped/          # published. Terminal truth.
+    images:        content/images/           # single images, one per piece slug
+    carousels:     content/carousels/        # {slug}/slides/*.png + carousel.pdf + spec.json
+    topic_bank:    content/topic-bank.md     # the queue the CMO plans from
+    series:        content/series/           # multi-part campaign plans, one file per series
+  # A stage folder is a location, not a gate. `status: approved` in the
+  # frontmatter IS the gate, and a ship skill checks the field, never the
+  # folder. Both exist because the folder is how a human finds a piece and the
+  # field is how a machine decides. Where they disagree, the field wins —
+  # except in shipped/, which is terminal: a published piece must never
+  # reappear as work because its frontmatter went stale.
+  voice:
+    root:     voice/                 # THE BUSINESS'S voice, per instance. Never shared.
+    guide:    voice/guide.md         # words to use, words never to use, the fingerprint
+    samples:  voice/samples/         # {register}.md — real published pieces, the calibration corpus
+  performance:
+    root:     performance/           # per-piece metrics, collected by engagement-analyzer
+    baselines: performance/baselines.md
+  proof:
+    root: proof/                     # evidence: real work with a real outcome
+    case_studies: proof/case-studies/            # a named client, a problem, a measured result
+    internal:     proof/internal/                # real work, no client — still proof of capability
+  agents:
+    cmo:                 { config: agents/cmo/config/,  notebook: agents/cmo/notebook/ }
+    campaign-strategist: { config: agents/campaign-strategist/config/, notebook: agents/campaign-strategist/notebook/ }
+    content-writer:      { notebook: agents/content-writer/notebook/ }
+  notebooks: agents/{agent}/notebook/   # per-agent memory. NEVER shared across instances.
+  config:
+    overrides:         config/config.yaml          # approver, filers, channels, cadence, credentials-by-reference
+    channels:          config/channels/            # {channel}.md — one playbook per live channel
+    instantiated_from: config/instantiated-from    # template VERSION this instance was built at
+
+# ---------------------------------------------------------------------------
+# Roles. Same vocabulary as the engineering department, on purpose: a business
+# running both should not have to learn two words for the same person.
+# ---------------------------------------------------------------------------
+roles:
+  approver:
+    is: the single human with gate authority
+    owns: [m1_strategy, m2_the_piece, m3_channel_autonomy]
+    note: >
+      Exactly one per instance. M2 is the recurring one — every single piece,
+      before it publishes. The five machine gates (brief completeness, voice,
+      format limits, cadence, asset readiness) stay machine-owned and blocking;
+      only the approver overrides one, explicitly, recorded in the decision log.
+  filer:
+    is: a human who may file a topic, with no gate authority
+    owns: []
+    note: >
+      Topics land in inbox/requests/ carrying `source: filer`. The CMO drains
+      them at planning like any other topic-bank entry. A filer never approves
+      a piece and never appears in the publishing path.
+
+# ---------------------------------------------------------------------------
+# The gates. Three human, five machine — the same split engineering uses, and
+# for the same reason: a gate a machine can check is a gate a human should not
+# have to.
+# ---------------------------------------------------------------------------
+gates:
+  human:
+    m1_strategy:
+      what: positioning, ICP, the channel portfolio, adding or retiring a channel
+      raised_by: cmo
+      frequency: rare — quarterly, or when evidence demands it
+    m2_the_piece:
+      what: every single piece, before it publishes
+      raised_by: the draft itself, on the approval surface
+      frequency: recurring — the only gate that is
+      note: >
+        This is the department's load-bearing gate and the reason nothing here
+        runs at full autonomy by default. A late post costs a day. A wrong post
+        published under someone's own name costs credibility the whole
+        department exists to compound.
+    m3_channel_autonomy:
+      what: moving a channel up an autonomy tier
+      raised_by: cmo, as a proposal
+      frequency: rare
+  machine:
+    brief_completeness: a piece is not drafted from an incomplete brief
+    voice:              the draft matches the voice guide's fingerprint
+    format_limits:      per-channel hard limits, revalidated at publish time
+    cadence:            at most one piece per channel per publishing day
+    asset_readiness:    every referenced image or document exists on disk
+  rule: >
+    No agent may override another agent's machine gate. Only the approver
+    overrides one, explicitly, and it is recorded.
+
+# ---------------------------------------------------------------------------
+# Channel autonomy tiers. The marketing analogue of engineering's L0-L3 project
+# autonomy. Autonomy belongs to the CHANNEL, never to the piece.
+# ---------------------------------------------------------------------------
+channel_autonomy:
+  c0: observe — metrics collected, nothing drafted, nothing published
+  c1: draft — drafts generated, no publishing path exists
+  c2: approve-to-ship — drafts generated and published, one approval per piece (M2)
+  c3: autoship — published with no per-piece approval
+  default: c1
+  rule: >
+    A new channel registers at C1 and moves up only when the approver says so
+    (gate M3). C1 is not a resting place: a draft with nowhere to go is a
+    dead end, so a channel sitting at C1 needs a live reason and a date. Note
+    the distinction — a channel with a working ship path whose queue is simply
+    empty is C2, not C1; capability decides the tier, not activity.
+    Nothing reaches C3 by accumulating good behaviour.
+
+# ---------------------------------------------------------------------------
+# A channel is a playbook, not an agent.
+#
+# The department's load-bearing design rule. Adding a channel means writing
+# config/channels/{name}.md and registering it in config/config.yaml. It does
+# NOT mean a new agent, and it does not mean a new strategy skill: strategy is
+# cross-channel and lives in the campaign strategist. Craft may fork when a
+# channel's format is genuinely different — a 280-character thread is not a
+# long-form post — and that fork is a skill, still not an agent.
+# ---------------------------------------------------------------------------
+channels:
+  playbook: config/channels/{name}.md
+  registry: config/config.yaml -> channels
+  playbook_holds: [format limits, cadence and its evidence, publishing path, what works here, hashtag and mention conventions, current baselines]
+  playbook_never_holds: [what to say, positioning, the week's plan]
+
+# ---------------------------------------------------------------------------
+# Business knowledge seam. Shared with the engineering department by design —
+# same file, same location, one description of the business.
+# ---------------------------------------------------------------------------
+knowledge:
+  source: ../knowledge/             # instances/{business}/knowledge/ — beside marketing/, not inside it
+  files:
+    profile: business-profile.md    # what the business is, who it serves, what it sells
+  read_by: [cmo, campaign-strategist]
+  rule: >
+    Read fresh at the start of any positioning or planning conversation. A CMO
+    that cannot say what the business does cannot say what is worth publishing,
+    and will approve anything that sounds professional.
+
+# ---------------------------------------------------------------------------
+# Voice seam. This is the one place marketing needs something engineering does
+# not, and it is the part of the life-os original that could not be ported.
+#
+# life-os read one person's identity store (clone/voice/) for every draft.
+# That is a person, not a business, and it was cut. What replaces it is not a
+# smaller version of the same thing — it is a corpus the business owns and the
+# department GROWS: a shipped piece the approver published is, by definition,
+# a piece in the business's voice, so it becomes a sample.
+#
+# This is why a new instance starts with an empty corpus and that is not a
+# failure state. It is why voice.floor exists, and why the seeding rule below
+# points at real published material rather than asking anyone to describe
+# their own voice in the abstract.
+# ---------------------------------------------------------------------------
+voice:
+  guide:   voice/guide.md
+  samples: voice/samples/{register}.md
+  floor: 10                        # samples per register before drafting is trusted unsupervised
+  read_by: [content-writer, campaign-strategist]
+  seeding: >
+    Seed from real published material in the business's own voice — posts,
+    articles, talks, anything already public and already approved of. Never
+    from a description of the voice, and never from material in a different
+    register: a channel's samples must be that channel's register, because
+    what is being calibrated is rhythm and shape, not opinions.
+  below_floor: >
+    A channel below the floor still drafts. It does not silently produce
+    worse output — it leans harder on the review pass and on M2, and the
+    instance's config records the gap so the number is visible rather than
+    discovered. Raising the floor or gating on it is the approver's call.
+  growth: >
+    Every piece that ships is a candidate sample for its register. That is the
+    intended path from an empty corpus to a calibrated one, and it means the
+    corpus can only ever contain material the approver already published.
+
+# ---------------------------------------------------------------------------
+# Proof seam — and the loose end this port ties off.
+#
+# departments/engineering/config/conventions.yaml declares
+# reports/proof/ with the note "rewires to a marketing department if one
+# exists". One now does. Marketing READS that directory and never writes to
+# it: engineering owns what it built, marketing owns what it says about it.
+# ---------------------------------------------------------------------------
+proof:
+  sources:
+    - proof/case-studies/                    # client work with a measured outcome
+    - proof/internal/                        # real work, no client
+    - ../engineering/reports/proof/          # written by the engineering department, read-only here
+  rule: >
+    A case study needs all three: a client, a real problem, and a measured
+    outcome. Missing any one of them, it is internal proof — still usable,
+    just not a case study. Getting this wrong is what turns an evidence
+    library into a claims library.
+  on_use: >
+    When a proof entry is used in a published piece, record it on the entry.
+    Proof reused silently across three posts reads as one story told three
+    times, which is the failure this field prevents.
+
+# ---------------------------------------------------------------------------
+# Publishing seam. The department never holds a credential.
+#
+# Every channel names HOW it publishes and WHERE the credential lives. The
+# credential itself lives in the instance's environment, never in a file here
+# and never in a file in the instance.
+# ---------------------------------------------------------------------------
+publishing:
+  methods:
+    api:     a published integration called with a token from the environment
+    browser: an authenticated browser session driven like a human would
+    manual:  the approver publishes it themselves; the department only prepares
+  rule: >
+    A channel declares its method in config/config.yaml. `browser` cannot run
+    headless and needs a live session on a machine someone is logged into —
+    that is a real operational cost and belongs in the channel's playbook, not
+    discovered on the first failed run.
+  verification: >
+    A publish is verified by reading the result back, never by the absence of
+    an error. Where read-back is impossible, the channel's playbook says so
+    explicitly and says what is checked instead. An unverified publish is
+    recorded as unverified.
+
+# ---------------------------------------------------------------------------
+# Pause switch. business-os convention, honoured by every existing component.
+# Replaces life-os's clone/context/modes.md.
+# ---------------------------------------------------------------------------
+mode:
+  source: .env
+  key: MODE
+  halt_values: [sabbath, retreat, quiet]
+  rule: >
+    Checked inside every component at start of run, never by the scheduler.
+    Cron keeps firing; the component exits immediately and silently. An empty
+    or unset MODE means normal operation.
+
+# ---------------------------------------------------------------------------
+# Publish freeze — the marketing analogue of engineering's release freeze, and
+# separate from a halt for the same reason.
+#
+# The approver is reachable enough for work to continue, but not available to
+# respond if something published lands badly. Drafting, review and approval
+# all proceed; nothing goes out.
+# ---------------------------------------------------------------------------
+publish_freeze:
+  source: .env
+  key: MKT_PUBLISH_FREEZE
+  set_when: any non-empty value
+  rule: >
+    Blocks publishing only. Planning, drafting, review and M2 approval keep
+    running, and approved pieces queue in content/approved/ until the freeze
+    lifts — then drain oldest-first, one per publishing day, never as a burst.
+
+# ---------------------------------------------------------------------------
+# Notification seam. The instance chooses the channel; the department only
+# calls the command. Same seam and same script contract as engineering's.
+# ---------------------------------------------------------------------------
+notify:
+  command: lib/mkt-notify.sh
+  channels: [telegram, slack, none]
+  default: telegram
+  rule: >
+    The department never formats for a specific channel. It hands the notify
+    script a mode and an item path; the instance's config decides where that
+    goes and how a reply comes back.
+
+# ---------------------------------------------------------------------------
+# Naming. Was life-os config/settings.yaml.
+# ---------------------------------------------------------------------------
+naming:
+  piece:       "{YYYY-MM-DD}-{archetype}-{slug}.md"
+  series_plan: "series-{slug}.md"
+  carousel:    "{piece-slug}/carousel.pdf"
+  weekly_plan: "plan-{YYYY}-W{WW}.md"
+  report:      "marketing-{YYYY}-W{WW}.md"
+  trace:       "mkt-{routine}-{YYYY-MM-DD}.log"
+  rule: >
+    A piece's filename date is its planned publish date, and the ship skills
+    read it. Renaming a piece at publish time to its actual ship date is the
+    convention that keeps shipped/ readable as a history rather than a list of
+    intentions.

@@ -1,0 +1,190 @@
+# Content Writer — config
+#
+# The craft agent under the campaign strategist. This file holds only what
+# dispatch, the review loop, the visual pass and the voice floor need.
+#
+# It does NOT hold:
+#   - brand config (positioning, anti-patterns, exemplars, CTA text) — the
+#     CMO's, in agents/cmo/config/; naming rules are the instance's, in
+#     $MKT_INSTANCE/config/config.yaml → naming_rules. Read-only here.
+#   - channel MECHANICS (format limits, hashtag rules, slide budgets,
+#     publishing method, image_renderer) — the playbook's, in
+#     $MKT_INSTANCE/config/channels/{name}.md
+#   - the live channel registry — $MKT_INSTANCE/config/config.yaml → channels
+#   - model bindings — each skill's header declares which TIER runs each
+#     pass (generation drafts, reasoning critiques and reviews) and the
+#     instance binds a tier to a model. A copy here would be a second place
+#     for the binding to go stale.
+#
+# Layout note (config/conventions.yaml → instance_layout.agents): this agent
+# gets a NOTEBOOK in the instance and nothing else — there is no
+# instance-side config directory for it. Everything an instance tunes lives
+# in seams other components own; this file is template-side and read-only at
+# runtime.
+
+reports_to: agents/campaign-strategist/agent.md
+
+# ---------------------------------------------------------------------------
+# Dispatch. On the brief's `channel` field — never inferred from the
+# material, the register, or what the piece "feels like". Both writer skills
+# take the same brief shape; the strategist never knows which ran.
+# ---------------------------------------------------------------------------
+dispatch:
+  on: brief.channel
+  writers:
+    long_form: skills/content-writer/SKILL.md      # $MKT_DEPT-relative
+    short_form: skills/x-content-writer/SKILL.md
+  channel_defaults:
+    linkedin: long_form
+    x: short_form
+  resolution: >
+    A channel resolves to short_form when its playbook's limit is a per-unit
+    weighted character budget (the 280-class channels), and to long_form
+    otherwise. The playbook is the authority — the defaults above only
+    restate what the two shipped playbooks already say. A new channel is
+    added here when its playbook lands; whether it needs a NEW writer skill
+    is the procedure-versus-content question worked in the strategist's
+    skills.md, and it is not this agent's call.
+  tier_gate: >
+    A brief into a channel at autonomy c0 is not drafted — the writer skill
+    exits channel_not_live and the brief goes back upstream as a contract
+    violation, not something to draft around. c1 drafts normally; a missing
+    publishing path is the caller's problem to have declared, never a
+    reason to write worse.
+
+# ---------------------------------------------------------------------------
+# Critique. Deliberately NOT a skill of its own.
+# ---------------------------------------------------------------------------
+critique:
+  standalone_skill: none
+  lives_in: pass 2 of each writer skill
+  # life-os had a shared draft-critique skill; this port folded critique
+  # into the writer skills so the criteria live in one place, next to the
+  # writing they judge, and cannot drift from the skill that must satisfy
+  # them. Do not reference or rebuild a standalone critique skill — two
+  # homes for the criteria is how they end up disagreeing and the wrong one
+  # wins.
+
+# ---------------------------------------------------------------------------
+# The review loop.
+# ---------------------------------------------------------------------------
+review:
+  skill: skills/content-reviewer/SKILL.md
+  max_rounds: 2
+  # Round 3 never happens. Still unresolved after round 2: verdict
+  # `unresolved`, concerns attached in the draft's review block, and the
+  # piece STILL moves to ready-to-send and STILL reaches the approver.
+  # Never looped, never blocked, never quietly passed off as clean.
+  loop_driver: content-reviewer
+  # The reviewer calls the writer skill's revision_target path itself —
+  # targeted edits, never a rewrite — and re-reviews. This agent invokes
+  # the reviewer once per piece and honours its outcome; it does not run a
+  # second loop of its own around the reviewer's.
+  reviewer_tier: reasoning
+  # Pinned by the skill itself, deliberately below the drafting tier: a
+  # reviewer at the generation tier starts rewriting the piece instead of
+  # reviewing it — a second draft nobody briefed. Do not "upgrade" it.
+
+# ---------------------------------------------------------------------------
+# The visual pass. Same run as the draft, always.
+# ---------------------------------------------------------------------------
+visual:
+  same_pass_as_draft: always
+  # Never queued as a later step. A draft with a promised-but-absent image
+  # is exactly the artifact that reaches the approver as a decision they
+  # can't make.
+  carousel: skills/render-carousel/SKILL.md
+  # That skill's selection gate — does every slide earn its own swipe? —
+  # decides whether the piece should be a carousel at all, before anything
+  # renders.
+  single_image: "config/channels/{channel}.md -> image_renderer"
+  # The single-image renderer is a per-channel, per-instance registration,
+  # not a department skill. life-os's render-infographic did not survive
+  # the port; this seam replaced it.
+  no_renderer:
+    image: none
+    image_note: required
+  # A channel with no renderer writes the declaration, never nothing:
+  # content-reviewer's image gate blocks a piece with neither an image nor
+  # a declaration, so "we forgot" and "we decided" stop looking identical.
+  on_render_failure: keep_draft_write_no_image_path
+  # A dangling image_path is worse than none.
+  eyeball_every_render: true
+  # Clipping, a unit error in a label, a wrong currency symbol — invisible
+  # to a clean exit code, obvious to an eye.
+
+# ---------------------------------------------------------------------------
+# Voice. The corpus is read on every draft and written by this agent never.
+# ---------------------------------------------------------------------------
+voice:
+  corpus: read_only
+  # Samples are grown by the ship path from pieces the approver actually
+  # published — the only way material enters voice/samples/.
+  floor: 10                    # per register — config/conventions.yaml → voice.floor
+  below_floor: draft_anyway
+  # Enforced by the long-form writer skill's pre-flight: below 10 samples
+  # it drafts anyway, stamps voice_sample_count and below_voice_floor, and
+  # the piece leans harder on review and on M2. The strategist's config
+  # carries a planning-time view of these numbers; this block is the one
+  # the drafting chain answers to. No sample tally is kept here — the
+  # corpus itself is the count, and a tally in a template goes stale in
+  # every instance.
+  hard_stop: no_voice_reference
+  # Only when a register has zero samples AND voice/guide.md is missing.
+  # Nothing to write AS; the fix is seeding, not drafting. The skill raises
+  # it once through the notify seam and stops asking.
+  short_form_preflight: none
+  # Deliberate asymmetry, owned by skills/x-content-writer/SKILL.md and
+  # documented there, in the strategist's config, and in the X playbook.
+  # Borrowed long-form samples calibrate TONE only, never shape; the
+  # critique pass and M2 carry more weight on that channel. Never equalise
+  # it by inventing a floor that would block every fresh instance.
+
+# ---------------------------------------------------------------------------
+# Content paths — all $MKT_INSTANCE-relative. See config/conventions.yaml →
+# instance_layout.content. A stage folder is a location; `status:` is the
+# gate.
+# ---------------------------------------------------------------------------
+output:
+  drafts: content/drafts/
+  ready_to_send: content/ready-to-send/
+  # ready-to-send is written by content-reviewer at the end of its loop —
+  # the only status transition this agent's chain ever makes.
+  images: content/images/
+  carousels: content/carousels/
+
+# ---------------------------------------------------------------------------
+# Gates. This agent works inside them and overrides none.
+# ---------------------------------------------------------------------------
+gates:
+  human_gate_met: m2_the_piece
+  # Met as a reviewed draft on the approval surface — never as a message
+  # from this agent, which has no line to the approver at all.
+  machine:
+    respects: [brief_completeness, voice, format_limits, asset_readiness]
+    override: approver_only
+  # cadence is the ship path's gate; this agent never publishes, so it
+  # never meets it.
+  never_sets: [approved, shipped]
+
+# Mode behaviour — every skill in the chain reads MODE from .env and exits
+# on a halt value.
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet: silent
+  # The strategist keeps engagement logging alive under quiet; this agent
+  # has no function that should.
+
+publish_freeze:
+  drafting: runs
+  review: runs
+  # MKT_PUBLISH_FREEZE blocks publishing only, and this agent publishes
+  # nothing — a freeze changes nothing here.
+
+connections: []
+# Drafting is an LLM call; carousel rendering is a local deterministic
+# subprocess; a single-image renderer is whatever the instance registered
+# in the playbook. This agent never publishes, so it never holds or touches
+# a publishing credential — those belong to the ship skills and the
+# publishing seam (config/conventions.yaml → publishing).

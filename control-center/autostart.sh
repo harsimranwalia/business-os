@@ -19,7 +19,7 @@
 # Scheduler's LogonTrigger + InteractiveToken; launchd's per-user LaunchAgent).
 # A true boot-time service would buy nothing and cost both of those.
 #
-# This script only ever manages the local server on :7777, gated by
+# This script only ever manages the local server on :6789, gated by
 # server.py's own email+PIN check. Reaching it from the internet is a
 # separate, opt-in process — cloudflare-tunnel.sh — registered the same way,
 # under its own label/task name, so removing one never touches the other.
@@ -32,7 +32,7 @@
 #
 # -- Restart rule ----------------------------------------------------------
 # Restart on a CRASH, never on a clean exit — both hosts, deliberately.
-# start.sh exits 0 when something is already listening on :7777, and Ctrl-C in
+# start.sh exits 0 when something is already listening on :6789, and Ctrl-C in
 # a foreground server also exits 0; neither should be fought by a supervisor
 # respawning it in a loop. A traceback out of serve_forever() exits non-zero,
 # and that is worth restarting.
@@ -43,7 +43,7 @@ ROOT="$(CDPATH= cd -P -- "$CC/.." && pwd -P)"
 START="$CC/start.sh"
 LOG_DIR="$ROOT/logs"
 LOG="$LOG_DIR/control-center.log"
-PORT=7777
+PORT=6789
 
 APPLY=0; REMOVE=0
 case "${1:-}" in
@@ -90,8 +90,14 @@ if [ "$HOST_KIND" = mac ]; then
   # is no calendar or watch trigger here at all.
   #
   # life-os ships its own com.lifeos.control-center; this is a different label
-  # for a different repo's server and the two leave each other alone. They
-  # cannot both hold :7777 though — whichever loses says so and exits 0.
+  # for a different repo's server and the two leave each other alone. They no
+  # longer contend for a port either: life-os keeps :7777 and this one moved off
+  # it on 2026-08-31, because both had hardcoded 7777 and life-os's is a
+  # KeepAlive agent — so whichever lost the race respawned into a port it could
+  # never win, and business-os was the one that kept losing. The first
+  # replacement, :6666, turned out to be one of Chromium's hardcoded unsafe
+  # ports (ERR_UNSAFE_PORT — the whole 6665-6669 IRC range is blocked at the
+  # browser level, no setting overrides it), so :6789 is the number that stuck.
   plist() {
     cat <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -200,7 +206,7 @@ task_xml() {
     <!-- Scoped to this user, not "any user": the server reads this repo's .env
          and writes into this checkout, so it belongs to the account that owns
          them. Delay PT30S keeps it out of the logon rush — nobody is looking
-         at :7777 half a minute after signing in, and the shell PATH, the
+         at :6789 half a minute after signing in, and the shell PATH, the
          network stack and the desktop all settle first. -->
     <LogonTrigger>
       <Enabled>true</Enabled>

@@ -1,7 +1,7 @@
 ---
 ticket: ENG-007
 project: aiorders-api
-status: designed
+status: verified
 size: S
 author: product-manager
 created: 2026-08-28

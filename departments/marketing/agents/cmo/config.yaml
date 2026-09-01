@@ -1,0 +1,228 @@
+# CMO — config
+#
+# Head of the marketing department. Brand-level config that every downstream
+# agent reads lives beside this file in config/ — positioning-statement.md,
+# anti-patterns.md, exemplars.md, current-cta.md. Those four ship here as
+# TEMPLATES; the live copies are the instance's, at
+# $MKT_INSTANCE/agents/cmo/config/, and only the CMO writes them.
+#
+# Cross-channel plan and execution config lives with the campaign strategist.
+# Craft config lives with the content writer. Channel MECHANICS live in a
+# playbook per channel, never here.
+#
+# Anything in this file marked `instance_configured` is bound in
+# $MKT_INSTANCE/config/config.yaml. No file in this template names a person,
+# a company, a handle, or a credential.
+
+reports_to: approver
+
+# ---------------------------------------------------------------------------
+# The department. Reporting line: CMO → campaign strategist → content writer.
+# Three agents, two of which ever produce something the approver sees.
+# ---------------------------------------------------------------------------
+department:
+  agents:
+    - cmo                  # this agent — strategy, the portfolio, the weekly report
+    - campaign-strategist  # the cross-channel plan and its execution
+    - content-writer       # craft only; never reaches the approver
+  reports:
+    campaign_strategist: agents/campaign-strategist/agent.md
+    content_writer: agents/content-writer/agent.md
+  # Renamed during the port: this agent was `marketing` in life-os, where the
+  # agent and the department shared a name. Here `marketing` is the department
+  # and `cmo` is the agent inside it. Nothing about the role changed.
+
+  # The brand-level files this agent owns and everything downstream reads.
+  # Read-only to every other agent and skill in the department.
+  shared_config:
+    positioning: agents/cmo/config/positioning-statement.md
+    anti_patterns: agents/cmo/config/anti-patterns.md
+    exemplars: agents/cmo/config/exemplars.md
+    cta: agents/cmo/config/current-cta.md
+
+# ---------------------------------------------------------------------------
+# The channel portfolio — the CMO's own view. Which channels exist at all is
+# an M1 decision; the live registry (tier, publishing method, credential
+# reference, weekly numbers) is the instance's.
+# ---------------------------------------------------------------------------
+channels:
+  registry: config/config.yaml          # $MKT_INSTANCE — the live list
+  playbooks: config/channels/{name}.md  # $MKT_INSTANCE — one per live channel
+  shipped_playbooks: agents/campaign-strategist/config/channels/
+  # The department ships starting playbooks for linkedin and x. install copies
+  # them into the instance; from then on the instance's copy is the only one
+  # anyone reads or edits, because a playbook carries this business's cadence,
+  # baselines and publishing path — none of which are template facts.
+
+  # A channel is a playbook, not an agent. See config/conventions.yaml →
+  # channels. Adding one is a playbook file plus a registry entry. It is never
+  # a new agent and never a new strategy skill: strategy is cross-channel by
+  # nature, and splitting it per channel duplicates the one judgment call
+  # ("this quarter's arc gets three beats here and one becomes a thread there")
+  # that no per-channel component can see.
+
+  # The bar for proposing a new channel at M1. BOTH conditions, not either.
+  new_channel_bar:
+    - distinct format, register and memory   # same craft, different logo = not a channel
+    - fully automatable end to end           # no recurring manual step for the approver
+  deferred: instance_configured
+  # Name a deferred channel rather than leaving it unsaid — "video, deferred,
+  # highest approver-time cost" is a decision on the record. An unnamed
+  # channel gets re-proposed every quarter by whoever forgot last quarter.
+
+# ---------------------------------------------------------------------------
+# Cadence. Days and times are the instance's — a business publishing to a
+# different timezone or a different working week changes them there.
+# ---------------------------------------------------------------------------
+weekly:
+  run: instance_configured        # the planning run; enters through this agent
+  catchup: instance_configured    # backstop if the planning run silently died
+  # The catch-up re-enters HERE, not at the campaign strategist, and its first
+  # act is the did-it-complete check (agent.md → What you own, 1). Compute the
+  # run's date fresh; never trust a stored weekday label.
+
+weekly_report:
+  output_dir: reports/            # $MKT_INSTANCE/reports/marketing-{YYYY}-W{WW}.md
+  max_words: 400
+  silence_is_valid: true          # a quiet marketing week needs no announcing
+  # Terminal by design: the approver reads it or doesn't. It raises no decision
+  # except the proposals deliberately attached to it.
+
+positioning_audit:
+  frequency: biweekly
+  pieces_to_score: 8
+  last_audit_date: null           # updated by the CMO after each audit
+  # NOT a skill. The CMO reads the last 8 shipped pieces against
+  # positioning-statement.md itself. Deliberate: the useful output is a
+  # judgment about drift across a run of pieces, which is exactly what a
+  # per-piece scoring skill is worst at. Report the pattern, not the scores.
+
+# ---------------------------------------------------------------------------
+# Inbound. The CMO owns the ICP definition; the campaign strategist detects
+# signals against it on whatever channel they appear and routes them out.
+# ---------------------------------------------------------------------------
+inbound:
+  route_to: instance_configured   # e.g. a sales inbox, a CRM, a shared folder
+  # If the business has nowhere to route to, say so in config rather than
+  # dropping signals on the floor — an undetected signal and a detected one
+  # with nowhere to go are the same outcome, and only one of them is visible.
+  icp_signals: instance_configured
+  # Shape, so an instance has something to fill rather than invent:
+  #   - title_contains:        [ ... the buying roles ... ]
+  #   - company_size_keywords: [ ... stage or revenue language ... ]
+  #   - intent_signals:        [ ... phrases that mean "we have this problem" ... ]
+  # These are a hypothesis. The CMO revises them at M1 when the observed
+  # audience and the stated profile diverge — with evidence, never silently.
+
+# ---------------------------------------------------------------------------
+# Client naming. The one brand rule with a machine check behind it.
+#
+# This exists because a shipped piece once named a client that was never to be
+# named, and the writer had nothing to check against. The lesson was not "be
+# careful" — it was that a naming rule has to live somewhere a review pass can
+# read. `never_name` is a CRITICAL failure in review, not a style flag.
+# ---------------------------------------------------------------------------
+naming_rules:
+  never_name: instance_configured
+  # Per entry, record the substitute phrasing the business wants used instead
+  # ("a client in {industry}"). A rule that only says "don't" produces an
+  # awkward paraphrase specific enough to identify them anyway — which is the
+  # same leak with extra steps. Name the replacement.
+  ok_to_name_with_public_metrics: instance_configured
+  # Naming is allowed only alongside numbers that are already public. A
+  # permitted name does not make a private metric publishable.
+  check_before_publish: agents/cmo/config/anti-patterns.md
+
+# ---------------------------------------------------------------------------
+# Gates. Definitions are in config/conventions.yaml → gates; this block records
+# who raises what and what the CMO may never do.
+# ---------------------------------------------------------------------------
+gates:
+  human:
+    m1_strategy:         { raised_by: cmo, as: proposal }
+    m2_the_piece:        { raised_by: the draft on the approval surface }
+    m3_channel_autonomy: { raised_by: cmo, as: proposal }
+  self_adoption: forbidden
+  # The CMO proposes and never adopts. A department that can commission its own
+  # scope spends itself on itself — the sibling engineering department watched
+  # its board go two-thirds self-generated before anyone noticed, with every
+  # single item individually defensible. That is why the cap is on the ABILITY
+  # rather than on the judgment inside any one week.
+  machine:
+    override: approver_only     # explicitly, and recorded. No agent, CMO included.
+  proposal_cost_field: required
+  # Every M1/M3 proposal names its recurring cost in the approver's hours.
+  # A proposal without that line is incomplete, not merely terse.
+
+channel_autonomy:
+  default: c1
+  raise_via: m3
+  # Autonomy belongs to the CHANNEL, never the piece. See
+  # config/conventions.yaml → channel_autonomy for the tier definitions and the
+  # C1-vs-C2 distinction (capability, not activity).
+
+# ---------------------------------------------------------------------------
+# Voice. The CMO reads the corpus for steering and writes none of it.
+# ---------------------------------------------------------------------------
+voice:
+  guide: voice/guide.md
+  samples: voice/samples/{register}.md
+  floor: 10                     # per register; config/conventions.yaml → voice
+  below_floor: draft_anyway
+  # Below the floor the department still drafts. It leans harder on the review
+  # pass and on M2, and the gap is recorded in the content writer's config so
+  # the number is visible rather than discovered. Raising the floor, or making
+  # it refuse, is the approver's call — not a fix an agent applies quietly.
+  growth: shipped_pieces_become_samples
+  # The path from an empty corpus to a calibrated one. A piece the approver
+  # published is by definition in the business's voice.
+
+# ---------------------------------------------------------------------------
+# Proof. Read for source material; the CMO writes case-study entries when a
+# real outcome lands, and never writes to the engineering feed.
+# ---------------------------------------------------------------------------
+proof:
+  sources:
+    - proof/case-studies/                # client + real problem + measured outcome. All three.
+    - proof/internal/                    # real work, no client
+    - ../engineering/reports/proof/      # read-only — engineering writes it
+  on_use: record_on_entry
+  # Proof reused silently across three pieces reads as one story told three
+  # times. The used-in record is what prevents that.
+
+# ---------------------------------------------------------------------------
+# Interrupts. This agent has none.
+# ---------------------------------------------------------------------------
+interrupts:
+  allowed: none
+  # There is no marketing emergency. Anything worth saying waits for the weekly
+  # report or an M1 proposal. An outperforming piece produces follow-up DRAFTS
+  # (campaign strategist's interrupt duty), never a ping.
+
+# ---------------------------------------------------------------------------
+# Notification seam. The department never formats for a channel.
+# ---------------------------------------------------------------------------
+notify:
+  command: lib/mkt-notify.sh
+  channel: instance_configured    # config/conventions.yaml → notify; default telegram
+  max_pings_per_item: 2
+  # A hard ceiling on purpose. Two pings is information; hourly reminders are
+  # manufactured urgency, which is the failure mode this department is a
+  # counterweight to. After the nudge, an unanswered item rides the weekly
+  # report and nothing else.
+
+# Mode behaviour — read MODE from .env at the start of every run.
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet:
+    planning: runs
+    approver_surfacing: deferred
+
+# Publish freeze — separate from MODE. config/conventions.yaml → publish_freeze.
+publish_freeze:
+  planning: runs
+  drafting: runs
+  approval: runs
+  publishing: suppressed
+  drain_on_lift: oldest_first_one_per_publishing_day

@@ -214,15 +214,14 @@ echo
 
 # ── 6. The control center ──────────────────────────────────────────────────
 echo "6. Control center (fires intake + decision events)"
-if curl -s -o /dev/null -m 2 "http://localhost:7777/api/engineering?instance=$BUSINESS" 2>/dev/null; then
+if curl -s -o /dev/null -m 2 "http://localhost:6789/api/engineering?instance=$BUSINESS" 2>/dev/null; then
   ok "running and serving $BUSINESS"
 else
-  warn "not responding on :7777 — the Engineering tab and its Approve buttons need it."
-  if [ "$ENG_HOST" = "mac" ]; then
-    echo "        It is a life-os component: launchctl load ~/Library/LaunchAgents/com.lifeos.control-center.plist"
-  else
-    echo "        Start it with: sh $BUSINESS_OS_ROOT/control-center/start.sh"
-  fi
+  warn "not responding on :6789 — the Engineering tab and its Approve buttons need it."
+  # This repo's own control center, not life-os's. It used to be life-os's and
+  # the pointer here outlived the carve-out; life-os still runs one of its own
+  # on :7777 and starting that will not serve this board.
+  echo "        Start it with: sh $BUSINESS_OS_ROOT/control-center/start.sh"
   echo "        Or stop starting it by hand: sh $BUSINESS_OS_ROOT/control-center/autostart.sh --apply"
 fi
 echo

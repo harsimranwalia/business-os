@@ -5,24 +5,22 @@ project: aiorders-admin-hub
 type: feature
 size: M
 time_estimate: half a day to a couple of days
-time_spent: ~3h build plus one code-review round (principal-engineer) plus
-  ~45min closing the round-1 test gap plus ~1h round-2 code review + QA
-  combined hop (this pass — both PASS; receipts written)
-time_remaining: ~1-2h — review and quality are both cleared; security is
-  next (fresh session, per `sequential_after_quality`), then devops
-  release-readiness and opening the L1 PR (this project raises a merge
-  request, not a G3). Still closing a definition-of-done gap, not new PRD
-  scope, so no approver time_impact
+time_spent: ~3h build, two code-review rounds (round 1 fail, round 2 pass),
+  the QA quality gate, the security gate, and release-readiness (two PRs
+  opened) — all machine time; see log
+time_remaining: none for the department. Waiting on the approver's own
+  merge of both PRs, on their own schedule (L1). No approver time_impact
+  beyond that merge.
 severity: P2
 priority:
-state: in-qa
-owner: eng-manager
+state: blocked
+owner: approver
 lane: full
-blocked_on:
-blocked_from:
+blocked_on: approver
+blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-31
 branch: feat/ENG-013-foodswipe-funnel-stage-control (same name, both repos)
 depends_on: []
 blocks: []
@@ -33,9 +31,11 @@ links:
   adrs: []
   review: agents/principal-engineer/reviews/ENG-013.md
   test_plan: agents/qa/test-plans/ENG-013.md
-  security_review:
+  security_review: agents/security/reviews/ENG-013.md
   release:
   pr:
+    aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/5
+    aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/4
 ---
 
 ## Input
@@ -587,6 +587,15 @@ Append-only. One line per state transition, newest last.
     six-value write from landing on an arbitrary profile id, since the DB
     constraint alone would allow it. Also: `stage` validated server-side
     against `VALID_STAGES` rather than relying on the DB `CHECK` alone.
+  - *Addendum, 2026-08-30:* `foodswipe.test.ts` now exists on the branch
+    (commit `c95b25b`) — see this ticket's own log for provenance and
+    verification. It also exports `AuthenticatedRequest`/`hasFoodswipeAccess`
+    (additive, needed for the tests to import them) and wraps
+    `hasFoodswipeAccess`'s return in `Boolean(...)` so a profile with no
+    `additional_roles` returns `false` rather than `undefined` — same
+    truthiness at the sole call site, no behavior change, caught by the new
+    tests. What to review hardest is unchanged; it now has direct test
+    coverage.
 
   ***`aiorders-admin-hub`***
   - *What it does:* Adds a "Set stage" / "Reset to automatic" dropdown to
@@ -758,231 +767,466 @@ Append-only. One line per state transition, newest last.
   scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`
   lines.
 
-- `2026-08-29` **round-1 test gap closed: `building → building`, re-entering
-  review next** (eng-manager, `continue` event pass, context `ENG-013`).
-  Narrow scope per the event's own contract (resume this ticket from its
-  current state; no board-wide sweep). Mode check clean (business-os `.env`
-  → `MODE=` empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+<!-- merge note: local claimed to have written and committed the round-1 test-gap fix (foodswipe.test.ts, commit c95b25b) directly in a single 2026-08-29 pass. Remote (2026-08-30) instead found that same commit already pushed and undocumented, investigated it as cross-host work (this instance runs on two hosts; traces/ is host-local and gitignored, a pattern this ticket own log already names elsewhere), and verified it hand-traced-correct rather than re-writing it. Both arrive at the identical commit c95b25b. Kept remote account below since it more accurately reflects the cross-host mechanism and is the later, more self-aware telling. -->
+- `2026-08-30` (dead-end sweep, no state change) `scheduled` event pass,
+  context `launchd`. Ticket still `building`/`eng-manager`, missing test not
+  yet added, unchanged since the entry above. Same finding as `ENG-008`'s
+  identical row today: no `continue (ENG-013)` drain appears in either day's
+  trigger log, only `ENG-023`'s two failed attempts and this pass. Re-firing:
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`.
+  Collapsing makes this safe even if the original fire is still queued
+  somewhere rather than lost. `chained: ENG-013`.
+
+- `2026-08-30` **the missing test already existed — found undocumented, not
+  written this pass** (eng-manager, `continue` event pass, context
+  `ENG-013`, this fire's own turn reached — the re-fire from the entry
+  above). Narrow scope per the event's own contract (resume this ticket from
+  its current state; no board-wide sweep). Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` not set,
+  falls through). Pre-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
   whole-board: both exit 0, clean.
 
-  **Worktree.** `~/Documents/_eng/aiorders-api` was sitting on
-  `feat/ENG-008-influencer-admin-management` (clean, `dc6972a`, nothing
-  uncommitted — safe to leave). `git fetch` then checked out this ticket's
-  own branch, `feat/ENG-013-foodswipe-funnel-stage-control` (`ac4efba`,
-  matching this ticket's frontmatter, up to date with origin). No worktree
-  changes needed in `aiorders-admin-hub` — round 1 read that side clean, the
-  finding was `aiorders-api`-only.
+  **Went to the worktree expecting to write the test file the ticket's own
+  `time_remaining` named, and found one already there.** Real worktree paths
+  are `~/Documents/projects/_eng/{project}` (`config/projects.md`), not the
+  `~/Documents/_eng/...` shorthand earlier entries on this ticket used —
+  neither existed at that literal path; not a regression, just an imprecise
+  path in prose. Fetched and checked out
+  `feat/ENG-013-foodswipe-funnel-stage-control` in `aiorders-api` (untouched,
+  clean, sitting on an unrelated branch beforehand — no mid-work found).
+  `git log` showed a second commit already on top of this ticket's recorded
+  `ac4efba`: `c95b25b`, *"Add missing test coverage for foodswipe
+  stage-override write path (ENG-013)"*, already pushed
+  (`origin/feat/ENG-013-...` 0 ahead/0 behind).
 
-  **Closed exactly the gap round 1 named**, per this ticket's own
-  `time_remaining` note (access-gate negative case, stage validation, the
-  `source='foodswipe'` tenant-scoping), same shape `ENG-008`'s own
-  round-1-gap-closing pass used. Read `influencers.test.ts` (`ENG-008`,
-  `feat/ENG-008-influencer-admin-management@dc6972a`) and
-  `loyalty-config.test.ts` (`ENG-007`, `origin/loyalty-system`) fresh via
-  `git show` (without disturbing the worktree, already on this ticket's own
-  branch) for this repo's established test shape before writing anything.
+  **Investigated rather than trusted, per this instance's own established
+  practice, because a commit nobody logged is exactly the shape of thing
+  that should not be taken on faith.** Author on both `ac4efba` and `c95b25b`
+  is the same identity (`businesspilotcare-gif`) — the department's own
+  automation account, not the approver's personal one (`Harsimran
+  <walia.harsimran@gmail.com>`, used for his own direct commits elsewhere in
+  this same `git log`) and not an unknown third party — so this is the
+  department's own prior work, not something to treat as suspicious in
+  origin. But it is genuinely undocumented: grepped every
+  `traces/eng-loop-2026-08-29.log` / `-30.log` line for `ENG-013` and found
+  no pass between the code-review-fail entry and this one; this ticket's own
+  log had no entry for it; `business-os`'s own `git log`/`git fetch` showed
+  `main` exactly in sync with `origin/main` (0/0), ruling out an unpulled
+  business-os-side commit from elsewhere. `proposals.md`'s 2026-08-29 row
+  (filed investigating the dropped-events incident) already names the
+  mechanism: **this instance runs on two hosts (Mac, Windows since
+  `168cb89`), and `traces/` is `.gitignore`d and host-local** — so a
+  `continue ENG-013` pass most likely ran on the Windows host, wrote and
+  pushed this exact commit, and either never reached or never pushed the
+  ticket-log/board update before ending. Reasoned, not confirmed — the
+  Windows host isn't reachable from here to check its own local `traces/`.
 
-  Exported `AuthenticatedRequest` and `hasFoodswipeAccess` from
-  `foodswipe.ts` (additive only — same convention `ENG-008` used for
-  `hasInfluencerAdminAccess`) so the test file could import them. Wrote
-  `supabase/functions/admin-portal/handlers/foodswipe.test.ts`: 5
-  `hasFoodswipeAccess` unit tests, 4 `handleFoodswipe` method/access-gate
-  tests (GET/POST/DELETE, admin and non-admin, proving the two new write
-  routes are gated too — `foodswipe.ts` checks method before role, the
-  reverse of `ENG-007`/`ENG-008`'s own handlers, so the DELETE case
-  deliberately pairs a rejected role with the method check to pin down which
-  one actually fires), 6 validation-rejection tests across
-  `setStageOverride`/`resetStageOverride` (missing/non-string `profileId`,
-  missing/out-of-enum `stage`), and 4 write-path tests against a hand-built
-  fake `adminSupabase` chain extending `ENG-008`'s single-`.eq()` shape to
-  two chained `.eq()` calls (`id` then `source`) — the fake **records** every
-  `.eq()` call rather than only returning canned data, so the assertion is
-  on the scoping actually firing, not just on the response shape. 19 tests
-  total.
+  **Verified the commit's content rather than assuming a plausible-sounding
+  message meant correct code.** No live way to self-test the normal way:
+  `deno` isn't installed on this Mac host at all (not on `PATH`, not in
+  `~/.deno/bin`) — a new, sharper data point on the same tool-availability
+  split `proposals.md`'s 2026-08-29 row already names for `docker`/`psql`/
+  `supabase` (that row's fix, formally adopting a documented substitute
+  verification path, would cover this too; not re-filed as a fresh proposal
+  for that reason — same root cause, same open fix). Read
+  `foodswipe.ts` and `foodswipe.test.ts` in full and traced every one of the
+  17 new test cases against the live handler logic by hand: method-before-
+  role ordering (`DELETE` → 405 before any role check), all three routes'
+  403 on a non-admin/sub-admin role, `hasFoodswipeAccess`'s five cases
+  including the `Boolean(...)` fix (confirmed the pre-fix `undefined` return
+  was genuinely truthiness-equivalent to `false` at its one call site — a
+  real but inert bug, exactly as the commit message claims, not a cover
+  story), `profileId`/`stage` validation on both actions including the exact
+  joined `VALID_STAGES` error string, and the two-`.eq()`-call recording fake
+  proving the `source='foodswipe'` scoping is exercised by construction (the
+  assertion on `calls` would fail if that `.eq()` were removed, which is
+  what the commit message's own "mutation-tested... during this pass" claims
+  — verified by construction, not by re-running their test). All three gaps
+  round 1 named — access-gate negative case, stage validation, the
+  source='foodswipe' tenant-scoping — are covered, correctly, against the
+  code as it stands on this branch today. Nothing left to add.
 
-  **The new tests caught a real bug**, same class `ENG-008`'s own round
-  found in its sibling access function: `hasFoodswipeAccess` returned
-  `undefined`, not `false`, for a profile with no `additional_roles` (the
-  same `&&`-short-circuit shape), a declared-`boolean`-return violation with
-  no production impact (the sole call site only checks truthiness). Fixed in
-  the same hop (`Boolean(...)` wrap), since the function was already being
-  touched for its new `export`. Filed as its own row in `observations.md`.
+  **Decision: accept the existing commit, do not duplicate it.** Writing a
+  second test file (or amending this one) over correct, already-pushed work
+  would be pure waste and would risk disagreeing with tests already proven
+  correct by hand. Added a short addendum to this ticket's own PR-body notes
+  above (`aiorders-api` section) recording the file's existence and the two
+  additive fixes, so devops's eventual PR description doesn't omit them.
+  `time_spent`/`time_remaining` updated in frontmatter to stop describing
+  finished work as pending.
 
-  **Mutation-tested the tenant-scoping assertion itself**, per
-  `engineering-standards.md`'s "a test is not evidence until it has been
-  seen red for the reason it exists" — not just written and trusted.
-  Temporarily removed `.eq('source', 'foodswipe')` from `setStageOverride`
-  (Edit tool, not a throwaway script — kept it reviewable and exactly
-  revertible), re-ran the suite: the scoping test and its neighboring 404
-  test both went red (`500`/`404` mismatches), confirming they fail for the
-  actual threat named in round 1's "what to review hardest" line and not by
-  coincidence. Reverted immediately, re-ran clean (19/19), removed the
-  backup file.
+  **Step 6b not run.** Nothing this pass wrote establishes or relies on a
+  new rule about an artifact path/state name/config key — it records a
+  discovery and corrects stale prose, the same category step 6b itself
+  calls "usually fine" for a location reference.
 
-  **Self-tested**: `deno check` on both touched files — clean. `deno test` —
-  18/19 on the first run (the `hasFoodswipeAccess` bug above), 19/19 after
-  the fix, and 19/19 again after the mutation-test revert. Whole-tree
-  `deno check admin-portal/handlers/*.ts` — 17 pre-existing errors, same
-  count `ENG-008`'s and the original building pass's own runs recorded, all
-  in `users.ts`, none in files this ticket touches. `git diff
-  origin/main...HEAD --stat` — only `foodswipe.ts` and the migration
-  (unchanged this pass) plus the new test file. Committed and pushed:
-  `aiorders-api@c95b25b` (the two exports, the `Boolean(...)` fix, and the
-  new test file — one commit, same gap). Frontmatter
-  `time_spent`/`time_remaining` updated on this ticket.
-
-  **0 transitions** — `state` stays `building`: the gap is closed, but
-  round-2 review is a fresh session's work by this loop's own design, same
-  as round 1 was (`eng_build_loop.md`'s "a pass stops after `building` on
-  purpose"). **Consequence:** machine WIP unaffected — verified fresh from
-  each ticket's own `state:` field: `ENG-007` `blocked` (outside range,
-  approver-facing), `ENG-008` `building`, `ENG-009`/`ENG-010` `ready`,
-  `ENG-011` `blocked` (outside range, approver-facing), `ENG-013` `building`
-  — still inside the counted `ready`..`ready-to-ship` range, count unchanged
-  by this pass. Approver-facing WIP and approval cap both unaffected — no
-  gate touched.
+  **0 net frontmatter transitions** — `state` was `building` at pass start
+  and remains `building`: the code (including its test coverage) was
+  already complete before this pass began, so there was no "reaches
+  `in-review`" moment for this session to stop short of. Per
+  `eng_build_loop.md`'s "a pass stops after `building` on purpose," running
+  the review hop itself in this same session would still be wrong even
+  though this pass wrote no code — the rule is state-based, not
+  effort-based, and improvising past it is exactly what this event's own
+  instructions rule out. `machine_wip` unaffected (`ENG-013` remains inside
+  the counted `ready`..`ready-to-ship` range). Approver-facing WIP and
+  approval cap both unaffected — no gate raised or resolved.
 
   **Dead-end sweep (scoped to this event):** no other ticket touched.
-  `ENG-007`/`ENG-008`/`ENG-009`/`ENG-010`/`ENG-011` left untouched — each has
-  or will have its own `continue`/gate event.
+  `ENG-008`/`ENG-023` each have their own already-queued `continue` fires
+  from the `scheduled` sweep two entries above; not this event's contract.
 
-  **Notify sweep:** nothing to raise — a machine gate re-entering review
-  doesn't reach the approver; nothing to nudge.
+  **Notify sweep:** nothing to raise — no gate this pass. Nothing to nudge.
 
-  **Observation filed** (`observations.md`): the `hasFoodswipeAccess`
-  undefined-vs-`false` bug, as a second occurrence of the exact class
-  `ENG-008` already logged for `hasInfluencerAdminAccess` — worth a shared
-  pattern note (an `&&`-chain used as the last term of a `boolean`-declared
-  `||` expression silently loses its declared type) rather than two
-  unrelated one-offs.
+  **Proposal filed** (`agents/eng-manager/proposals.md`, Open table): a build
+  hop that finds a ticket at `building` currently has no step that checks
+  the ticket's own remote branch(es) for commits beyond what its log last
+  recorded, so cross-host work that completes and pushes but dies before its
+  business-os-side commit lands is invisible until someone happens to `git
+  log` the branch directly, as this pass did. Distinct from the existing
+  2026-08-29 row (that one is about a *dropped-event incident item* not
+  carrying enough detail cross-host; this is about *no incident existing at
+  all* for a pass that actually finished its real work and only lost the
+  bookkeeping) — filed separately rather than folded in.
 
-  `chained: ENG-013` — `building` is an agent-owned state (round-2 code
-  review next), not the approver, not blocked, not terminal, not held by a
-  cap. Fired
-  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+  `chained: ENG-013` — `building` is agent-owned (the review+quality
+  combined hop is next), not the approver, not blocked, not terminal, not
+  held by a cap. A *fresh* session is exactly what that hop needs, same
+  reasoning every prior entry on this ticket has used. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+  before exiting. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-08-31` `building → in-review → in-qa` (principal-engineer + qa,
+  combined hop, round 2 — `continue` event pass, context `ENG-013`, this
+  fire's own turn at the front of `traces/.pending` reached). Narrow scope
+  per the event's own contract (resume this ticket from its current state;
+  no board-wide sweep). Mode check clean (business-os `.env` →
+  `MODE=active`; instance `config/config.yaml` → `mode:` empty, falls
+  through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+  **Both worktrees clean, on `ENG-008`'s branch, not this ticket's** — same
+  shape the round-1 review found. Reviewed via
+  `git diff origin/main...origin/feat/ENG-013-foodswipe-funnel-stage-control`
+  and `git show <branch>:<path>` rather than checking either out. Fetched
+  first: confirmed both branches match this ticket's own frontmatter
+  (`aiorders-api@c95b25b`, `aiorders-admin-hub@a1c3bdf`) with no further
+  commits since the prior pass's own discovery.
+
+  **Ran the actual code-review-gate skill this round** (`skills/code-review-gate/SKILL.md`),
+  not just a hand-trace investigation — genuinely no receipt existed yet for
+  either gate (`agents/principal-engineer/reviews/ENG-013.md`,
+  `agents/qa/test-plans/ENG-013.md` both absent at pass start), so this was
+  the first pass to actually execute them rather than discover them already
+  done (unlike `ENG-007`'s/`ENG-011`'s own recovery passes, which found all
+  gate receipts already on disk from a prior cross-host run — checked that
+  distinction explicitly before deciding a fresh review was actually owed
+  here, not skippable).
+
+  **Automatic-failure scan: 0/10 open.** Round 1's #10 (auth path, no
+  failure-case test) is closed — three dedicated 403 tests, five
+  `hasFoodswipeAccess` unit tests, and a mutation-sensitive test proving the
+  `.eq('source', 'foodswipe')` scoping is exercised by construction (a fake
+  client that records every `.eq()` call, not just canned return data).
+  Checked #4 (`any`/untyped public interface) against this exact board's own
+  precedent before flagging it — `influencers.ts` (`ENG-008`) already
+  exports the identical `AuthenticatedRequest` shape, so not a fresh
+  violation; logged to the notebook as a second occurrence, not yet a
+  third. Design conformance re-checked against all five acceptance criteria
+  in the PRD — no divergence. Full detail, line numbers, and the mutation
+  reasoning: `agents/principal-engineer/reviews/ENG-013.md`.
+
+  **Verified what could be verified fresh on this host, named what
+  couldn't.** `npm run lint`/`npm run build` (`aiorders-admin-hub`): 150
+  errors/31 warnings, clean build — identical to this ticket's own recorded
+  baseline; independently re-confirmed (not trusted from the prior pass)
+  that both of `FoodswipeListings.tsx`'s two lint hits already exist on
+  `origin/main` before this diff, by diffing the pre-branch file directly.
+  `deno test` did **not** execute — `deno` confirmed absent from `PATH` and
+  `~/.deno/bin` fresh this pass (not carried forward as a stale claim), and
+  `aiorders-api` has no registered suite command (`config/projects.md`, no
+  `deno.json`). In its place: read `foodswipe.ts` and `foodswipe.test.ts` in
+  full and hand-traced all 17 cases against the code at HEAD, independently
+  of the prior pass's own trace — zero discrepancies. Named plainly as
+  corroborating evidence, not a substitute for a green run, same discipline
+  this ticket's own migration doc already used for its own unexecuted
+  `ALTER TABLE`.
+
+  **QA plan written**: `agents/qa/test-plans/ENG-013.md` — one row per
+  acceptance criterion (all five covered), a failure-path table (eight
+  scenarios, two explicitly named as intentionally untested — idempotent
+  reset, and concurrent-write-is-last-write-wins-by-design), and a `Not
+  automated` section naming the same deno-unavailable gap plainly. No open
+  P0/P1 bug anywhere on this board (`agents/qa/bugs/` is empty, checked
+  fresh). Verdict: pass.
+
+  **Both receipts written** (pass-verdict-only, per
+  `config.yaml` → `machine_gates.combined_hop`'s receipt rule):
+  `agents/principal-engineer/reviews/ENG-013.md`,
+  `agents/qa/test-plans/ENG-013.md`. `links.review`/`links.test_plan` set
+  on this ticket in the same edit as the state change.
+
+  **Stopped at `in-qa`, not carried further to `in-security` this pass —
+  deliberate, not the transition cap.** Only 2 transitions used
+  (`building→in-review→in-qa`), well under 4. `config.yaml`'s
+  `combined_hop` licenses exactly `[code_review, quality]` in one session
+  because they read the same diff and don't depend on each other;
+  `sequential_after_quality: [security, release_readiness]` keeps security
+  a separate hop on purpose, because it needs QA's *finished* plan to check
+  negative-authz coverage against — the plan didn't exist until this pass
+  wrote it moments ago. Checked `ENG-007`'s/`ENG-011`'s own
+  `in-review→in-security→ready-to-ship` single-pass precedent before
+  deciding not to follow it here: both of those were recovery passes
+  verifying gate receipts (including security's) that already existed on
+  disk from earlier cross-host work, not passes running the security gate
+  fresh — not the same situation as this one, where no security receipt
+  exists yet and a fresh session is exactly what `eng_build_loop.md`'s "each
+  heavy step gets its own session with fresh context" calls for.
+
+  **Step 6b not run** — this is a review+quality hop, not a build hop, and
+  step 6b names itself as build-hop-specific; nothing this pass wrote
+  establishes a new rule about an artifact path, state name, or config key.
+
+  **Consequence:** `machine_wip` unaffected — `ENG-013` was and remains
+  inside the counted `ready`..`ready-to-ship` range (`in-qa` is inside it).
+  Approver-facing WIP and approval cap both unaffected — no gate raised or
+  resolved this pass.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  `ENG-008`/`ENG-009`/`ENG-010` each have their own already-queued or
+  already-fired `continue` events; not this event's contract.
+
+  **Notify sweep:** nothing to raise — `in-qa` needs no approver gate.
+  Nothing to nudge.
+
+  **Observation filed** (`observations.md`): the existing 2026-08-29
+  proposal on this board (Supabase-MCP-as-substitute-verification) covers
+  the missing-Postgres-tooling gap but does not actually cover this
+  ticket's own deno-unavailable gap — different tool, no substitute
+  execution path exists for it at all, only hand-tracing. A prior pass's
+  note treated the two as "the same root cause, same open fix"; correcting
+  that so a future proposal-writer doesn't skip this one as already
+  covered.
+
+  `chained: ENG-013` — `in-qa` is agent-owned (security next), not the
+  approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`
   lines.
 
-- `2026-08-29` **code review round 2 + quality combined hop, both PASS:
-  `building → in-review → in-qa`** (principal-engineer + qa, `continue`
-  event pass, context `ENG-013`, this fire's own turn at the front of
-  `traces/.pending` finally reached). Narrow scope per the event's own
-  contract (resume this ticket from its current state; no board-wide
-  sweep). Mode check clean (business-os `.env` → `MODE=` empty; instance
-  `config/config.yaml` → `mode:` empty). Pre-pass
+<!-- merge note: local re-recorded a round-2 code review + quality pass (building to in-review to in-qa) dated 2026-08-29, duplicating the round-2 pass remote already recorded above dated 2026-08-31. Kept remote continuation below (security gate, then release-readiness/blocked) since it matches the frontmatter both branches agree on (state: blocked, security_review set, updated 2026-08-31) and carries the ticket further than local duplicate entry. -->
+- `2026-08-31` `in-qa → ready-to-ship`: security gate — **PASS**
+  (security, `continue` event pass, context `ENG-013`, this fire's own
+  turn at the front of `traces/.pending` finally reached). Narrow scope
+  per the event's own contract (resume this ticket from its current
+  state; no board-wide sweep). Mode check clean (business-os `.env` →
+  `MODE=active`; instance `config/config.yaml` → `mode:` empty, falls
+  through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-013`) and whole-board: both exit 0, clean.
+
+  **Confirmed this is a genuinely fresh security pass, not a rediscovery.**
+  `agents/security/reviews/ENG-013.md` was absent at pass start (checked
+  fresh, not trusted from any prior pass's account) — first execution of
+  this gate for this ticket, same footing the round-2 code-review/QA pass
+  had for its own gates.
+
+  **Ran `skills/security-gate/SKILL.md` in full, against both branches at
+  their currently-recorded commits** (`aiorders-api@c95b25b`,
+  `aiorders-admin-hub@a1c3bdf` — fetched fresh, confirmed no further
+  commits since the round-2 review). Both worktrees were sitting on
+  `ENG-008`'s branch, same shape every prior pass on this ticket found —
+  reviewed via `git diff origin/main...origin/feat/ENG-013-...` and `git
+  show`, without checking either out.
+
+  **Threat-modelled the change** (four questions, full reasoning in the
+  receipt): new input is `profileId`/`stage` on two new POST routes, both
+  behind the existing bearer-auth middleware and the handler's existing
+  admin/sub-admin gate; new capability is write access to one enum field,
+  granted only to the population that could already read every row; new
+  data exposed is that same enum value, already computed and returned as
+  `stage` today; blast radius on full compromise is integrity-only (a
+  mislabeled, fully-reversible kanban card), not confidentiality or
+  financial, since read access to this data was already available to the
+  same compromised token.
+
+  **Walked OWASP A01–A10.** 8 of 10 marked `n/a` with a reason (no crypto,
+  no new dependency, no session/auth-token logic, no deserialization of
+  untrusted data, no SSRF-shaped fetch). Two reviewed in full:
+  - **A01 Broken Access Control** — clean. Both new write routes share the
+    one existing gate call the read already used (checked before any path
+    branch, so the three routes can't drift apart), and both additionally
+    scope their `UPDATE` to `.eq('id', profileId).eq('source',
+    'foodswipe')` — the same tenant boundary the existing read already
+    enforced, not a new one. Verified the tenant-scoping test is
+    mutation-sensitive by construction (a fake client records every
+    `.eq()` call; deleting the `source` scoping fails the assertion for
+    the reason it exists), not just shape-checked — independently
+    confirmed this claim from round 2's code review by reading the test
+    file myself rather than trusting the citation.
+  - **A05 Security Misconfiguration** — found one **non-blocking** item:
+    both new write actions return `error.message` verbatim in a 500 body.
+    Weighed rather than waved through: unreachable pre-role-check, copied
+    from this same file's pre-existing `GET` catch (not a new posture this
+    diff introduces), and nothing secret in what such a message could
+    contain here. Logged as the **first tracked occurrence** of this
+    finding class in `agents/security/notebook/2026-08-31-findings.md`
+    (three-strike tracking) — not escalated, not blocking.
+
+  **Checked all three of the baseline's negative-auth cases, not just the
+  two with dedicated tests.** Wrong-role: 403 before any DB call, proven
+  by a `Proxy` that throws if `adminSupabase` is touched at all (3 tests).
+  Wrong-tenant: 404, proven by the mutation-sensitive `.eq()` recording
+  (2 tests). **No-token: read `admin-portal/index.ts` fresh rather than
+  assume it from other tickets' precedent** — confirmed `authenticate()`
+  returns 401 before any handler (including this one) is ever reached,
+  unmodified by this diff. All three covered; only the third has no
+  dedicated test in *this* diff, because it's enforced upstream of it.
+
+  **Scanned for secrets** — the full diff plus all three unique commits
+  across both branches (`ac4efba`, `c95b25b`, `a1c3bdf`) for key/secret/
+  token/password/bearer/PEM/AWS/service-role patterns. Zero matches.
+
+  **SOC 2 evidence trail confirmed complete**: ticket → PRD → design
+  (no G2) → migration review → code review (PASS, round 2) → QA plan
+  (PASS) → this verdict → release record (pending). No gap.
+
+  **Receipt written** (pass-only, per `config.yaml` →
+  `machine_gates.receipts.pass_verdict_only`):
+  `agents/security/reviews/ENG-013.md`. `links.security_review` set on
+  this ticket in the same edit as the state change. `time_spent`/
+  `time_remaining` updated in frontmatter.
+
+  **1 transition this pass** (`in-qa → ready-to-ship`), well under the cap
+  of 4. Stopped here deliberately, not by the cap: `release_readiness` is
+  a separate hop after `security` per `config.yaml`'s
+  `sequential_after_quality: [security, release_readiness]` (not
+  `combined_hop`, which licenses only `[code_review, quality]`), and this
+  was a fresh security session with no receipt to recover — the same
+  reasoning the round-2 review+quality pass used to justify not also
+  running security in that same session. **Consequence:** `machine_wip`
+  unaffected — `ENG-013` was and remains inside the counted
+  `ready`..`ready-to-ship` range (`ready-to-ship` is its far end).
+  Approver-facing WIP and approval cap both unaffected — `ready-to-ship`
+  raises no gate; devops's own release-readiness hop is what will open the
+  PR and raise the `merge_request` item next.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  `ENG-008` has its own already-fired `continue` event queued separately;
+  not this event's contract.
+
+  **Notify sweep:** nothing to raise this pass — `ready-to-ship` itself
+  raises no approver gate for an L1 project; the merge-request item comes
+  from devops's next hop, once a PR actually opens. Nothing to nudge.
+
+  `chained: ENG-013` — `ready-to-ship` is agent-owned (devops's
+  release-readiness hop next: open the PR, raise the merge request), not
+  the approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-013`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:`
+  lines.
+
+- `2026-08-31` `ready-to-ship → blocked` (devops — `continue` event pass,
+  context `ENG-013`, this fire's own turn at the front of `traces/.pending`
+  reached — drained immediately after the `ENG-008` security-gate pass
+  ended, confirmed via `traces/eng-loop-2026-08-31.log`: `pass end: continue
+  (exit 0, 589s)` at `10:59:15` immediately followed by `draining queued
+  event: continue (ENG-013)` and `pass start: continue (ENG-013)` at
+  `10:59:16`). Narrow scope per the event's own contract (resume this ticket
+  from its current state; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`). Pre-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
   whole-board: both exit 0, clean.
 
-  **Worktrees.** `_eng/aiorders-api` was already on this ticket's own
-  branch (`c95b25b`, matching frontmatter) — no switch needed. `_eng/aiorders-admin-hub`
-  was on `feat/ENG-008-influencer-admin-management` (clean, `f2ea36c`,
-  nothing uncommitted — safe to leave mid-review). Read this ticket's own
-  frontend diff via `git diff`/`git show` against `origin/main` first
-  without disturbing that worktree, then — once diff-level review was
-  done and lint/build needed to actually run — switched it to
-  `feat/ENG-013-foodswipe-funnel-stage-control` (`a1c3bdf`, confirmed via
-  `git log`), ran verification, and switched it back to
-  `feat/ENG-008-influencer-admin-management` (`f2ea36c`) before finishing,
-  confirmed via fresh `git status`/`git log` that it matched its pre-review
-  state exactly.
+  **Read the current `skills/release-runner/SKILL.md` before acting**, same
+  discipline `ENG-011`'s own equivalent hop used. Step 1's window check
+  doesn't apply — both `aiorders-api` and `aiorders-admin-hub` are
+  registered **L1** (`config/projects.md`) — so went straight to step 4.
 
-  **Ran `skills/code-review-gate/SKILL.md` step 2 (automatic-failure scan)
-  fresh** rather than trusting round 1's partial scan or the build pass's
-  own self-report: 0/10. Round 1's #10 (no failure-case test on the new
-  authz-gated write path) is closed — `foodswipe.test.ts` (19 tests) covers
-  the access gate on both new routes, six validation-rejection cases, and —
-  round 1's own "what to review hardest" line — the `source='foodswipe'`
-  tenant scoping on the write itself. One new, non-blocking instance of #4
-  (`any`): `hasFoodswipeAccess(userProfile: any)`, confirmed by diffing
-  `deno lint` output against `origin/main` (13 hits vs. 12) to be the
-  extraction of an already-untyped value rather than a fresh untyped
-  surface — same call `ENG-008` already made for `hasInfluencerAdminAccess`
-  the same day.
+  **Verified all four upstream gates fresh from the receipt files, not
+  trusted from this ticket's own log summary**:
+  `agents/database/migrations/ENG-013-foodswipe-funnel-stage-control.md`
+  (**pass**), `agents/principal-engineer/reviews/ENG-013.md` (**pass**,
+  round 2), `agents/qa/test-plans/ENG-013.md` (**pass**),
+  `agents/security/reviews/ENG-013.md` (**PASS**). All four read in full,
+  not just their verdict lines.
 
-  **Verified independently rather than trusted from the log**, per this
-  board's own established review discipline: `deno check`/`deno test` on
-  `foodswipe.ts`/`foodswipe.test.ts` — clean, **19/19**, matching the
-  build pass's own claim exactly. **Mutation-tested the tenant-scoping
-  assertion**, not just read it: removed `.eq('source', 'foodswipe')` from
-  `setStageOverride` by hand (a real edit, reviewable and exactly
-  revertible — not a throwaway script), re-ran — the scoping test and its
-  404 neighbor both went red (**17/19**) exactly as round 1's own concern
-  predicted, `resetStageOverride`'s own pair correctly stayed green since
-  only `setStageOverride` was mutated. Reverted immediately, confirmed
-  `git diff --stat` against `HEAD` was empty, re-ran clean (19/19).
-  Whole-tree `deno check admin-portal/handlers/*.ts`: 17 pre-existing
-  errors, **0 in `foodswipe.ts`/`foodswipe.test.ts`** (isolated each
-  error's own file location rather than trusting the total alone) — the
-  load-bearing claim from the prior pass's log ("none in files this ticket
-  touches") holds, but that entry's own aside ("all in `users.ts`") does
-  not: the real split is `auth.ts` (4), `partners.ts` (4), `users.ts` (9).
-  Corrected in the receipt; doesn't change any verdict. `aiorders-admin-hub`
-  (on this ticket's own branch during verification): `npm run lint` — 150
-  errors / 31 warnings, exact match to this ticket's own recorded baseline;
-  grepped for `FoodswipeListings.tsx`/`constants.ts` specifically — one
-  pre-existing `any`, one pre-existing `exhaustive-deps` warning, zero new.
-  `npm run build` — clean, 3340 modules, same pre-existing chunk-size
-  notice as every prior ticket on this board.
+  **Worktrees.** Both `~/Documents/projects/_eng/{aiorders-api,
+  aiorders-admin-hub}` were clean, sitting on `ENG-008`'s branch (that
+  ticket's own `ready-to-ship` state, still awaiting its own devops hop) —
+  same shape every prior pass on this ticket found. Fetched both, checked
+  out `feat/ENG-013-foodswipe-funnel-stage-control`, diffed against
+  `origin/main`: `aiorders-api` at `c95b25b` (3 files, 387+/11-),
+  `aiorders-admin-hub` at `a1c3bdf` (2 files, 172+/5-) — both match this
+  ticket's own frontmatter exactly, no drift. Checked for an already-opened
+  PR before creating one, same caution `ENG-011` used: `gh pr list --head
+  feat/ENG-013-foodswipe-funnel-stage-control --state all` on both repos —
+  empty on both. None existed.
 
-  **QA's test plan written in the same hop**:
-  `agents/qa/test-plans/ENG-013.md` — all 5 PRD acceptance criteria mapped,
-  gaps named rather than hidden (no live-database round trip; only 1 of 6
-  stage values exercised through a successful write; "set, then reload
-  reflects it" proven as two separate facts, never as one end-to-end test;
-  no frontend test harness registered for `aiorders-admin-hub`), none of
-  them blocking.
+  **Opened both PRs** (`gh pr create`): `aiorders-api`
+  https://github.com/harsimranwalia/aiorders-api/pull/5,
+  `aiorders-admin-hub`
+  https://github.com/harsimranwalia/aiorders-admin-hub/pull/4.
+  `aiorders-api` opened first (the frontend depends on its two new routes).
+  Each PR body states what it does, what it deliberately does not do,
+  uncertainties, what to review hardest, and this ticket's four gate
+  verdicts by file reference. Restored both worktrees to
+  `feat/ENG-008-influencer-admin-management` afterward (re-verified clean)
+  so `ENG-008`'s own in-flight state is undisturbed.
 
-  **New finding, not blocking, not new**: `hasFoodswipeAccess`'s `any`-typed
-  shape is part of the three-way `hasXAccess`/`AuthenticatedRequest`
-  duplication (`foodswipe.ts`/`influencers.ts`/`loyalty-config.ts`) that
-  `ENG-008`'s own round 2 already filed as a proposal, citing this file as
-  one of the three — re-confirmed here, not re-filed.
+  **Wrote the L1 merge-request item**
+  (`inbox/2026-08-31-eng013-merge-request.md`, `gate: merge`, `agent:
+  eng-manager`) carrying both PR links and all four gate verdicts by file
+  reference, plus the named non-blocking gaps (raw `error.message` on a
+  500; no audit trail; no live Postgres/frontend session exercised).
+  **Used `pr_urls:` as a YAML list of `{repo, url}` pairs**, per the
+  skill's current, corrected instruction — not the single delimited
+  `pr_url:` string `ENG-011`'s own item used before the approver caught
+  it. Ran `departments/engineering/lib/eng-notify.sh raise`: succeeded
+  cleanly this time (`traces/eng-notify-2026-08-31.log`: `sent: active`) —
+  unlike `ENG-011`'s recorded `SLACK_WEBHOOK_URL unset` gap. Stamped
+  `notified: 2026-08-31T11:05:16` (the trace log's own timestamp). State →
+  `blocked`, `blocked_on: approver`, `blocked_from: ready-to-ship`, owner
+  `devops → approver`. `links.pr` set to both PR URLs in frontmatter.
 
-  **Code review receipt written** (pass-verdict-only, per the skill's own
-  rule): `agents/principal-engineer/reviews/ENG-013.md`, `links.review` set.
-  Both findings journaled in
-  `agents/principal-engineer/notebook/2026-08-29-review-log.md`.
+  **Cap check before this transition, read fresh from `inbox/`'s actual
+  top-level contents**: one file present besides this pass's own new item —
+  `2026-08-30-eng-events-dropped.md` (`gate: incident`, ticket `ENG-023`,
+  out of this event's scope) — which does not count against the
+  G1/G2/G3/merge-request approval cap, consistent with the immediately
+  preceding `ENG-008` pass's own board header (0/3 with that same file
+  already present). Approver-facing WIP was 0/2, approval cap 0/3 going in.
 
-  **2 transitions this pass** (`building → in-review → in-qa`), well under
-  the cap of 4 — security is a separate hop by explicit config
-  (`machine_gates.sequential_after_quality`, needing QA's finished test
-  plan as its own input), so this pass stops here by design.
-  **Consequence:** machine WIP unaffected — `ENG-013` was and remains
-  inside the counted `ready`..`ready-to-ship` range (still over the
-  2026-08-29 cap alongside the other tickets already in flight when it
-  changed, draining naturally as each reaches `shipped`). Approver-facing
-  WIP and approval cap both unaffected — no gate raised. `time_spent`/
-  `time_remaining` updated in frontmatter this pass.
+  **1 transition this pass** (`ready-to-ship → blocked`), well under the
+  cap of 4 — opening two PRs and writing the gate item is itself the real
+  work of this hop. **Consequence:** `machine_wip` 4/1 → 3/1 (`blocked`
+  sits outside the counted `ready`..`ready-to-ship` range — `ENG-009`,
+  `ENG-010` at `ready` and `ENG-008` at `ready-to-ship` remain inside it).
+  Approver-facing WIP 0/2 → 1/2; approval cap 0/3 → 1/3.
 
-  **Dead-end sweep (scoped to this event):** no other ticket touched.
-  `ENG-007`/`ENG-008`/`ENG-009`/`ENG-010` left untouched — each has or will
-  have its own `continue`/gate event.
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in
+  a valid, accounted-for state with the chain record below. `ENG-008` (the
+  ticket whose branch occupied both worktrees) untouched beyond the
+  clean-before/clean-after check.
 
-  **Notify sweep:** nothing to raise — machine gates passing don't reach
-  the approver; nothing to nudge.
+  **Notify sweep:** this pass's own gate item raised and stamped above.
+  Nothing else to nudge (the `ENG-023` incident item is a notice, not a
+  24h-nudge-eligible G-gate). Approval cap now 1/3, not full — no stall.
 
-  **Observation filed** (`observations.md`): the ticket-log inaccuracy
-  above (17 pre-existing `deno check` errors logged as "all in `users.ts`"
-  when the real split spans three files) — a reminder that a self-reported
-  aside, not just the headline number, is worth spot-checking even when the
-  load-bearing claim turns out true.
+  **Observation filed** (`observations.md`): `eng-notify.sh raise` sent
+  cleanly this pass with no gap reproduced, in direct contrast to
+  `ENG-011`'s recorded `SLACK_WEBHOOK_URL unset` failure at this identical
+  step two days earlier — worth a corroborating data point for whoever next
+  looks at that channel's reliability, not itself investigated further
+  here (out of this event's own narrow contract).
 
-  `chained: ENG-013` — `in-qa` is agent-owned (security is next, a fresh
-  session per `machine_gates.sequential_after_quality`) — not the approver,
-  not blocked, not terminal, not held by a cap. Fired
-  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-013`
-  before exiting. **Confirmed, not just assumed, sent:**
-  `traces/eng-loop-2026-08-29.log` shows this fire hit the single-flight
-  lock at 23:50:24, found it held by this same pass's own still-running PID
-  (1909, launched 23:27:20 for this exact event), correctly declined to
-  steal it, and queued rather than launched — `traces/.pending` shows
-  `continue ENG-013` appended at the tail, eleventh behind a real backlog
-  (`watch schtasks`, `continue ENG-011`/`ENG-007`/`ENG-008`/`ENG-009`, five
-  more `watch schtasks`). Not a broken chain — same FIFO-position shape
-  this ticket's own earlier entries already documented — a later fire or
-  the safety-net scheduled pass will drain it. Post-pass
-  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
-  whole-board: both exit 0, clean, no `WAIVED:` lines (re-verified
-  immediately before this entry was written).
+  `chained: none` — `blocked`, `blocked_on: approver`. This is the human
+  gate the whole hop was driving toward; firing `continue ENG-013` again
+  would only queue against a ticket with nothing left for a machine to do
+  until the approver merges one or both PRs or replies to the gate item.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-013`) and whole-board: see pass notes below.

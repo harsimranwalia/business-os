@@ -1,0 +1,255 @@
+# Campaign Strategist — config
+#
+# The cross-channel strategy agent, under the CMO. This file holds only what a
+# scheduling or rotation decision needs.
+#
+# It does NOT hold:
+#   - brand config (positioning, anti-patterns, exemplars, CTA text, naming
+#     rules, ICP signals) — those are the CMO's, in agents/cmo/
+#   - channel MECHANICS (format limits, cadence evidence, publishing path,
+#     hashtag conventions, baselines) — those are the playbook's, in
+#     $MKT_INSTANCE/config/channels/{name}.md
+#   - the live channel registry (which channels exist, at which tier, with
+#     which credential) — that is $MKT_INSTANCE/config/config.yaml → channels
+#
+# Three files could each plausibly hold "the channel's cadence." Exactly one
+# does: the playbook. Duplicating a number here to save a file read is how two
+# copies end up disagreeing and the wrong one wins.
+
+reports_to: agents/cmo/agent.md
+
+# ---------------------------------------------------------------------------
+# Channel defaults.
+#
+# The template ships DEFAULTS ONLY, keyed by channel name, for the two channels
+# whose playbooks it ships. An instance overrides any of these in its own
+# config.yaml → channels.{name}; where both exist, the instance wins, because
+# only the instance knows what this business's week actually looks like.
+#
+# A channel absent from the instance's registry is not live, whatever appears
+# here. This block never enables anything.
+# ---------------------------------------------------------------------------
+channel_defaults:
+
+  linkedin:
+    playbook: config/channels/linkedin.md
+    autonomy: c1              # every channel registers here; C2 is gate M3
+    weekly_plan:
+      post_count: 4           # a ceiling shaped by judgment, not a quota
+      default_mix:
+        - data-insight
+        - case-study
+        - pov
+        - frame-shift
+      # Occasional archetypes, rotated in and never weekly defaults:
+      #   teardown — critique-shaped; a weekly slot skews the feed negative
+      #   carousel — a multi-part document post; frequency follows the
+      #              material, not a quota. The limiter is structural
+      #              uniformity: never leave 3-4 consecutive multi-part pieces
+      #              in a run. Whether a given idea should be one at all is
+      #              decided by skills/render-carousel/SKILL.md's own gate.
+      # Contrarian framing (teardown, pov-as-critique) is capped at 1 per week
+      # ACROSS ALL CHANNELS COMBINED — the cap is on what a reader sees, and
+      # readers do not experience channels separately.
+      cta_rotation:
+        pieces_per_cta: 4     # roughly 1 in 4 carries a CTA
+        weekly_cap: 1         # hard cap, regardless of piece count or channel count
+        last_cta_archetype: null   # updated after each planning run; never the same twice running
+    performance:
+      interrupt_threshold_multiple: 3.0   # x baseline within the window below
+      interrupt_window_hours: 6
+      interrupt_followup_count: 2         # follow-up DRAFTS, never a ping
+      baseline_window_days: 28            # rolling
+    voice:
+      register: linkedin-post
+      preflight: true
+      # The long-form path runs a voice preflight in the writer skill. The X
+      # path does not — see channel_defaults.x.voice. That asymmetry is
+      # deliberate and is documented in both places rather than quietly evened
+      # out; the consequence is that M2 carries more weight on X.
+
+  x:
+    playbook: config/channels/x.md
+    autonomy: c1
+    weekly_plan:
+      post_count: 3
+      publishing_days: instance_configured   # e.g. [tuesday, wednesday, thursday]
+      publishing_time: instance_configured   # with an explicit timezone
+      # THE CADENCE LIVES IN ONE PLACE and this is a pointer to it, not a copy:
+      # the instance's channel registry. A ship skill reads that list every run
+      # and stops on any day not in it. In the ported instance the scheduler
+      # could only express "daily", so the skill's own day check WAS the
+      # cadence — which is what makes changing the cadence a one-line config
+      # edit with no scheduler to re-create. Keep that property.
+      default_mix:
+        - thread
+        - thread
+        - thread
+      # A slot with no queued source piece falls through to a standalone piece
+      # rather than going empty. Designed behaviour — see agent.md, "Series
+      # mechanics." Never wait for a source piece to catch up.
+    performance:
+      interrupt_threshold_multiple: 3.0
+      interrupt_window_hours: 6
+      baseline_window_days: 28
+      # These are carried over from the long-form channel as a STARTING GUESS
+      # and are not an X baseline. Short-form engagement windows are shorter
+      # and reply-weighted. Revisit once engagement-analyzer has logged real
+      # data for this account, and do not reason from them meanwhile as though
+      # they were measured.
+    voice:
+      register: [tweet, thread]
+      preflight: false
+      # DELIBERATE, AND THE ONE ASYMMETRY IN THIS FILE WORTH READING TWICE.
+      # skills/x-content-writer/SKILL.md carries no voice-sample preflight,
+      # where the long-form path does. A new instance has no short-form corpus,
+      # and the skill's voice frame borrows long-form exemplars for TONE only —
+      # explicitly not for shape, since the shapes are unrelated.
+      #
+      # What that costs: early short-form pieces are calibrated against a
+      # register nobody has validated on this platform, so they lean harder on
+      # the critique pass and on M2 than the long-form ones do. The channel
+      # with the least voice data has the least voice protection.
+      #
+      # Do not "fix" this by adding a preflight here. Turning it on is a design
+      # change and the approver's call — and the honest first move is seeding
+      # the corpus, not gating on its absence.
+
+# ---------------------------------------------------------------------------
+# Voice corpus tracking. The enforcing copy of these numbers is the content
+# writer's config; this is the planning-time view.
+# ---------------------------------------------------------------------------
+voice:
+  floor: 10                   # per register — config/conventions.yaml → voice
+  below_floor: draft_anyway   # leans on review + M2; the gap is recorded, not hidden
+  seeding: >
+    Seed from real published material in the business's own voice, in the
+    matching register. Never from a description of the voice, and never from
+    material in another register — what is being calibrated is rhythm and
+    shape, not opinions. An account with hundreds of posts in the wrong
+    register is not a corpus; using it pulls drafts away from the business's
+    professional voice rather than toward it. Investigated and rejected once
+    in the ported instance, with the searches logged, so it would not get
+    re-proposed every quarter.
+  growth: shipped_pieces_become_samples
+
+# ---------------------------------------------------------------------------
+# Series. The generic mechanism; a specific series is instance content, one
+# file per series, and its queue rule lives IN that file.
+# ---------------------------------------------------------------------------
+series:
+  dir: content/series/
+  plan_file: content/series/{slug}.md
+  may_pause_regular_content: true
+  pause_is_total: true
+  # A pause is total, not a reduction: while it holds, generate no new drafts
+  # for that channel. A run that produces drafts a ship skill cannot drain
+  # builds a backlog, and a backlog is invisible until it is large.
+  resume_condition: checked_every_planning_run
+  # NOT automatic. Every run, check whether the series still has unshipped
+  # pieces staged; when it does not, restore post_count and drop the pause.
+  # A pause with no checked resume condition is how a channel goes quiet for a
+  # month and nobody notices.
+  trailing_series_fallthrough: standalone_piece
+  # A series that trails another channel repurposes pieces already shipped
+  # there. When none is queued, the slot falls through to a standalone piece —
+  # designed, not a stall. This is what makes the queue self-regulating rather
+  # than something a human nudges, and a queue that needs nudging violates the
+  # prime directive.
+
+# ---------------------------------------------------------------------------
+# The brief. The handoff contract with the content writer.
+# ---------------------------------------------------------------------------
+brief:
+  fields: [channel, archetype_or_format, source_material, register, include_cta, notes]
+  all_required: true
+  # An incomplete brief fails the brief-completeness machine gate and comes
+  # back. That is the correct outcome. Do not guess a missing field on the
+  # writer's behalf — the gate exists because a draft built on an assumed
+  # register is expensive to detect and cheap to prevent.
+  boundary: >
+    The strategist decides WHAT gets written and WHEN. The writer decides HOW
+    WELL. Craft instructions belong in `notes` for the writer to interpret, not
+    as directives; and the writer never renegotiates the channel, format or
+    timing.
+
+# ---------------------------------------------------------------------------
+# Content paths — all $MKT_INSTANCE-relative. See config/conventions.yaml →
+# instance_layout.content. A stage folder is a location; `status:` is the gate.
+# ---------------------------------------------------------------------------
+content:
+  drafts: content/drafts/
+  ready_to_send: content/ready-to-send/
+  approved: content/approved/
+  shipped: content/shipped/
+  topic_bank: content/topic-bank.md
+
+# ---------------------------------------------------------------------------
+# Publishing oversight — watch, never invoke.
+# ---------------------------------------------------------------------------
+publishing:
+  invoked_by: schedule        # never by this agent
+  oversight:
+    - queue depth per channel
+    - skipped publishing days
+    - ship errors and unverified publishes
+  on_backlog: slow_the_plan
+  # If a queue is silently backing up, that is the strategist's signal to plan
+  # fewer pieces. It is not the ship skill's job to notice.
+  verification: read_back
+  # A publish is verified by reading the result back, never by the absence of
+  # an error. Where read-back is impossible the playbook says so and says what
+  # is checked instead, and an unverified publish is RECORDED as unverified.
+  # This is not theoretical: in the ported instance a well-formed publish
+  # identifier came back for a piece that never existed.
+
+# ---------------------------------------------------------------------------
+# Inbound. Definitions are the CMO's; detection and the ledger are this
+# agent's.
+# ---------------------------------------------------------------------------
+inbound:
+  signals_defined_in: agents/cmo/config.yaml   # inbound.icp_signals
+  route_to: agents/cmo/config.yaml             # inbound.route_to
+  ledger: notebook/routed-signals.md
+  ledger_line: "- {date} | {person} @ {company} | {signal} | routed → {outcome, once known}"
+  # One running file, fixed filename. The CMO reads it for the funnel loop and
+  # other departments may read it for seed material, so it is not a
+  # date-stamped notebook entry.
+
+# ---------------------------------------------------------------------------
+# Gates. This agent works inside them and overrides none.
+# ---------------------------------------------------------------------------
+gates:
+  human_gate_met: m2_the_piece   # as a draft on the approval surface; nothing else
+  machine:
+    respects: [brief_completeness, voice, format_limits, cadence, asset_readiness]
+    override: approver_only
+  cadence_rule:
+    max_per_channel_per_publishing_day: 1
+    order: oldest_approved_first
+    never: burst
+  # The cadence rule came from an incident: three backlogged approvals went out
+  # in one run and the approver deleted two by hand. It binds hardest exactly
+  # where it is most tempting to relax it — when a publish freeze lifts with a
+  # full queue behind it.
+
+interrupts:
+  to_approver: none
+  # An outperforming piece produces two follow-up DRAFTS within 48 hours. The
+  # approver hears about it in the weekly report, not when it happens. There is
+  # no marketing emergency.
+
+# Mode behaviour — read MODE from .env at the start of every run.
+modes:
+  sabbath: silent
+  retreat: silent
+  quiet:
+    engagement_logging: runs
+    interrupt_checks: run
+    planning_output: deferred
+
+publish_freeze:
+  planning: runs
+  briefing: runs
+  publishing: suppressed
+  drain_on_lift: oldest_first_one_per_publishing_day

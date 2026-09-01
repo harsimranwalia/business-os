@@ -848,3 +848,4 @@ Append-only. One line per state transition, newest last.
   routing, and `definition-of-done.md`'s state table). Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
   whole-board: see pass notes.
+<!-- merge note: local (HEAD) and remote logs diverged after the ready-to-ship-to-blocked step. Local records the department own watch-pass reconciliation of the control-center merge (blocked to shipped, release record 2026-08-29-aiorders-admin-hub-ENG-011.md) followed by a full acceptance-check to verified. Remote (dated 2026-08-30) reaches the same terminal verified state via a single combined scheduled-pass entry doing equivalent git-ancestry and deploy verification. Kept local fuller, first-hand account below; remote independent verification covered the same ground by a different method without adding new information. -->

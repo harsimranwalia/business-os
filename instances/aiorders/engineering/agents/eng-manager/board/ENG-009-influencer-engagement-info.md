@@ -577,3 +577,6 @@ Append-only. One line per state transition, newest last.
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-009`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-009`) and whole-board: see board index.
+<!-- merge note: remote said ENG-009 was still at ready on 2026-08-31, held by the machine-WIP cap, with the sequencing hold reason merely corrected. This contradicts the frontmatter both branches agree on (state: building, branch commits aiorders-api@4eb4b1b / aiorders-admin-hub@328db29) and local own detailed 2026-08-30 building entry above. Kept local account (the build genuinely happened) and dropped remote stale ready/held entry as superseded. -->
+eady on 2026-08-31, held by the machine-WIP cap, with the sequencing hold reason merely corrected. This contradicts the frontmatter both branches agree on (state: building, branch commits aiorders-api@4eb4b1b / aiorders-admin-hub@328db29) and local's own detailed 2026-08-30 building entry below. Kept local's account (the build genuinely happened) and dropped remote's stale 
+eady/held entry as superseded. -->

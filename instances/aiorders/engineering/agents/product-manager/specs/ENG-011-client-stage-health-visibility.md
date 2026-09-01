@@ -1,7 +1,7 @@
 ---
 ticket: ENG-011
 project: aiorders-admin-hub
-status: designed
+status: verified
 size: M
 author: product-manager
 created: 2026-08-29

@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-31
 branch:
 depends_on: []
 blocks: []
@@ -24,7 +24,7 @@ parent:
 links:
   prd: agents/product-manager/specs/ENG-014-restaurant-qr-media-self-service.md
   design: agents/architect/designs/ENG-014-restaurant-qr-media-self-service.md
-  adrs: []
+  adrs: [ADR-005]
   review:
   test_plan:
   security_review:
@@ -316,101 +316,144 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-014`) and
   whole-board: exit 0, clean.
 
-- `2026-08-29` `designed` (no state change — exit condition now met),
-  `continue` event pass, context `ENG-014` — this fire's own turn, resuming
-  the ticket from its current state per the event's own narrower contract
-  (no board-wide sweep). Mode check clean (business-os `.env` → `MODE=`
-  empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+<!-- merge note: local (HEAD) recorded a 2026-08-29 `continue ENG-014` entry
+  claiming design work was completed that pass. Remote's 2026-08-31
+  `scheduled` entry below investigated and found zero trace-log evidence
+  that pass ever ran and no design file on disk, directly contradicting
+  the local claim; remote's later, corroborated account is kept and the
+  local entry is dropped rather than merged in. -->
+- `2026-08-31` `designed` (no state change), `scheduled` event pass, context
+  `launchd`. Whole-board safety-net sweep. Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-014`) and whole-board: both exit 0, clean.
+
+  **The 2026-08-29 re-fire, confirmed queued that day, never actually ran —
+  a second, different break in the same chain.** Grepped every
+  `traces/eng-loop-*.log` this instance has ever written for `pass start:
+  continue (ENG-014)` (the exact format confirmed against `ENG-008`'s/
+  `ENG-013`'s own known-good runs today): zero matches, in any log, ever.
+  No design file exists at `agents/architect/designs/ENG-014-*.md`. This
+  ticket's own architect-owned observation filed on `ENG-023` this same day
+  ("`designed` conflates 'handed to architect, undesigned' and 'design
+  complete, cap-held' — `ENG-014`/`ENG-015` turned out to be the former")
+  independently corroborates the same finding from the other direction.
+  This is not the known redundant-dispatch race (`observations.md`,
+  multiple 2026-08-26/27 rows) — that race is two events chasing a
+  **completed** action; here the action itself was never done. Root cause
+  not fully determined — `traces/` is local and this instance runs on two
+  hosts, and the 2026-08-29 confirmation only proves the append happened,
+  not that the subsequent drain preserved or ran it.
+
+  **Action taken:** did not re-fire — `continue ENG-014` already sits in
+  `traces/.pending` at this pass's start (verified fresh, not assumed;
+  likely the same entry `ENG-008`'s `continue` pass queued behind
+  earlier today, though the log gives no way to distinguish that from a
+  surviving remnant of the 2026-08-29 append). Firing a second `continue
+  ENG-014` here would either collapse into it harmlessly or, if the
+  existing entry is in fact stuck, double queue depth without fixing
+  anything — left as one entry, to drain naturally behind `ENG-008`/
+  `ENG-013` once this pass releases the lock.
+
+  **Filed, not fixed here:** `agents/eng-manager/proposals.md` (this
+  pass) — the dispatch gap itself (a confirmed-queued event that can
+  vanish before draining, with no `eng-events-dropped`-style notice ever
+  raised, unlike a pass that fails and is properly retried/dropped) is
+  department machinery, not a ticket-shaped fix, and not P0 on an
+  internal-lane process.
+
+  `chained: none` — the ticket already has a queued fire; adding another
+  is not a repair. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-014`) and whole-board: both exit 0, clean.
+
+- `2026-08-31` `designed` (no state change — design work actually done this
+  time), `continue` event pass, context `ENG-014`. Narrow scope per the
+  event's own contract (resume this ticket from its current state; no
+  board-wide sweep). This session is the dedicated `continue ENG-014` run
+  three prior passes recorded chaining to and none of them actually reached —
+  confirmed at pass start: `ENG-014` is absent from `traces/.pending`
+  (already drained to launch this session), and the 2026-08-31 `scheduled`
+  entry above independently found zero `pass start: continue (ENG-014)` lines
+  in any trace log, ever, before now. Mode check clean (business-os `.env` →
+  `MODE=active`; instance `config/config.yaml` → `mode:` empty). Pre-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-014`) and
   whole-board: both exit 0, clean.
 
-  **Design work done this pass** — the immediately preceding entry named
-  exactly why it wasn't done inline ("designed's exit condition is the
-  architect's own output... belongs in a dedicated continue ENG-014
-  session"); this is that session. Read both repos fresh from the worktrees
-  rather than trusting the PRD's summary: `restaurant-portal`
-  (`~/Documents/_eng/restaurant-portal`, clean, `eng/base`) and `aiorders-api`
-  (`~/Documents/_eng/aiorders-api`, clean, sitting on `ENG-008`'s branch —
-  confirmed via `git diff origin/main...HEAD --stat` that branch touches
-  only `admin-portal`'s influencer handler, nothing this design reads, so
-  safe to read from without switching branches).
+  **Design work done, for real this time.** Read the actual code across all
+  three repos this ticket touches rather than trusting the PRD's own summary:
+  `aiorders-api`'s `url-shortener/index.ts` (confirmed the blanket
+  `verifyAdminAccess` gate and the existing `redirect` public carve-out),
+  `_shared/restaurantAccess.ts` and `brand-portal/utils.ts` (two independent
+  copies of `verifyRestaurantAccess`, confirmed why: `_shared`'s own comment
+  says it exists so functions that deploy independently don't cross-import),
+  `brand-portal/restaurants.ts` and `index.ts` (the `get_custom_reports`
+  pattern this design's new action mirrors), and on the frontend side
+  `qrUtils.ts`, `BagInsertGenerator.tsx`, and `A4PosterGenerator.tsx` in
+  `aiorders-admin-hub` (found the same list-then-create QR logic hand-rolled
+  three separate times, each building its own `destination_url`), plus
+  `RestaurantDetails.tsx` (exact props passed to each generator) and
+  `restaurant-portal`'s own `RestaurantContext.tsx`, `brandPortalApi.ts`, and
+  `Sidebar.tsx`/`App.tsx` (confirmed `currentRestaurant` carries no
+  `website`/`logo_url` today — a real gap the design has to close, not an
+  assumption).
 
-  **Traced the actual code, not just the PRD's summary of it**:
-  `url-shortener/index.ts` (the exact `verifyAdminAccess` gate and the
-  `list`/`create` shapes), `_shared/restaurantAccess.ts` (already exists,
-  already used by `api-key-auth` for the identical "restaurant-scoped path
-  alongside an admin-gated function" shape — direct precedent, not a novel
-  pattern), and all three existing client call sites that each do their own
-  "list, filter, create-if-absent" (`qrUtils.ts`, `BagInsertGenerator.tsx`,
-  `A4PosterGenerator.tsx`) — confirmed the latter two's embedded QR and the
-  standalone Bag-Insert QR all resolve to the same `destination_url` (no
-  `utm_source`), so the new action's `qr_type` only needs two values,
-  matching the PRD's non-goal of no new QR type.
+  **Design written:**
+  `agents/architect/designs/ENG-014-restaurant-qr-media-self-service.md`. One
+  new restaurant-scoped action on `url-shortener`
+  (`get_or_create_restaurant_qr`, gated by `verifyRestaurantAccess` instead of
+  admin, computing its own `destination_url` server-side rather than trusting
+  one from the caller — the detail that actually makes the scoping mean
+  something); one new read action on `brand-portal`
+  (`get_restaurant_media_info`) for the two fields the portal's existing
+  restaurant data doesn't carry; both generator components ported into
+  `restaurant-portal` (no shared package exists across these four repos to
+  import from instead). `touches_data: false` — no migration, no new table or
+  column. `touches_models: false` — no AI/LLM surface in this ticket.
 
-  **Design written**:
-  `agents/architect/designs/ENG-014-restaurant-qr-media-self-service.md`.
-  One new restaurant-scoped action on `url-shortener`
-  (`get_or_create_restaurant_qr`), inserted before the existing admin gate,
-  touching none of that function's existing actions; two ported (not
-  shared) frontend generator components with their admin-only QR auto-load
-  effect rewritten to call the new action instead of `list`; one new page +
-  nav entry + route in `restaurant-portal`. No new table, column, vendor, or
-  migration — `touches_data: false`, `touches_models: false`.
+  **One ADR, no G2.** `ADR-005` records narrowing `url-shortener`'s trust
+  boundary per-action rather than per-function — a real "why on earth" a
+  future engineer would ask, but reversible and following an existing
+  in-repo pattern (`_shared/restaurantAccess.ts`), so decided and logged
+  rather than escalated. No new datastore, vendor, or auth model; no one-way
+  door. **Moves straight through `designed`, no G2** — same precedent
+  `ENG-011`/`ENG-013` set.
 
-  **No one-way door, no G2** — precedented by `api-key-auth`'s identical use
-  of `_shared/restaurantAccess.ts`; every existing `url-shortener` action
-  untouched; fully reversible. No ADR needed (`adrs: []`).
+  **Stays at `designed` anyway — held by the machine WIP cap, not a gate.**
+  Verified fresh from each ticket's own frontmatter rather than the board's
+  cached header: `ENG-008` (`in-qa`), `ENG-009` (`ready`), `ENG-010`
+  (`ready`), and `ENG-013` (`ready-to-ship`) are all currently inside the
+  counted `ready`..`ready-to-ship` range — **machine WIP 4/1, over cap** — and
+  `_index.md`'s own header already names `ENG-014` through `ENG-025` as held
+  by it until that count clears. This design does not attempt to push
+  `ENG-014` into `ready` on top of that; per `eng_build_loop.md` step 6,
+  shaping/design work is exempt from the cap, but entering `ready` is not.
 
-  **Two pre-existing findings surfaced during research, neither new**: the
-  `verifyRestaurantAccess` misuse in `brand-portal`'s `website.ts` (result
-  discarded) and `feedback.ts`/`offers.ts` (wrong argument order) are
-  already tracked in `aiorders-api/supabase/functions/README.md`'s "Known
-  issues" — named in the design's Risks section only as the mistake this
-  new code must not repeat, not filed again as a fresh finding.
-
-  **AC5 (checklist auto-completion) scoped out** — the PRD itself flags it
-  `[proposed]`/possibly-fast-follow and leaves the mechanism to this design;
-  doing it well means reaching into `admin-portal`'s
-  `restaurant_activations`, untouched by everything else here, to answer a
-  question (does viewing count, or only first generation?) this ticket
-  doesn't need answered. Recommended as its own fast-follow once this ticket
-  verifies — see the design's "Out of scope".
-
-  **State stays `designed`.** The exit condition
-  ("Tech design written; ADRs logged; one-way doors either decided or
-  escalated", `definition-of-done.md`) is now met, but the mechanical flip
-  to `ready` is that state's own owner's job ("Work broken down, sequenced,
-  assigned; WIP slot available"), not this pass's. **`owner: architect →
-  eng-manager`** — naming the next actor rather than the current one, same
-  convention `ENG-022`'s own design-done entry used, citing the same
-  `definition-of-done.md` `ready | eng-manager` row.
-
-  **Not advanced to `ready`, and not chained, for the same reason.**
-  Verified fresh from `agents/eng-manager/board/_index.md` (read this pass,
-  not trusted from memory) that machine WIP is currently 5/1 — over the
-  1-ticket cap corrected earlier today — and the board's own header names
-  `ENG-014` explicitly among the tickets held at
-  `designed`/`shaped`/`awaiting-scope` until that count clears. This differs
-  from `ENG-022`'s own design-done pass, which chained immediately after
-  design — but at that moment machine WIP was 6 against the *old* 12-ticket
-  cap, genuinely not capped, so chaining could plausibly make progress.
-  Right now it provably cannot: the next hop would re-verify the same 5/1
-  cap and record the same hold, spending a full pass to reconfirm a fact
-  already on the board. Per `eng_build_loop.md` step 9 ("Do NOT chain when
-  the ticket is: ... held by a cap"), that is exactly the condition here.
+  **Closes the specific ambiguity flagged against this ticket.** The
+  architect's own `ENG-023` observation (2026-08-31) and the `scheduled`
+  sweep above both named `ENG-014`/`ENG-015` as sitting at `designed`
+  *un-designed*, not cap-held-after-completion — the two sub-states
+  `designed` conflates. That's resolved for `ENG-014` specifically as of this
+  pass: the design file now exists and is real; `ENG-014` is now genuinely in
+  the cap-held-after-completion sub-state. `ENG-015` is untouched (out of
+  scope — this event names `ENG-014` only) and remains in the other
+  sub-state until its own `continue` pass runs.
 
   **Dead-end sweep (scoped to this ticket only, per this event's own
-  contract):** nothing else outstanding on `ENG-014` itself.
+  contract):** none needed beyond the cap re-verification above.
 
-  **Observations filed** (`observations.md`): one — this is the second
-  same-day design-done pass to fork on the machine-WIP-cap question
-  (`ENG-022` chained, not yet capped at its moment; `ENG-014` here does not,
-  now capped) — worth eng-manager's dispatch pass confirming `ready`-entry
-  actually resumes once `ENG-007`/`ENG-008`/`ENG-009`/`ENG-010`/`ENG-013`
-  drain, rather than this ticket silently waiting past that point.
+  **Notify sweep:** nothing raised — no gate opened this pass (no G2), so
+  nothing to notify or nudge. Approval cap unaffected.
 
-  `chained: none` — held by the machine WIP cap (5/1, over the 1-ticket
-  limit; `_index.md` names `ENG-014` by name as parked at `designed` until
-  it clears). Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-  scoped (`ENG-014`) and whole-board: see pass notes in
-  `agents/eng-manager/board/_index.md`.
+  **Observations filed** (`observations.md`): closing the loop on the
+  architect's own 2026-08-31 `ENG-023` observation for `ENG-014` specifically;
+  the admin-hub QR/media destination-URL construction being hand-rolled three
+  times independently, and this design adding a fourth (server-side, this
+  time) rather than consolidating all four — named as a pre-existing,
+  out-of-proportion-to-this-ticket pattern, not fixed here.
+
+  `chained: none` — held by the machine WIP cap (4/1: `ENG-008`/`ENG-009`/
+  `ENG-010`/`ENG-013` occupying), not waiting on the approver and not
+  blocked, but explicitly one of the documented no-chain conditions
+  ("held by a cap (WIP or approvals)"). Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-014`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.

@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-31
 branch:
 depends_on: []
 blocks: []
@@ -24,7 +24,7 @@ parent:
 links:
   prd: agents/product-manager/specs/ENG-025-feedback-recurring-issues.md
   design: agents/architect/designs/ENG-025-feedback-recurring-issues.md
-  adrs: []
+  adrs: [ADR-007]
   review:
   test_plan:
   security_review:
@@ -242,95 +242,118 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-025`) and
   whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
 
-- `2026-08-29` `designed → designed` (architect, `continue` event pass,
-  context `ENG-025`) — narrow scope per this event's own contract (resume
-  this ticket from its current state; no board-wide sweep). Mode check clean
-  (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+<!-- merge note: local (HEAD) recorded a 2026-08-29 `continue ENG-025`
+  entry claiming the design was completed that pass and owner handed off
+  to eng-manager. Remote's entries below (2026-08-31) found no trace of
+  that chain ever running and no design file on disk, and only wrote the
+  design on 2026-08-31 with owner staying `architect` — directly
+  contradicting the local claim. Remote's later, verified account is kept
+  and the local entry dropped. -->
+- `2026-08-31` `designed` (no state change), `scheduled` event pass, context
+  `launchd`. Whole-board safety-net sweep. Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-025`) and whole-board: both exit 0, clean.
+
+  **The 2026-08-29 chain fire never actually ran — same shape as `ENG-014`/
+  `ENG-015`, found while investigating those two.** Unlike `ENG-014`/
+  `ENG-015`, this ticket's own log never recorded a confirmed-queued
+  re-verification — only the original `chained: ENG-025` claim from the
+  `scheduled` pass that raised it. Grepped every `traces/eng-loop-*.log`
+  this instance has ever written for `pass start: continue (ENG-025)`
+  against the confirmed-working format (`ENG-008`/`ENG-013` today): zero
+  matches, ever. No design file exists at `agents/architect/designs/
+  ENG-025-*.md`. Same not-the-redundant-dispatch-race reasoning as
+  `ENG-014`'s entry this pass — the design was never written, not merely
+  re-processed after completion.
+
+  **Action taken:** `continue ENG-025` was not in `traces/.pending` at this
+  pass's start — re-fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-025`
+  directly and confirmed rather than assumed: `traces/.pending` now carries
+  `1 continue ENG-025`, queued behind this still-running pass.
+
+  **Filed:** `agents/eng-manager/proposals.md` (this pass, filed once
+  against `ENG-014`'s entry, covers all three tickets) — the dispatch gap
+  itself is department machinery, not a ticket-shaped fix.
+
+  `chained: ENG-025` — re-fired this pass and confirmed on the queue.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-025`) and whole-board: both exit 0, clean.
+
+- `2026-08-31` `designed` (no state change), `continue` event pass, context
+  `ENG-025`. Narrow scope per the event's own contract (resume this ticket
+  from its current state; no board-wide sweep). This is the dedicated
+  `continue ENG-025` session the prior `scheduled` pass recorded chaining to
+  and never reached — confirmed at this pass's start: `ENG-025` absent from
+  `traces/.pending` (`1 continue ENG-008` / `1 continue ENG-013` are the only
+  lines left — already drained to launch this session, not lost); no design
+  file existed yet at `agents/architect/designs/ENG-025-*.md`. Mode check
+  clean (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
   `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-025`) and whole-board: both exit 0, clean.
 
-  **Incidental discovery, not reconciled here.** `ENG-007`'s own ticket file
-  now reads `state: shipped` (`blocked → shipped`, "control center, merge
-  detected... recorded on Harry's say-so; ancestry not consulted") though
-  `_index.md`'s header and In-flight table still show it `blocked` — that
-  transition happened outside this pass, by a human dashboard action, not by
-  a build-loop write. `inbox/2026-08-29-eng007-merge-request.md` carries no
-  `decision:` field, so its gate item is also not yet resolved/archived to
-  match. Same shape as the `ENG-011` discovery `ENG-007`'s own pass logged
-  earlier today — flagged as an observation (`observations.md`) rather than
-  reconciled, out of scope for a ticket-scoped `continue ENG-025` pass; pre-
-  and post-pass whole-board gate checks both ran clean regardless.
+  Read the real code rather than trusting the PRD's summary:
+  `aiorders-api/supabase/functions/brand-portal/feedback.ts`'s `getFeedback`
+  (confirmed `select('*')`, no date filter, no pagination — the restaurant's
+  entire history, every call), `restaurant-portal/src/services/brandPortalApi.ts`'s
+  `RestaurantFeedback` interface (confirmed `type`/`sub_type`/`nature` already
+  typed and already rendered per-card in `Index.tsx` today), and
+  `restaurant-portal/src/pages/feedback/Index.tsx` itself (confirmed
+  `feedbackList` already holds every field this needs before this ticket).
+  This fully confirmed the PRD's Evidence section rather than assuming it: no
+  new backend action, no new migration, pure client-side aggregation.
 
-  Did the architect's design work this ticket's prior entry deferred to a
-  dedicated session. Read `restaurant-portal` fresh from its `_eng` worktree
-  (`eng/base`, clean, 2 commits behind `origin/main` — both unrelated CI/
-  deploy-workflow commits, confirmed via `git log b3a81ef..origin/main`
-  before fast-forwarding; safe, no risk to this design). Read
-  `src/pages/feedback/Index.tsx` in full: confirmed the PRD's Evidence
-  claims firsthand — flat list plus exactly two aggregate stats (total
-  count, average rating), fetches the restaurant's entire feedback history
-  in one call, no per-category breakdown exists today. Read
-  `src/services/brandPortalApi.ts`'s `RestaurantFeedback` interface:
-  `sub_type`/`nature` both nullable, `type` non-null — confirms a `sub_type
-  ?? type` fallback is needed for grouping. Read `aiorders-api`'s
-  `brand-portal/feedback.ts`, `catering.ts`, and `utils.ts` (worktree
-  sitting on `ENG-008`'s branch; `git diff origin/main...HEAD --stat`
-  confirmed that branch touches only `admin-portal/handlers/influencers.ts`
-  and its own migration, nowhere near `brand-portal/`, so safe to read
-  without switching branches) to confirm the PRD's access-check warning
-  firsthand rather than trusting its wording: `feedback.ts`'s `getFeedback`
-  calls `verifyRestaurantAccess(supabase, user.id, restaurant_id)` (wrong
-  argument order against `utils.ts`'s real signature) and checks the
-  returned object's truthiness (`if (!hasAccess)`, always false on an
-  object) instead of `.hasAccess` — confirmed live, same bug class
-  `ENG-022` is already scoped to fix, and confirmed **not** one this
-  design's own change touches or depends on (see below).
+  **Design written:**
+  `agents/architect/designs/ENG-025-feedback-recurring-issues.md`. One new
+  presentational component (`RecurringIssuesSummary.tsx`, `feedback` in,
+  ranked category list or empty-state out via `useMemo`), one render-call
+  edit to `Index.tsx`. `touches_data: false`, `touches_models: false`.
 
-  **Design conclusion: no backend change needed.** All three acceptance
-  criteria are answerable from data the page already has in the browser —
-  `sub_type`/`nature`/`type` are already present on every fetched row, and
-  the existing call already returns full history with no date filter. Wrote
-  `agents/architect/designs/ENG-025-feedback-recurring-issues.md`: one new
-  exported pure function (`groupRecurringIssues`) plus one new "Recurring
-  Issues" `Card` section, both in `Index.tsx`, no new file, no new backend
-  action, no new table/column/migration, no one-way door, no G2, no ADR.
-  Documented three of my own design calls the PRD explicitly left open
-  (count-≥-2 recurrence threshold, all-time windowing, keeping the helper
-  inline rather than a new module) under Approach/Alternatives rather than
-  deciding them silently.
+  **One ADR, no G2.** `ADR-007` records the two calls the PRD explicitly left
+  to design time (Risks: "windowing is a design-time call, not a PM one"): an
+  all-time window (matches what `getFeedback` already fetches, no new query)
+  and a >1 threshold for what counts as "recurring" (makes AC3's "no clear
+  recurring pattern" empty-state actually reachable at today's feedback
+  volumes, per the PRD's own Evidence numbers). Both are one constant each,
+  reversible with no data migration and no backend deploy — decided and
+  logged rather than escalated, same precedent `ADR-005`/`ADR-006` set.
 
-  **State stays `designed`** — exit condition (tech design written) is now
-  met, but the flip to `ready` belongs to whichever pass finds machine WIP
-  clear, same convention `ENG-014`'s and `ENG-015`'s own entries used.
-  **`owner: architect → eng-manager`.** **Not chained** — machine WIP
-  verified fresh immediately before this decision, each ticket's own
-  `state:` field read directly rather than trusting `_index.md`'s header:
-  `ENG-007` `shipped` (outside range, see discovery above), `ENG-008`
-  `building`, `ENG-009` `ready`, `ENG-010` `ready`, `ENG-011` `blocked`
-  (outside range), `ENG-013` `building` — 4/1 (`ENG-008`, `ENG-009`,
-  `ENG-010`, `ENG-013`), still over the one-ticket cap. `chained: none` —
-  held by the machine WIP cap.
+  **Stays at `designed` regardless — held by the machine WIP cap, not a
+  gate.** Re-verified fresh from each ticket's own frontmatter, not the board
+  index: `ENG-008` (`in-qa`), `ENG-009`/`ENG-010` (`ready`), `ENG-013`
+  (`ready-to-ship`) — four tickets inside the counted `ready`..`ready-to-ship`
+  range against a cap of 1, unchanged since this morning's `scheduled` sweep.
+  Design work itself is exempt from this cap; entering `ready` is not, so
+  this pass does not attempt it — no branch created in either worktree, no
+  code written.
 
-  **0 net board consequence**: `machine_wip` unaffected (still 4/1 —
-  `designed` sits outside the counted `ready`...`ready-to-ship` range);
-  approver-facing WIP and approval cap both unaffected by this ticket's own
-  transition (this pass did not touch either cap's count — the `ENG-007`
-  discovery above is noted, not acted on). In-flight table's `ENG-025` row:
-  Owner column updated to `eng-manager`, State unchanged.
+  Closes the chain gap the 2026-08-31 `scheduled` sweep flagged against this
+  ticket specifically, same shape as `ENG-014`/`ENG-015`: `ENG-025` was
+  sitting at `designed` *un-designed*, not cap-held-after-completion. As of
+  this pass it's genuinely the latter — the third and last of the three
+  tickets that sweep found in this state.
 
-  **Dead-end sweep (scoped to this event):** no other action needed on
-  `ENG-025` itself.
+  **Dead-end sweep (scoped to this ticket only, per this event's own
+  contract):** complete for `ENG-025` — no other action needed.
 
-  **Notify sweep:** nothing to raise — this pass produced a design doc, not
-  a gate item. Nothing with `notified:` older than 24h and no `decision:`
-  found in this event's narrow scope — nothing to nudge.
+  **Notify sweep:** nothing raised — no gate opened this pass (no G2), so
+  nothing to notify or nudge. Approval cap unaffected.
 
-  **Observation filed** (`observations.md`): the `ENG-007`/control-center
-  discovery above.
+  **Observations filed** (`observations.md`): one line closing the loop on
+  the architect's and eng-manager's own 2026-08-31 entries for this same
+  three-ticket dispatch gap — `ENG-025` is now also genuinely
+  cap-held-after-completion, matching `ENG-014`. Not a new dispatch-bug
+  finding; that's already fully covered by the existing `proposals.md` row
+  and prior `observations.md` entries this same day.
 
-  `chained: none` — `designed`, held by the machine WIP cap (4/1). Resume
-  happens when a future pass finds the cap clear. Post-pass
-  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-025`) and
-  whole-board: both run clean, no `WAIVED:` lines. Board holds four dated
-  entries once this one is added — oldest (`ENG-014`) moved to
-  `_index-archive.md`, per the keep-three rule.
+  **0 transitions** — ticket stays at `designed`; the cap, not the hop
+  budget, is what stopped it. Machine WIP unaffected (still 4/1, `ENG-025`
+  was never inside the counted range). Approver-facing WIP and approval cap
+  both unaffected — no gate raised.
+
+  `chained: none` — held by the machine WIP cap (4/1: `ENG-008`/`ENG-009`/
+  `ENG-010`/`ENG-013` occupying), one of the documented no-chain conditions
+  ("held by a cap (WIP or approvals)"), not waiting on the approver and not
+  blocked. Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-025`) and whole-board: both exit 0, clean, no `WAIVED:` lines.

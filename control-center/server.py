@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Business OS Control Center — http://localhost:7777
+"""Business OS Control Center — http://localhost:6789
 
 A standalone command center for business-os, with zero dependency on
 life-os. Runs entirely off this repo: departments/, instances/, and this
@@ -13,11 +13,13 @@ account system, no password reset — just enough to keep this off the open
 internet's script kiddies while staying a single human's tool.
 
 Tabs:
-  Marketing    Twenty CRM "Marketing Content" lifecycle — approve/edit/skip
-               drafts right here, the same lifecycle Telegram already drives
-               (scripts/content_loop.py). Two approval surfaces, one system
-               of record — Twenty's `status` field is the only truth either
-               of them writes.
+  Marketing    The marketing department, per business instance. Four views
+               under one tab: DECIDE (what is due for the approver's M2 —
+               the only recurring human gate in the system), CONTENT (the
+               library), REDDIT (the Twenty CRM community pipeline, folded in
+               as one channel among several rather than owning the tab), and
+               SETTINGS (the channel config, editable — every value read on
+               the next run). See departments/marketing/docs/marketing-team.md.
   Sales        A generic CRM funnel — stage-folder leads per business
                instance, no channel coupling. No sales agent writes into it
                yet (Harry's call, 2026-08-28: build the agent later), so this
@@ -43,7 +45,7 @@ import subprocess
 import threading
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -51,7 +53,7 @@ from urllib.parse import urlparse, parse_qs
 ROOT = Path(__file__).resolve().parent.parent  # business-os root
 HTML_FILE = Path(__file__).parent / "index.html"
 LOGIN_HTML_FILE = Path(__file__).parent / "login.html"
-PORT = 7777
+PORT = 6789
 
 
 def load_env():
@@ -1181,11 +1183,803 @@ def sales_move_lead(instance_id, slug, to_stage):
     return {"moved": True, "from": from_stage, "stage": to_stage}, None
 
 
-# ── Marketing view (Twenty CRM) ─────────────────────────────────────────────
+# ── Marketing view (the marketing department) ────────────────────────────────
+# Ported from life-os's control-center, re-rooted onto business-os's two-root
+# department shape: MKT_DEPT is the read-only template, MKT_INSTANCE is the one
+# thing written. See departments/marketing/config/conventions.yaml.
+#
+# Three views under one tab, and the split is deliberate. DECIDE is the only
+# recurring human gate the whole system has (M2 — every piece, before it
+# publishes), so it shows what is actually due and nothing else. CONTENT is the
+# library, for looking rather than deciding. SETTINGS is the channel config,
+# which sat as its own tab in life-os for a day and was wrong there: everything
+# in it is a channel setting, and a channel picked in the dropdown should scope
+# its settings exactly as it scopes its work.
+#
+# The channel roster is read out of the instance's config rather than hardcoded.
+# life-os could name LinkedIn and X in a constant because life-os is one
+# business; a department that ships to any business cannot.
+
+MKT_DEPT_DIR = ROOT / "departments" / "marketing"
+
+# A week. Long enough that nothing is a surprise, short enough that "due"
+# still means due — a fortnight of pieces is a library, not a decision.
+MKT_DUE_WINDOW_DAYS = 7
+
+WEEKDAY_INDEX = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+                 "friday": 4, "saturday": 5, "sunday": 6}
+WEEKDAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday",
+                 "saturday", "sunday"]
+
+# The four stage folders, in lifecycle order. A stage folder is a location,
+# not a gate — `status` is the gate — but shipped/ is terminal either way.
+MKT_STAGES = ["drafts", "ready-to-send", "approved", "shipped"]
+
+MKT_KEYS = ["status", "channel", "register", "kind", "archetype", "series",
+            "stage", "planned_date", "scheduled_day", "image_format",
+            "carousel_pdf", "format", "tweet_count", "shipped_at", "title"]
+
+# What the Settings view may write. Anything outside this list is rendered
+# read-only, because set_channel_field() would refuse it and a control that
+# fails when clicked is worse than one that was never offered.
+SETTINGS_WRITABLE = {
+    "enabled":         "bool",
+    "post_count":      "int",
+    "publishing_days": "days",
+    "publishing_time": "time",
+}
+
+
+def mkt_instances():
+    """Every marketing instance this server can show — one per business that
+    has actually been instantiated (`config/instantiated-from` is install.sh's
+    marker, same test the engineering roster uses). A directory without it is
+    a half-made instance, not a department."""
+    out = []
+    if INSTANCES_DIR.is_dir():
+        for d in sorted(p for p in INSTANCES_DIR.iterdir() if p.is_dir()):
+            mkt = d / "marketing"
+            if not (mkt / "config" / "instantiated-from").exists():
+                continue
+            out.append({
+                "id": d.name,
+                "label": _business_label(d),
+                "root": mkt,
+                "config": mkt / "config" / "config.yaml",
+                "content": mkt / "content",
+                "topic_bank": mkt / "content" / "topic-bank.md",
+            })
+    return out
+
+
+def mkt_instance(instance_id=None):
+    """Resolve an instance id to its paths, falling back to the first known
+    one. An unknown id falls back rather than erroring — it arrives from a
+    value the browser remembered, so a business that was renamed shouldn't
+    leave the tab permanently broken."""
+    known = mkt_instances()
+    if instance_id:
+        for i in known:
+            if i["id"] == instance_id:
+                return i
+    return known[0] if known else None
+
+
+def _mkt_channel_blocks(cfg_path):
+    """channel id -> the raw YAML lines under it in the instance config.
+
+    Line scan, no YAML dependency — the same call eng_limits() makes, for the
+    same reason: this server has none and shouldn't grow one to read a dozen
+    scalars. It also means a config with a syntax error still renders the tab
+    with whatever it could read, instead of 500ing the dashboard."""
+    blocks, cur = {}, None
+    if not cfg_path or not cfg_path.exists():
+        return blocks
+    try:
+        lines = cfg_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception:
+        return blocks
+    in_channels = False
+    for line in lines:
+        if re.match(r"^channels:\s*$", line):
+            in_channels = True
+            continue
+        if not in_channels:
+            continue
+        if line.strip() and not line.startswith(" "):
+            break  # a new top-level key — the channels block is over
+        m = re.match(r"^  ([a-z0-9_-]+):\s*$", line)
+        if m:
+            cur = m.group(1)
+            blocks[cur] = []
+            continue
+        if cur is not None:
+            blocks[cur].append(line)
+    return {k: "\n".join(v) for k, v in blocks.items()}
+
+
+def _mkt_scalar(block, key, default=""):
+    """One scalar out of a channel block, comment and quotes stripped.
+
+    Anchored on `key:` preceded only by whitespace, so a commented-out line can
+    never be read as live config — which matters more here than usual, because
+    these blocks carry long explanatory comments and some of them name a key
+    precisely to say it is deliberately absent."""
+    m = re.search(rf"^\s+{re.escape(key)}:[ \t]*([^#\n]*)", block, re.MULTILINE)
+    if not m:
+        return default
+    return m.group(1).strip().strip('"').strip("'") or default
+
+
+def _mkt_list(block, key):
+    """An inline YAML list (`[a, b, c]`) out of a channel block."""
+    raw = _mkt_scalar(block, key)
+    if not raw.startswith("["):
+        return []
+    return [v.strip().strip('"').strip("'").lower()
+            for v in raw.strip("[]").split(",") if v.strip()]
+
+
+def _mkt_has(block, key):
+    """Is this key actually SET on this channel, live (not in a comment)?
+
+    The distinction between "absent" and "absent, so we defaulted it" is the
+    whole point. `_mkt_scalar(block, 'publishing_time', '08:00')` returns
+    '08:00' for a channel whose config never mentions a publishing time — fine
+    for computing a next slot, wrong for telling someone what their config
+    says, and actively misleading rendered as an editable field."""
+    return re.search(rf"^\s+{re.escape(key)}:[ \t]", block, re.MULTILINE) is not None
+
+
+def _mkt_label(cid):
+    """A channel's display name. Config may carry one; otherwise the id,
+    title-cased, with the two whose casing everyone already knows kept."""
+    fixed = {"linkedin": "LinkedIn", "x": "X", "youtube": "YouTube",
+             "tiktok": "TikTok", "reddit": "Reddit"}
+    return fixed.get(cid, cid.replace("-", " ").replace("_", " ").title())
+
+
+def _mkt_next_slot(days, hhmm):
+    """The next date this channel can publish on, as (iso_date, human).
+
+    An empty `days` means every weekday — a channel whose cadence lives in its
+    ship routine's own schedule rather than in this config."""
+    try:
+        hour, minute = [int(x) for x in (hhmm or "08:00").split(":")[:2]]
+    except Exception:
+        hour, minute = 8, 0
+    idx = sorted({WEEKDAY_INDEX[d] for d in days if d in WEEKDAY_INDEX})
+    if not idx:
+        idx = [0, 1, 2, 3, 4]
+    now = datetime.now()
+    for ahead in range(0, 14):
+        day = now + timedelta(days=ahead)
+        if day.weekday() not in idx:
+            continue
+        if ahead == 0 and (now.hour, now.minute) >= (hour, minute):
+            continue  # today's slot has already passed
+        label = "today" if ahead == 0 else ("tomorrow" if ahead == 1
+                                            else day.strftime("%a %d %b"))
+        return day.strftime("%Y-%m-%d"), f"{label} {hhmm or '08:00'}"
+    return "", ""
+
+
+def _mkt_channel_of(fm, known):
+    """Which channel a piece belongs to.
+
+    The `channel:` field decides. The register/format fallback below it exists
+    because pieces written before a channel's field was introduced predate it
+    entirely, and inferring `thread`/`tweet` avoids backfilling historical
+    files to teach this tab one thing it can already derive. A piece that
+    resolves to nothing keeps an empty channel rather than being assigned to
+    whichever channel happens to be first — guessing here would put a piece on
+    the wrong channel's approval list."""
+    ch = (fm.get("channel") or "").strip().lower()
+    if ch in known:
+        return ch
+    reg = (fm.get("register") or "").strip().lower()
+    fmt = (fm.get("format") or "").strip().lower()
+    if ("x" in known) and (reg in ("tweet", "thread") or fmt in ("tweet", "thread")):
+        return "x"
+    return ch
+
+
+def _mkt_phase(stage, status):
+    """Where a piece sits in the pipeline.
+
+    Status leads and the folder is the fallback, matching the department's own
+    rule that `status` is the gate and the folder is not — except for shipped/,
+    which is terminal truth: a published piece whose frontmatter went stale
+    must never reappear as work."""
+    if stage == "shipped" or status == "shipped":
+        return "shipped"
+    if status == "approved":
+        return "queued"
+    if status in ("ready-to-send", "ready_to_send", "final", "reviewed"):
+        return "awaiting"
+    if stage == "approved":
+        return "queued"
+    if stage == "ready-to-send":
+        return "awaiting"
+    return "drafting"
+
+
+def _mkt_title(slug, fm):
+    """A readable title for a piece. The frontmatter's if it has one, else the
+    slug with its leading date stripped."""
+    if fm.get("title"):
+        return fm["title"]
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})[-_](.*)$", slug)
+    rest = m.group(2) if m else slug
+    return rest.replace("-", " ").replace("_", " ").strip().capitalize() or slug
+
+
+def _mkt_date(slug, fm):
+    """The date a piece is planned for. The filename's date is the one every
+    ship skill selects on, so it leads; `planned_date` is the fallback."""
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})", slug)
+    return (m.group(1) if m else "") or fm.get("planned_date", "")
+
+
+def _mkt_pieces(inst, known):
+    """Every content piece in the instance, tagged with channel and phase."""
+    items = []
+    content = inst["content"]
+    if not content.exists():
+        return items
+    for stage in MKT_STAGES:
+        stage_dir = content / stage
+        if not stage_dir.exists():
+            continue
+        for f in sorted(stage_dir.glob("*.md")):
+            try:
+                raw = f.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            m = re.match(r"^---\n(.*?)\n---\n?(.*)", raw, re.DOTALL)
+            fm_text, body = (m.group(1), m.group(2).strip()) if m else ("", raw.strip())
+            fm = parse_frontmatter_keys(fm_text, MKT_KEYS)
+            slug = f.stem
+            items.append({
+                "path": str(f.relative_to(ROOT)),
+                "slug": slug,
+                "title": _mkt_title(slug, fm),
+                "channel": _mkt_channel_of(fm, known),
+                "phase": _mkt_phase(stage, (fm.get("status") or "").strip().lower()),
+                "stage": stage,
+                "date": _mkt_date(slug, fm),
+                "archetype": fm.get("archetype", ""),
+                "register": fm.get("register", ""),
+                "series": fm.get("series", ""),
+                "series_stage": fm.get("stage", ""),
+                "format": fm.get("image_format") or fm.get("format", ""),
+                "has_carousel": bool(fm.get("carousel_pdf")),
+                "body": body,
+            })
+    return items
+
+
+def _mkt_channel_cards(blocks):
+    """One derived card per configured channel, in config order."""
+    cards = []
+    for cid, block in blocks.items():
+        enabled = _mkt_scalar(block, "enabled").lower() == "true"
+        days = _mkt_list(block, "publishing_days")
+        time_str = _mkt_scalar(block, "publishing_time", "08:00")
+        method = _mkt_scalar(block, "method")
+        cred = _mkt_scalar(block, "credential_env")
+        declared = _mkt_scalar(block, "autonomy").upper()
+
+        # Autonomy is DECLARED here, unlike in life-os where it had to be
+        # inferred: `autonomy: c2` is the recorded output of gate M3, so it is
+        # authoritative about what the approver granted. What it is not is
+        # authoritative about what the channel can currently do — a config can
+        # say C2 while its publishing path is empty. So both are computed and
+        # the view shows the grant, flagging it when reality is behind it.
+        # A tier that keeps claiming a channel can publish, for exactly as long
+        # as it took someone to notice, is the failure this guards against.
+        if not enabled:
+            capable, why = "C0", "not enabled — nothing drafted, nothing published"
+        elif method and method != "manual" and cred:
+            capable, why = "C2", "drafts and publishes, one approval per piece"
+        elif method == "manual":
+            capable, why = "C1", "drafts; publishing is a manual step, not a path"
+        else:
+            capable, why = "C1", "drafts, but no publishing path is configured"
+
+        if not enabled:
+            # Off is off. The grant is what it would resume at, not a gap to
+            # close — framing it as one turns every parked channel into a
+            # to-do.
+            tier = "C0"
+            if re.match(r"^C[1-3]$", declared):
+                why += f" · config grants {declared} when switched back on"
+        else:
+            tier = declared if re.match(r"^C[0-3]$", declared) else capable
+            if tier != capable:
+                why = f"config grants {tier}, but it can only do {capable} today — {why}"
+        nxt_iso, nxt_human = _mkt_next_slot(days, time_str) if enabled else ("", "")
+        cards.append({
+            "id": cid,
+            "label": _mkt_scalar(block, "label") or _mkt_label(cid),
+            "enabled": enabled,
+            "tier": tier,
+            "tier_why": why,
+            "days": days,
+            "time": time_str,
+            "next_slot": nxt_human,
+            "next_iso": nxt_iso,
+            "post_count": _mkt_scalar(block, "post_count", "0"),
+            "paused_for": _mkt_scalar(block, "paused_for"),
+            # The credential's NAME, never its value — the config stores a
+            # variable name on purpose and this view must not be the thing
+            # that resolves it.
+            "publish_path": ("the approver's logged-in browser session"
+                             if method == "browser" else
+                             (f"{method} · {cred}" if method and cred else
+                              (method or "none configured"))),
+            "require_approval": _mkt_scalar(block, "require_approval").lower() != "false",
+            "voice_have": _mkt_scalar(block, "current_samples", "0"),
+            "voice_need": _mkt_scalar(block, "floor", "0"),
+            "playbook": _mkt_scalar(block, "playbook"),
+        })
+    return cards
+
+
+MKT_EMPTY_HINT = ("No marketing instance yet — run departments/marketing/install.sh "
+                  "to onboard a business.")
+
+
+def list_marketing(instance_id=None):
+    """Channel health, the pipeline per channel, and the pieces actually due
+    for the approver's M2.
+
+    `due` is the section that earns this view: without it, approving the next
+    piece means finding it among everything staged in a flat library."""
+    inst = mkt_instance(instance_id)
+    instances = [{"id": i["id"], "label": i["label"]} for i in mkt_instances()]
+    if not inst:
+        return {"instance": None, "instances": [], "channels": [], "due": [],
+                "queued": [], "later_count": 0, "later_first": "",
+                "today": datetime.now().strftime("%Y-%m-%d"),
+                "window_days": MKT_DUE_WINDOW_DAYS,
+                "stats": {"due": 0, "queued": 0, "shipped_30d": 0, "channels_live": 0},
+                "empty": MKT_EMPTY_HINT}
+
+    blocks = _mkt_channel_blocks(inst["config"])
+    cards = _mkt_channel_cards(blocks)
+    items = _mkt_pieces(inst, set(blocks))
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    horizon = (datetime.now() + timedelta(days=MKT_DUE_WINDOW_DAYS)).strftime("%Y-%m-%d")
+
+    def of(ch, phase):
+        return [i for i in items if i["channel"] == ch and i["phase"] == phase]
+
+    for c in cards:
+        awaiting = of(c["id"], "awaiting")
+        queued = of(c["id"], "queued")
+        # Of the unapproved pieces, how many are actually due. Both numbers are
+        # kept because they answer different questions: "how much is written" is
+        # planning, "how much needs you this week" is a call on someone's time.
+        c["due"] = len([i for i in awaiting if not i["date"] or i["date"] <= horizon])
+        c["pipeline"] = {
+            "drafting": len(of(c["id"], "drafting")),
+            "awaiting": len(awaiting),
+            "due": c["due"],
+            "queued": len(queued),
+            "shipped": len(of(c["id"], "shipped")),
+        }
+
+    awaiting_all = sorted([i for i in items if i["phase"] == "awaiting"],
+                          key=lambda i: i["date"] or "9999")
+    due = [i for i in awaiting_all if not i["date"] or i["date"] <= horizon]
+    later = [i for i in awaiting_all if i not in due]
+    queued_all = sorted([i for i in items if i["phase"] == "queued"],
+                        key=lambda i: i["date"] or "9999")
+
+    cutoff = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    shipped_recent = [i for i in items if i["phase"] == "shipped" and i["date"] >= cutoff]
+
+    return {
+        "instance": inst["id"],
+        "instances": instances,
+        "today": today,
+        "window_days": MKT_DUE_WINDOW_DAYS,
+        # Just enough for the channel dropdown. Everything else about a channel
+        # — cadence, publishing path, voice corpus — is under Settings, because
+        # it is configuration rather than work.
+        "channels": [{"id": c["id"], "label": c["label"], "enabled": c["enabled"],
+                      "due": c["due"], "next_slot": c["next_slot"]} for c in cards],
+        "due": due,
+        # A count, not a list. The whole point of the window is that these stay
+        # out of the way until they come due; the Content view has them.
+        "later_count": len(later),
+        "later_first": later[0]["date"] if later else "",
+        "queued": queued_all,
+        "stats": {
+            "due": len(due),
+            "queued": len(queued_all),
+            "shipped_30d": len(shipped_recent),
+            "channels_live": len([c for c in cards if c["enabled"]]),
+        },
+    }
+
+
+def list_content(instance_id=None):
+    """The whole library, every phase. Looking, not deciding."""
+    inst = mkt_instance(instance_id)
+    if not inst:
+        return {"instance": None, "items": [], "empty": MKT_EMPTY_HINT}
+    blocks = _mkt_channel_blocks(inst["config"])
+    items = _mkt_pieces(inst, set(blocks))
+    items.sort(key=lambda i: i["date"] or "0000", reverse=True)
+    return {"instance": inst["id"], "items": items}
+
+
+# ── Marketing settings — the channel config, editable ────────────────────────
+# Everything here was previously a hand edit to a YAML file, which is exactly
+# the recurring manual step this system exists to remove. The writes are
+# line-targeted rather than a YAML round-trip: that config is mostly comments
+# explaining WHY each number is what it is, and a dump-and-reload would delete
+# all of them — a far larger loss than this endpoint saves.
+
+def _mkt_channel_line_span(lines, channel):
+    """(start, end) line indices of one channel's block in the config.
+
+    Returns the lines UNDER `  {channel}:`, exclusive of the header itself, so
+    a write can never touch the key that names the block."""
+    in_channels, start = False, None
+    for i, line in enumerate(lines):
+        if re.match(r"^channels:\s*$", line):
+            in_channels = True
+            continue
+        if not in_channels:
+            continue
+        if line.strip() and not line.startswith(" "):
+            return (start, i) if start is not None else (None, None)
+        m = re.match(r"^  ([a-z0-9_-]+):\s*$", line)
+        if m:
+            if start is not None:
+                return start, i          # the next channel begins
+            if m.group(1) == channel:
+                start = i + 1
+    return (start, len(lines)) if start is not None else (None, None)
+
+
+def _settings_coerce(kind, value):
+    """Validate and normalise one incoming value. Returns (yaml_text, error)."""
+    if kind == "bool":
+        if isinstance(value, str):
+            value = value.lower() in ("true", "1", "yes", "on")
+        return ("true" if value else "false"), None
+    if kind == "int":
+        try:
+            n = int(value)
+        except (TypeError, ValueError):
+            return None, "must be a whole number"
+        if not 0 <= n <= 50:
+            return None, "must be between 0 and 50"
+        return str(n), None
+    if kind == "days":
+        if isinstance(value, str):
+            value = [v.strip() for v in value.split(",") if v.strip()]
+        if not isinstance(value, list):
+            return None, "must be a list of weekday names"
+        days = [str(d).strip().lower() for d in value]
+        bad = [d for d in days if d not in WEEKDAY_NAMES]
+        if bad:
+            return None, f"not weekday names: {', '.join(bad)}"
+        # Ordered Monday-first and deduplicated. A list reading
+        # [thursday, tuesday] is the same schedule and a worse thing to read.
+        days = [d for d in WEEKDAY_NAMES if d in days]
+        return "[" + ", ".join(days) + "]", None
+    if kind == "time":
+        s = str(value).strip().strip('"').strip("'")
+        if not re.match(r"^([01]?\d|2[0-3]):[0-5]\d$", s):
+            return None, "must be HH:MM, 24-hour"
+        return f'"{s}"', None
+    return None, "unknown field type"
+
+
+def set_channel_field(channel, field, value, instance_id=None):
+    """Write one channel field back to the instance's marketing config.
+
+    The write is atomic and verified: the candidate text has to round-trip to
+    the value we intended before it replaces the file. A settings view that can
+    corrupt the config governing what gets published is worse than no settings
+    view — so on any doubt it refuses and the file is left alone."""
+    inst = mkt_instance(instance_id)
+    if not inst:
+        return None, "no marketing instance"
+    kind = SETTINGS_WRITABLE.get(field)
+    if not kind:
+        return None, f"'{field}' is not editable here"
+    cfg = inst["config"]
+    if not cfg.exists():
+        return None, "marketing config not found"
+
+    text = cfg.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    start, end = _mkt_channel_line_span(lines, channel)
+    if start is None:
+        return None, f"no channel '{channel}' in the config"
+
+    new_val, err = _settings_coerce(kind, value)
+    if err:
+        return None, f"{field}: {err}"
+
+    hit = None
+    for i in range(start, end):
+        m = re.match(rf"^(\s+){re.escape(field)}:([ \t]*)([^#\n]*)(#.*)?$", lines[i])
+        if m:
+            hit = i
+            indent, comment = m.group(1), (m.group(4) or "")
+            # Keep the comment and its spacing. These carry the reasoning for
+            # the value; losing them on edit would strip the config of the only
+            # record of why it is what it is.
+            spacer = "   " if comment else ""
+            lines[i] = f"{indent}{field}: {new_val}{spacer}{comment}".rstrip()
+            break
+    if hit is None:
+        return None, f"'{field}' is not set on channel '{channel}' — add it to the file first"
+
+    candidate = "\n".join(lines) + ("\n" if text.endswith("\n") else "")
+
+    try:
+        import yaml as _yaml
+        parsed = _yaml.safe_load(candidate)
+        got = (((parsed or {}).get("channels") or {}).get(channel) or {})
+
+        # Walk to the field wherever it landed — it may be nested under
+        # weekly_plan or publishing, and this check must not assume which.
+        def _find(d):
+            if not isinstance(d, dict):
+                return None, False
+            if field in d:
+                return d[field], True
+            for v in d.values():
+                got_v, ok = _find(v)
+                if ok:
+                    return got_v, True
+            return None, False
+
+        actual, found = _find(got)
+        if not found:
+            return None, "write produced a config the value disappeared from — not saved"
+        if actual != _yaml.safe_load(new_val):
+            return None, f"write did not round-trip ({actual!r}) — not saved"
+    except ImportError:
+        # No yaml module here. Fall back to the shallow reader this file
+        # already uses: weaker, but it still catches a mangled line, and it
+        # beats writing blind.
+        probe = _mkt_scalar("\n".join(lines[start:end]), field)
+        if probe.strip() != new_val.strip():
+            return None, "write did not round-trip — not saved"
+    except Exception as e:
+        return None, f"result would not parse as YAML ({e}) — not saved"
+
+    tmp = cfg.with_suffix(".yaml.tmp")
+    tmp.write_text(candidate, encoding="utf-8")
+    tmp.replace(cfg)
+    return {"channel": channel, "field": field, "value": new_val}, None
+
+
+def _mkt_ship_schedule(channel):
+    """The department schedule that actually publishes a channel — a pointer,
+    never a copy, so this view cannot drift from the thing that really fires.
+
+    It has to exist because channels answer "when does this publish?" from two
+    different places. A channel with `publishing_days` answers from the config,
+    and its ship skill reads that list every run. A channel without one answers
+    from its schedule's own cron, and a day list written here would be a
+    setting nobody reads."""
+    for name in (f"ship_content_{channel}.md", "ship_content.md"):
+        p = MKT_DEPT_DIR / "schedules" / name
+        if p.exists():
+            return str(p.relative_to(ROOT))
+    return ""
+
+
+SCHEDULE_CADENCE_FIELDS = ("Schedule \\(human\\)", "Trigger")
+
+
+def _schedule_human(rel):
+    """The cadence sentence out of a schedules/ file.
+
+    Two field names, because the two departments head it differently:
+    engineering writes `**Schedule (human):**`, marketing writes `**Trigger:**`.
+    Reading only one would leave this row blank for a whole department, which
+    is how a settings view starts quietly lying about when things publish.
+
+    Continuation lines are joined until the blank line — these files hard-wrap
+    prose, so reading one line would truncate the sentence mid-clause."""
+    if not rel:
+        return ""
+    p = ROOT / rel
+    if not p.exists():
+        return ""
+    try:
+        lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception:
+        return ""
+    pat = re.compile(r"^\*\*(?:" + "|".join(SCHEDULE_CADENCE_FIELDS) + r"):\*\*\s*(.*)$")
+    out = []
+    for i, line in enumerate(lines):
+        m = pat.match(line)
+        if not m:
+            continue
+        out.append(m.group(1).strip())
+        for nxt in lines[i + 1:]:
+            if not nxt.strip():
+                break
+            out.append(nxt.strip())
+        break
+    return re.sub(r"[*`]", "", " ".join(out)).strip()
+
+
+def list_settings(instance_id=None):
+    """Everything editable, grouped into sections."""
+    inst = mkt_instance(instance_id)
+    if not inst:
+        return {"instance": None, "sections": [], "empty": MKT_EMPTY_HINT}
+    blocks = _mkt_channel_blocks(inst["config"])
+    channels = []
+    for c in _mkt_channel_cards(blocks):
+        block = blocks.get(c["id"], "")
+        # The literal config value, blank when the key is absent — as opposed
+        # to the assumption used to compute a next slot. Keeping them apart is
+        # what stops a default being rendered as if someone had chosen it.
+        time_str = _mkt_scalar(block, "publishing_time") if _mkt_has(block, "publishing_time") else ""
+        sched_rel = _mkt_ship_schedule(c["id"])
+        channels.append({
+            "id": c["id"],
+            "label": c["label"],
+            "tier": c["tier"],
+            "tier_why": c["tier_why"],
+            "enabled": c["enabled"],
+            # Offer exactly what can be written. set_channel_field() refuses
+            # any key not already in the file, so anything outside this list
+            # would be a control that fails when clicked.
+            "editable": [f for f in SETTINGS_WRITABLE if _mkt_has(block, f)],
+            "post_count": c["post_count"],
+            "publishing_days": c["days"],
+            # Where the cadence really lives. `config` means this list is read
+            # every run and editing it changes what publishes. `schedule` means
+            # the ship routine's own cron decides and this config has no day
+            # list to read.
+            "cadence_source": "config" if c["days"] else "schedule",
+            "schedule_file": sched_rel,
+            "schedule_human": "" if c["days"] else _schedule_human(sched_rel),
+            "publishing_time": time_str,
+            "next_slot": c["next_slot"],
+            "paused_for": c["paused_for"],
+            "publish_path": c["publish_path"],
+            "require_approval": c["require_approval"],
+            "voice_have": c["voice_have"],
+            "voice_need": c["voice_need"],
+            "playbook": c["playbook"],
+        })
+    try:
+        source = str(inst["config"].relative_to(ROOT))
+    except ValueError:
+        source = str(inst["config"])
+    return {
+        "instance": inst["id"],
+        "sections": [{
+            "id": "channels",
+            "label": "Marketing channels",
+            "note": "Every editable value here is read on the next run, so a "
+                    "change is a change to what actually publishes. Where a row "
+                    "is read-only, the reason is on the row — usually that the "
+                    "real setting lives somewhere else.",
+            "source": source,
+            "channels": channels,
+            "weekdays": WEEKDAY_NAMES,
+            "writable": sorted(SETTINGS_WRITABLE),
+        }],
+    }
+
+
+def mkt_topic(topic, note, instance_id=None):
+    """Append an idea to the instance's topic bank.
+
+    Not a new mechanism — the CMO already drains this file on every planning
+    run. What it removes is the manual step of opening a markdown file to
+    record a thought, the same reason the engineering tab has an intake box.
+
+    The archetype is left unset deliberately. Asking someone to classify an
+    idea before they can write it down puts a taxonomy between them and the
+    thought, and the CMO picks the archetype anyway."""
+    inst = mkt_instance(instance_id)
+    if not inst:
+        return None, "no marketing instance"
+    topic = (topic or "").strip()
+    if not topic:
+        return None, "topic required"
+    bank = inst["topic_bank"]
+    bank.parent.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y-%m-%d")
+    entry = f"- **{topic}** — archetype: unset · added {stamp}"
+    if (note or "").strip():
+        entry += f"\n  - {note.strip()}"
+    if not bank.exists():
+        bank.write_text(
+            "# Topic bank\n\n"
+            "Topics waiting for a planning run. The CMO reads this file on "
+            "every run and picks the archetype.\n\n"
+            "## Queued topics\n\n" + entry + "\n", encoding="utf-8")
+        return {"added": topic}, None
+    raw = bank.read_text(encoding="utf-8")
+    # `[ \t]*`, never `\s*`: \s matches newlines, so a greedy tail would eat the
+    # blank line after the heading and land the insert below the first bullet.
+    m = re.search(r"^##+[ \t]*Queued topics[ \t]*$", raw, re.MULTILINE | re.IGNORECASE)
+    if m:
+        cut = raw.find("\n", m.end())
+        cut = len(raw) if cut == -1 else cut + 1
+        raw = raw[:cut] + "\n" + entry + "\n" + raw[cut:].lstrip("\n")
+    else:
+        raw = raw.rstrip("\n") + "\n\n## Queued topics\n\n" + entry + "\n"
+    bank.write_text(raw, encoding="utf-8")
+    return {"added": topic}, None
+
+
+def mkt_approve(rel_path, instance_id=None):
+    """The approver's M2, executed: `status: approved`, and the file moved into
+    content/approved/ so the folder agrees with the field.
+
+    This never publishes. A ship skill picks the piece up on its channel's next
+    slot, one per day, oldest first — which is the whole reason approving here
+    is safe to do in one click."""
+    inst = mkt_instance(instance_id)
+    if not inst:
+        return None, "no marketing instance"
+    if not rel_path:
+        return None, "path required"
+    src = (ROOT / rel_path).resolve()
+    content = inst["content"].resolve()
+    # A path arrives from the browser. It must land inside this instance's
+    # content tree or it is not a piece, whatever it is named.
+    try:
+        src.relative_to(content)
+    except ValueError:
+        return None, "not a piece in this instance's content"
+    if not src.exists():
+        return None, "piece not found"
+    if src.parent.name == "shipped":
+        return None, "already shipped — shipped is terminal"
+
+    raw = src.read_text(encoding="utf-8")
+    m = re.match(r"^---\n(.*?)\n---", raw, re.DOTALL)
+    fm = parse_frontmatter_keys(m.group(1) if m else "", ["status"])
+    if (fm.get("status") or "").strip().lower() == "approved":
+        return {"approved": False, "reason": "already approved"}, None
+
+    dest_dir = inst["content"] / "approved"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / src.name
+    dest.write_text(update_frontmatter_key(raw, "status", "approved"), encoding="utf-8")
+    if dest != src:
+        src.unlink()
+    return {"approved": True, "path": str(dest.relative_to(ROOT))}, None
+
+
+# ── Reddit view (Twenty CRM) ────────────────────────────────────────────────
+# The Reddit community pipeline, and a view UNDER Marketing rather than a tab
+# of its own. It was the whole Marketing tab until the marketing department
+# landed; that made it one channel among several rather than the surface, so
+# it folded in where a channel belongs. Nothing about the pipeline changed —
+# only what it is called and where it is reached.
+#
 # System of record is Twenty's "Marketing Content" object (see
 # scripts/content_loop.py, which drives the same lifecycle over Telegram).
-# This tab is a second surface over the SAME lifecycle — it only ever moves
+# This view is a second surface over the SAME lifecycle — it only ever moves
 # `status`, never invents a parallel one. No LLM in this path either.
+#
+# It reads Twenty over the network, which is why it is not folded into
+# /api/marketing: the department view has to render with no credentials and no
+# reachable CRM, and one endpoint that can fail for two unrelated reasons is
+# an endpoint that reports neither honestly.
 
 MC_FIELDS = ("id title key channel status community permalink externalId "
              "rationale postedUrl notes telegramMessageId notifiedAt")
@@ -1223,7 +2017,7 @@ def _mc_update(rid, fields):
     return _twenty_gql(q, {"id": rid, "d": fields})["updateMarketingContent"]
 
 
-def list_marketing(status_filter=None):
+def list_reddit(status_filter=None):
     filt = {"status": {"eq": status_filter.upper()}} if status_filter else None
     records = _mc_find(filt)
     items = []
@@ -1240,7 +2034,7 @@ def list_marketing(status_filter=None):
     return {"items": items}
 
 
-def marketing_action(rid, action, body=None, reason=None):
+def reddit_action(rid, action, body=None, reason=None):
     if not rid:
         return None, "id required"
     recs = _mc_find({"id": {"eq": rid}}, limit=1)
@@ -1278,7 +2072,6 @@ MODEL_TIERS = {"classification": "haiku", "reasoning": "sonnet", "complex": "opu
 
 
 def list_costs(days=30):
-    from datetime import timedelta
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     rows = []
     if INSTANCES_DIR.is_dir():
@@ -1514,8 +2307,20 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/marketing":
+            self.send_json(200, list_marketing(qs.get("instance", [None])[0]))
+            return
+
+        if parsed.path == "/api/content":
+            self.send_json(200, list_content(qs.get("instance", [None])[0]))
+            return
+
+        if parsed.path == "/api/settings":
+            self.send_json(200, list_settings(qs.get("instance", [None])[0]))
+            return
+
+        if parsed.path == "/api/reddit":
             try:
-                self.send_json(200, list_marketing(qs.get("status", [None])[0]))
+                self.send_json(200, list_reddit(qs.get("status", [None])[0]))
             except Exception as e:
                 self.send_json(502, {"error": str(e)})
             return
@@ -1633,11 +2438,31 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             self.send_json(200, result)
             return
 
-        if parsed.path == "/api/marketing/action":
+        if parsed.path == "/api/mkt/approve":
+            body = self.read_body()
+            result, err = mkt_approve(body.get("path"), body.get("instance"))
+            self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
+        if parsed.path == "/api/mkt/topic":
+            body = self.read_body()
+            result, err = mkt_topic(body.get("topic"), body.get("note"),
+                                    body.get("instance"))
+            self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
+        if parsed.path == "/api/settings/channel":
+            body = self.read_body()
+            result, err = set_channel_field(body.get("channel"), body.get("field"),
+                                            body.get("value"), body.get("instance"))
+            self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
+        if parsed.path == "/api/reddit/action":
             body = self.read_body()
             try:
-                result, err = marketing_action(body.get("id"), body.get("action"),
-                                               body.get("body"), body.get("reason"))
+                result, err = reddit_action(body.get("id"), body.get("action"),
+                                            body.get("body"), body.get("reason"))
             except Exception as e:
                 self.send_json(502, {"error": str(e)})
                 return
