@@ -12,6 +12,75 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-01 — watch sweep (~10:10): the approver-facing WIP cap was actually 3/2, not 2/2
+
+`watch` event pass, context `launchd` — one of 7 duplicate `watch (launchd)`
+fires queued while the 09:30 `scheduled` pass above was still running
+(2,409s); the queue collapsed all 7 to the oldest copy before draining it
+(`traces/eng-loop-2026-09-01.log`, `10:10:16`). Narrow scope per this
+event's own contract: sweep the three watched inboxes, act on what's new,
+ignore what's already processed — no whole-board dead-end sweep.
+
+Mode check clean (`MODE=active`).
+
+**All three inboxes swept fresh.** `agents/product-manager/inbox/` and
+`agents/eng-manager/inbox/` both empty (archives only). `inbox/`'s nine
+items all re-read directly rather than trusted from the pass above: two
+open G1s (`ENG-016`, see below; `ENG-026`'s standing readback question),
+two open merge requests (`ENG-008`, `ENG-013`), and three self-closed
+incident notices plus one already-nudged question the pass above had
+already investigated to conclusion the same morning
+(`2026-08-30-eng-loop-halted.md`, `2026-08-30`/`2026-08-31-eng-events-dropped.md`,
+`2026-09-01-eng-gate-violation-watch.md`, `2026-08-30-eng007-continue-sequence-question.md`)
+— none carries a `decision:` filled in or content postdating that pass's own
+read; not re-investigated, since doing so would repeat the exact waste that
+pass's own proposal was filed to stop.
+
+**Merge detection re-run anyway**, since `ENG-008`/`ENG-013`'s merge-request
+files are literally the inbox items being swept: `git fetch origin main`
+plus the `ENG-013` branch on both `_eng` worktrees (both clean, no
+uncommitted changes), then `git merge-base --is-ancestor` for all four PR
+branch heads against `origin/main` — same four commits the pass above
+verified (`aiorders-api@57f8c4b`/`aiorders-admin-hub@63be255` for `ENG-008`,
+`aiorders-api@c95b25b`/`aiorders-admin-hub@a1c3bdf` for `ENG-013`) — **none
+merged.** Both tickets remain `blocked`/`blocked_on: approver`, unchanged.
+
+**One real finding: `ENG-016`'s own board file and PRD disagreed with this
+index.** Both read `awaiting-scope`/`owner: approver`, G1 raised and
+notified `2026-08-29T23:13:49` — this index's In-flight table and "Waiting
+on the approver" section instead read `shaped`/`product-manager`, "G1
+drafted, ready to raise," carried forward unquestioned since the 09:30
+pass's cross-host merge (`e281c71`) kept a rival host's account of this row
+specifically. Checked `decision-journal.md` (no `ENG-016` row) and the
+PRD's own `status:` before treating this as staleness rather than a
+legitimate reset — neither shows one. **Consequence, not cosmetic:**
+approver-facing WIP was actually 3/2 (`ENG-008`, `ENG-013`, `ENG-016` all
+have a path running through the approver), not the 2/2 this index claimed —
+and the G1 itself sat un-nudged for 2.5 days because every intervening pass
+trusted this table over the ticket's own file. Corrected in place (header
+WIP accounting, In-flight row, "Waiting on the approver" section) and in
+`ENG-016`'s own log; nudged the G1 (`nudged: 2026-09-01T10:20:06`, first
+nudge). Filed a proposal (`proposals.md`) so the next cross-host merge
+re-derives this table from each ticket's own frontmatter rather than
+keeping one side's account wholesale.
+
+**Dispatch: nothing starts.** No ticket sits in a state this pass could
+legally advance: `ENG-008`/`ENG-013`/`ENG-016` all wait on the approver
+(WIP 3/2, over); `ENG-009`/`ENG-010` wait on the machine-WIP cap (2/1,
+unchanged); every `shaped`/`designed` ticket's own next gate waits on the
+same approver-WIP cap; `ENG-026` waits on its own open question. The
+`ENG-016` correction doesn't change any dispatch outcome — the last two
+passes already declined to raise a new G1 this cycle, just for a reason
+that wasn't quite right.
+
+**0 transitions.** No ticket changed state. **1 board correction** (the
+`ENG-016` row above).
+
+`chained: none` — every in-flight ticket is either approver-blocked or
+capped; nothing sits in a state owned by an agent. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
 ## 2026-09-01 — same scheduled pass, continued: a git pull mid-pass surfaced two days of the other host's backlog
 
 Still the 09:30 `scheduled` pass above — recorded as a second dated entry

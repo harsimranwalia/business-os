@@ -165,75 +165,6 @@ why); nudged this pass, first nudge, 2.5 days overdue. `ENG-019` through
 pass — the WIP-2 cap is already over, so none of their G1s may be raised
 regardless of the (nonexistent) approval cap this board used to cite.
 
-## 2026-09-01 — watch sweep (~10:10): the approver-facing WIP cap was actually 3/2, not 2/2
-
-`watch` event pass, context `launchd` — one of 7 duplicate `watch (launchd)`
-fires queued while the 09:30 `scheduled` pass above was still running
-(2,409s); the queue collapsed all 7 to the oldest copy before draining it
-(`traces/eng-loop-2026-09-01.log`, `10:10:16`). Narrow scope per this
-event's own contract: sweep the three watched inboxes, act on what's new,
-ignore what's already processed — no whole-board dead-end sweep.
-
-Mode check clean (`MODE=active`).
-
-**All three inboxes swept fresh.** `agents/product-manager/inbox/` and
-`agents/eng-manager/inbox/` both empty (archives only). `inbox/`'s nine
-items all re-read directly rather than trusted from the pass above: two
-open G1s (`ENG-016`, see below; `ENG-026`'s standing readback question),
-two open merge requests (`ENG-008`, `ENG-013`), and three self-closed
-incident notices plus one already-nudged question the pass above had
-already investigated to conclusion the same morning
-(`2026-08-30-eng-loop-halted.md`, `2026-08-30`/`2026-08-31-eng-events-dropped.md`,
-`2026-09-01-eng-gate-violation-watch.md`, `2026-08-30-eng007-continue-sequence-question.md`)
-— none carries a `decision:` filled in or content postdating that pass's own
-read; not re-investigated, since doing so would repeat the exact waste that
-pass's own proposal was filed to stop.
-
-**Merge detection re-run anyway**, since `ENG-008`/`ENG-013`'s merge-request
-files are literally the inbox items being swept: `git fetch origin main`
-plus the `ENG-013` branch on both `_eng` worktrees (both clean, no
-uncommitted changes), then `git merge-base --is-ancestor` for all four PR
-branch heads against `origin/main` — same four commits the pass above
-verified (`aiorders-api@57f8c4b`/`aiorders-admin-hub@63be255` for `ENG-008`,
-`aiorders-api@c95b25b`/`aiorders-admin-hub@a1c3bdf` for `ENG-013`) — **none
-merged.** Both tickets remain `blocked`/`blocked_on: approver`, unchanged.
-
-**One real finding: `ENG-016`'s own board file and PRD disagreed with this
-index.** Both read `awaiting-scope`/`owner: approver`, G1 raised and
-notified `2026-08-29T23:13:49` — this index's In-flight table and "Waiting
-on the approver" section instead read `shaped`/`product-manager`, "G1
-drafted, ready to raise," carried forward unquestioned since the 09:30
-pass's cross-host merge (`e281c71`) kept a rival host's account of this row
-specifically. Checked `decision-journal.md` (no `ENG-016` row) and the
-PRD's own `status:` before treating this as staleness rather than a
-legitimate reset — neither shows one. **Consequence, not cosmetic:**
-approver-facing WIP was actually 3/2 (`ENG-008`, `ENG-013`, `ENG-016` all
-have a path running through the approver), not the 2/2 this index claimed —
-and the G1 itself sat un-nudged for 2.5 days because every intervening pass
-trusted this table over the ticket's own file. Corrected in place (header
-WIP accounting, In-flight row, "Waiting on the approver" section) and in
-`ENG-016`'s own log; nudged the G1 (`nudged: 2026-09-01T10:20:06`, first
-nudge). Filed a proposal (`proposals.md`) so the next cross-host merge
-re-derives this table from each ticket's own frontmatter rather than
-keeping one side's account wholesale.
-
-**Dispatch: nothing starts.** No ticket sits in a state this pass could
-legally advance: `ENG-008`/`ENG-013`/`ENG-016` all wait on the approver
-(WIP 3/2, over); `ENG-009`/`ENG-010` wait on the machine-WIP cap (2/1,
-unchanged); every `shaped`/`designed` ticket's own next gate waits on the
-same approver-WIP cap; `ENG-026` waits on its own open question. The
-`ENG-016` correction doesn't change any dispatch outcome — the last two
-passes already declined to raise a new G1 this cycle, just for a reason
-that wasn't quite right.
-
-**0 transitions.** No ticket changed state. **1 board correction** (the
-`ENG-016` row above).
-
-`chained: none` — every in-flight ticket is either approver-blocked or
-capped; nothing sits in a state owned by an agent. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
-clean, no `WAIVED:` lines.
-
 ## 2026-09-01 — watch sweep (~10:25): duplicate fire off the prior pass's own nudge write, nothing new
 
 `watch` event pass, context `launchd` — drained immediately behind the
@@ -385,6 +316,66 @@ correction; 2 observations filed; 1 decision journaled; 1 proposal filed.
 `chained: none` — nothing in-flight sits in a state this pass could
 legally advance; every ticket is either approver-blocked or capped, same
 as both passes before it. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
+## 2026-09-01 — watch sweep (~15:46): duplicate fire off the 15:30 scheduled pass's own writes, nothing new
+
+`watch` event pass, context `launchd` — queued while the 15:30 `scheduled`
+pass above was still running (1,001s); the queue collapsed 2 duplicate
+copies to the oldest before draining it (`traces/eng-loop-2026-09-01.log`,
+`15:46:51`). Narrow scope per this event's own contract: sweep the three
+watched inboxes only.
+
+Mode check clean (`MODE=active`). Pre-pass `eng-gate-check.sh`,
+whole-board: exit 0, clean, no `WAIVED:` lines.
+
+**Traced this fire to its source before treating it as new**, same check
+as the ~10:25 entry now in `_index-archive.md`: `traces/.watch-seen`'s
+committed fingerprint is still `10:32` (untouched since this morning), so
+anything the 15:30 pass itself wrote to a watched inbox during its own run
+reads as "changed" against that stale baseline. The 15:30 pass wrote to
+three files in `inbox/` during its 1,001s run: the nudge stamps on
+`2026-08-31-eng008-merge-request.md` and
+`2026-08-31-eng013-merge-request.md` (both `nudged:
+2026-09-01T22:41:10`, mtimes `15:41`) and the closing investigation note
+appended to `2026-08-31-eng-events-dropped.md` (mtime `15:38`). No other
+file across any of the three watched inboxes has an mtime later than
+`10:32` this session, apart from
+`2026-09-01-eng026-visibility-toggle-question.md` (`10:03`, already
+accounted for in the 10:10/10:25 entries) — confirmed with `find`/`stat`
+across all three inbox roots, not inferred from the board's own narrative.
+
+**All three inboxes swept anyway**, not trusted from the entries above.
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
+their `_handled`/`_processed` archives — nothing loose. `inbox/requests/`
+holds only its `.gitkeep`. `inbox/`'s nine loose items re-read directly:
+every `decision:` field is still blank (`grep -n "^decision:" inbox/*.md`
+— four matches, the `ENG-007` sequence question, `ENG-008` and `ENG-013`
+merge requests, `ENG-026` readback question — all empty), and the tails
+of the three just-touched files plus `ENG-016`'s G1 confirm nothing was
+appended after the automated writes already on record above — no
+hand-edit, no reply.
+
+**Nothing re-done.** `ENG-008` and `ENG-013` already nudged this pass
+cycle (first and only nudge, per the 15:30 entry) — not renudged.
+`ENG-016`'s G1 already nudged this morning — not renudged. The
+events-dropped incident is already closed in place. The `ENG-007`
+sequence question and `ENG-026`'s readback question are each under 24h
+old or already nudged — neither qualifies again.
+
+**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1
+(`ENG-009`/`ENG-010` at `ready`, over cap); approver-facing WIP 3/2
+(`ENG-008`, `ENG-013`, `ENG-016` all block it, none cleared — no merge,
+no decision, no reply since the 15:30 pass). Spot-checked `ENG-008`'s and
+`ENG-013`'s own board-file logs: both correctly sit `blocked`/owner
+`approver`, not an agent-owned state — nothing here to chain either.
+
+**0 transitions.** No board correction needed this time.
+
+`chained: none` — nothing in this pass's scope sits in a state owned by
+an agent; every in-flight ticket is either approver-blocked or capped,
+same as the three passes before it. Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
 clean, no `WAIVED:` lines.
 
