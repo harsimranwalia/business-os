@@ -277,3 +277,27 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-009`) and
   whole-board: both exit 0, clean. Also recorded on the board index
   (`_index.md`, matching dated entry).
+
+- `2026-08-31` **stale hold reason corrected, no state change** (eng-manager,
+  `scheduled` event pass, context `launchd` — whole-board sweep). This
+  ticket's own hold reason above, "pending `ENG-008` reaching `in-review` or
+  later," has been satisfied for hours: `ENG-008` passed round 2 review,
+  quality, and security today, and its release-readiness hop has since put
+  it at `blocked` on the approver's own merge (see its own log and the board
+  index). Re-verified before touching anything: machine WIP is still 2/1 —
+  `ENG-008`/`ENG-013` both left the counted `ready`..`ready-to-ship` range for
+  `blocked`, leaving only this ticket and `ENG-010` inside it — still over
+  the cap the approver set 2026-08-29, and that cap, not the original
+  sequencing reason, is what now holds this ticket at `ready`. **Conclusion
+  unchanged (stay at `ready`, do not start `building`); reason corrected** so
+  a future pass doesn't read the stale sequencing text and either assume the
+  hold lapsed or re-derive the same check from scratch. Git ancestry
+  independently confirms neither `ENG-008` nor `ENG-013` has merged yet (see
+  the board index's own dated entry for this pass).
+
+  **0 transitions.** No cap change.
+
+  `chained: none` — still held by the machine-WIP cap (2/1, over), not by
+  the sequencing reason this ticket's log previously cited. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean, no `WAIVED:` lines.

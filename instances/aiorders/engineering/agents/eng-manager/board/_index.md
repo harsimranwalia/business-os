@@ -102,69 +102,6 @@ ready to raise, deliberately left for a future pass rather than filling
 every open slot in one sweep — see `ENG-023`'s own ticket log for the
 reasoning.
 
-## 2026-08-31 — continue ENG-008: security gate — PASS, now ready-to-ship
-
-`continue` event pass, context `ENG-008`. Narrow scope per the event's own
-contract (resume this ticket from its current state; no board-wide sweep).
-Mode check clean. Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean.
-
-Ran the security gate fresh — no receipt existed at pass start. Re-derived
-both diffs from disk (matched code review's own figures exactly: 4
-files/404 insertions on `aiorders-api`, 1 file/202 insertions/14 deletions
-on `aiorders-admin-hub`) and read the actual handler, test file, migration,
-router diff, and full frontend diff directly rather than trusting the prior
-review's account. Threat-modelled the change: new capability is read+write
-on 6 fields for the same admin/sub-admin population that already read all
-of them (the page was 100% read-only before this ticket); blast radius on
-full compromise is identical to `loyalty-config.ts`/`foodswipe.ts`
-(service-role client, RLS bypassed, only the in-code role checks gate
-access) — already-accepted architecture, not a new risk.
-
-Walked OWASP A01–A10, all ten marked applicable or `n/a` with a reason. A01
-clean — one shared gate before the GET/PATCH branch, body-supplied `id`
-never used for row selection, no client-side-only authorization. Verified
-the negative-auth cases independently rather than assuming QA's/review's
-account correct: no-token/invalid-token 401 and no-profile 403 confirmed
-live in `index.ts`'s unmodified `authenticate()`; wrong-role 403 proven by a
-throwing-Proxy test that fails if the gate is ever bypassed; the
-field-allowlist test hand-traced and confirmed mutation-sensitive (asserts
-the exact object reaching `.update()`, not just the response shape). A05
-found one non-blocking item — the same raw-`error.message`-on-500 shape
-`ENG-013`'s review tracked as occurrence 1/3 on `foodswipe.ts`. Checked the
-actual extent before logging it as a repeat: a grep across
-`admin-portal/handlers/` finds the identical pattern in 8 files total, six
-pre-dating this department's review process — so three-strike tracking
-counts *gate-reviewed* occurrences (this is the 2nd), not the repo's
-pre-existing total. Logged to
-`agents/security/notebook/2026-08-31-findings.md`, not blocking.
-
-Secrets: full diff and branch history on both repos scanned — two benign
-matches (a CORS header's literal `apikey` string, and the frontend's own
-forwarded user session token), no leaked credential. Dependencies: none
-new. LLM checklist: n/a, confirmed against the diff. Independently
-re-confirmed code review's `min_visit_payment` stale-value finding against
-the diff directly — real, but P3/data-integrity, not security; carried
-forward rather than re-raised.
-
-**Receipt written**: `agents/security/reviews/ENG-008.md` (verdict `pass`).
-`links.security_review` set; `time_spent`/`time_remaining` updated — only
-release-readiness remains.
-
-**1 transition** (`in-qa → ready-to-ship`), well under the cap of 4.
-Machine WIP unaffected — stays inside the counted `ready`..`ready-to-ship`
-range, still 4/1 (`ENG-009`/`ENG-010` at `ready`, `ENG-013` alongside this
-ticket now both at `ready-to-ship`). No approver-facing or approval-cap
-change — a security pass isn't a gate item, and the `owner` handoff to
-`devops` is agent-to-agent.
-
-`chained: ENG-008` — `ready-to-ship` is agent-owned (devops's
-release-readiness hop next), not the approver, not blocked, not terminal,
-not held by a cap. Fired
-`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
-before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
-
 ## 2026-08-31 — continue ENG-013: release-readiness — both PRs opened, now blocked on the approver
 
 `continue` event pass, context `ENG-013`, drained immediately behind the
@@ -244,4 +181,74 @@ the whole hop was driving toward; firing `continue ENG-008` again would only
 queue against a ticket with nothing left for a machine to do. Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
 whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+## 2026-08-31 — scheduled sweep: no merges yet, stale sequencing-hold reason on ENG-009/ENG-010 corrected
+
+`scheduled` event pass, context `launchd` — the 15:30 safety-net sweep.
+Whole-board scope per this event's own contract. Mode check clean
+(`MODE=active`). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board (invoked with `ENG_ROOT` set to this instance explicitly — the
+bare form resolves against the department root, not an instance, and reads
+as `PARSE:` on a bad argument rather than a clean sweep): exit 0, clean, no
+`WAIVED:` lines.
+
+**Inboxes not re-swept — a `watch` pass covered this ground 8 minutes
+earlier** (`traces/eng-loop-2026-08-31.log`, `11:22:21`, exit 0):
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` empty;
+`inbox/requests/` empty; `inbox/` holds only the two fresh merge-request
+items (both `decision:` still blank) and the already-closed 2026-08-30
+dropped-events notice. Re-confirmed the same read fresh rather than trusting
+the log entry alone — all three still true at this pass's own start.
+
+**Merge detection — the part an inbox-only pass cannot do.** `git fetch
+origin main` on both `_eng` worktrees (both clean, both still sitting on
+`ENG-008`'s branch, no uncommitted changes), then `git merge-base
+--is-ancestor` for all four PR branch heads against `origin/main`:
+`aiorders-api@57f8c4b` (ENG-008), `aiorders-admin-hub@63be255` (ENG-008),
+`aiorders-api@c95b25b` (ENG-013), `aiorders-admin-hub@a1c3bdf` (ENG-013) —
+**none merged.** Both tickets remain `blocked`/`blocked_on: approver`,
+unchanged.
+
+**Dead-end sweep (whole board).** Tabulated `state`/`owner`/last `chained:`
+for all 25 tickets: every non-terminal ticket's last recorded chain decision
+is `none`, and in every case the reason still holds today (approver-blocked,
+or held by the machine-WIP/approval caps) — no silently-broken chain found.
+
+**One stale-but-superseded hold reason found and corrected, not a break.**
+`ENG-009` and `ENG-010`'s own logs both still cite their original hold
+reason verbatim — "held pending `ENG-008` reaching `in-review` or later" —
+which `ENG-008` satisfied hours ago (round 2 review, quality, security, and
+release-readiness all since passed; it's now `blocked` on the approver's
+merge). Re-verified before concluding anything: machine WIP is still 2/1
+(only `ENG-009`/`ENG-010` occupy the counted `ready..ready-to-ship` range now
+that `ENG-008`/`ENG-013` both left it for `blocked`), still over the cap the
+approver set 2026-08-29, still the reason nothing may start building. So the
+*conclusion* (stay at `ready`, do not start) is still correct — only the
+*stated reason* had gone stale, exactly the shape a whole-board sweep exists
+to catch and a narrowly-scoped `continue`/`watch` pass cannot. Corrected in
+both tickets' own logs rather than left to read, to a future pass, as a hold
+that had quietly lapsed.
+
+**Dispatch: nothing starts.** Machine WIP 2/1 (over cap, unchanged) — no new
+ticket may enter `ready`, and the two already there stay un-built per the
+correction above. Approver-facing WIP 2/2 (cap reached) and approval cap 2/3
+(one free) — consistent with `ENG-023`'s and `ENG-025`'s own established
+reasoning, the one free approval-cap slot is deliberately not spent raising
+`ENG-016`'s G1 in the same sweep that's still carrying two live merge
+requests; nothing material changed to revisit that call.
+`ENG-014`/`ENG-015`/`ENG-022`/`ENG-023`/`ENG-024`/`ENG-025` remain at
+`designed`/`shaped` — backlog grooming only, not gated by the WIP cap, but no
+fresh shaping work is due on any of them this pass.
+
+**Notify sweep:** both open merge requests notified today (11:05, 11:15) —
+well under the 24h nudge threshold, nothing to nudge. Approval cap not full
+(2/3) — no stall condition.
+
+**0 transitions.** No cap changes.
+
+`chained: none` — `ENG-008`/`ENG-013` wait on the approver; `ENG-009`/
+`ENG-010` wait on the machine-WIP cap; every other ticket is capped backlog.
+Nothing on the board is in a state this pass could legally hand to another
+agent. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board: exit 0, clean, no `WAIVED:` lines.
 
