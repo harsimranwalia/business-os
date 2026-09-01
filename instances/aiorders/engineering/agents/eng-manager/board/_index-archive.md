@@ -12,6 +12,42 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-008: release-readiness — both PRs opened, now blocked on the approver
+
+`continue` event pass, context `ENG-008`, this fire's own turn at the front
+of `traces/.pending` — queued by the security-gate pass above and drained
+right behind `continue (ENG-013)`. Narrow scope per the event's own contract
+(resume this ticket from its current state; no board-wide sweep). Mode check
+clean (`MODE=active`). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+Verified all four upstream gates fresh from the receipt files: migration,
+code review (round 2), quality, security — all **pass**. Both worktrees were
+already clean on this ticket's own branch at the recorded commits
+(`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`), already pushed;
+confirmed no PR already existed on either repo. Same L1 readiness-gate
+interpretation `ENG-007`/`ENG-013` already established (rollback reasoned
+through but not live-tested, $0 cost, existing `console.error` logging as
+observability, window check n/a). Opened both (`aiorders-api` first):
+PR #6 (https://github.com/harsimranwalia/aiorders-api/pull/6), PR #5
+(https://github.com/harsimranwalia/aiorders-admin-hub/pull/5).
+
+Wrote the L1 merge-request item
+(`inbox/2026-08-31-eng008-merge-request.md`), `pr_urls:` YAML-list format.
+Notify sent cleanly. State → `blocked`, `blocked_on: approver`,
+`blocked_from: ready-to-ship`, owner `devops → approver`.
+
+**1 transition** (`ready-to-ship → blocked`). **Consequence:** `machine_wip`
+3/1 → 2/1 (`ENG-008` leaves the counted `ready`..`ready-to-ship` range —
+`ENG-009`/`ENG-010` at `ready` are all that's left inside it). Approver-facing
+WIP 1/2 → 2/2 (**cap reached**); approval cap 1/3 → 2/3.
+
+`chained: none` — `blocked`, `blocked_on: approver`. This is the human gate
+the whole hop was driving toward; firing `continue ENG-008` again would only
+queue against a ticket with nothing left for a machine to do. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — continue ENG-013: release-readiness — both PRs opened, now blocked on the approver
 
 `continue` event pass, context `ENG-013`, drained immediately behind the

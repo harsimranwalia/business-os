@@ -7,6 +7,7 @@ ticket: ENG-007
 recommendation: File ticket 3 (points ledger / earn API) now, continuing the approved five-ticket loyalty sequence. Does not block anything currently in flight — answer when convenient.
 raised: 2026-08-30
 notified: 2026-08-30T07:43:29
+nudged: 2026-09-01T09:59:34
 decision:
 ---
 

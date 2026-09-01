@@ -48,7 +48,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ID | Title | Project | State | Priority | Owner | Size | Updated |
 |---|---|---|---|---|---|---|---|
 | ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
-| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | building | | eng-manager | S | 2026-08-30 |
+| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-31 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-31 |
@@ -61,7 +61,7 @@ not `severity`, which is the agent's read of how bad a problem is.
   (2026-08-31) "Waiting on the approver" section below, which explicitly
   states ENG-016 through ENG-021 are G1-drafted but not yet raised. -->
 | ENG-016 | Catering page — self-serve quote generator, with automatic stage update | config-site-builder | shaped | next | product-manager | L | 2026-08-29 |
-| ENG-017 | Autopilot nurture for the presignup sales lead pipeline — stage-triggered email/SMS | aiorders-api | shaped | | product-manager | L | 2026-08-29 |
+| ENG-017 | Autopilot nurture for the presignup sales lead pipeline — stage-triggered email/SMS | aiorders-api | designed | | architect | L | 2026-09-01 |
 | ENG-018 | Sales demonstration account — a fully seeded AIOrders environment to show prospects | aiorders-admin-hub | shaped | hold | product-manager | L | 2026-08-29 |
 | ENG-019 | Restaurant self-service marketing broadcasts — mass send and drip sequences, scheduled or immediate | restaurant-portal | shaped | | product-manager | L | 2026-08-29 |
 | ENG-020 | Marketing ROI reporting — traffic source and revenue attribution on the brand dashboard | restaurant-portal | shaped | | product-manager | M | 2026-08-29 |
@@ -70,6 +70,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ENG-023 | Add status and internal notes to each brand-portal feedback item | restaurant-portal | designed | | architect | S | 2026-08-31 |
 | ENG-024 | Set show_in_marketplace on onboarding's createRestaurant insert, plus a backfill | aiorders-api | shaped | | eng-manager | XS | 2026-08-29 |
 | ENG-025 | Recurring feedback issues, per restaurant, over time | restaurant-portal | designed | | architect | S | 2026-08-31 |
+| ENG-026 | FoodSwipe multi-channel filters, operational status, and promo badges | restaurant-marketplace | intake | | approver | L | 2026-09-01 |
 
 `ENG-002` shipped and reached `verified` in an earlier pass today — off the
 In-flight table (terminal); see its own board file. `ENG-001` — this
@@ -132,42 +133,6 @@ no-reply-needed shape. `ENG-016` through `ENG-021` are also G1-drafted and
 ready to raise, deliberately left for a future pass rather than filling
 every open slot in one sweep — see `ENG-023`'s own ticket log for the
 reasoning.
-
-## 2026-08-31 — continue ENG-008: release-readiness — both PRs opened, now blocked on the approver
-
-`continue` event pass, context `ENG-008`, this fire's own turn at the front
-of `traces/.pending` — queued by the security-gate pass above and drained
-right behind `continue (ENG-013)`. Narrow scope per the event's own contract
-(resume this ticket from its current state; no board-wide sweep). Mode check
-clean (`MODE=active`). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
-scoped (`ENG-008`) and whole-board: both exit 0, clean.
-
-Verified all four upstream gates fresh from the receipt files: migration,
-code review (round 2), quality, security — all **pass**. Both worktrees were
-already clean on this ticket's own branch at the recorded commits
-(`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`), already pushed;
-confirmed no PR already existed on either repo. Same L1 readiness-gate
-interpretation `ENG-007`/`ENG-013` already established (rollback reasoned
-through but not live-tested, $0 cost, existing `console.error` logging as
-observability, window check n/a). Opened both (`aiorders-api` first):
-PR #6 (https://github.com/harsimranwalia/aiorders-api/pull/6), PR #5
-(https://github.com/harsimranwalia/aiorders-admin-hub/pull/5).
-
-Wrote the L1 merge-request item
-(`inbox/2026-08-31-eng008-merge-request.md`), `pr_urls:` YAML-list format.
-Notify sent cleanly. State → `blocked`, `blocked_on: approver`,
-`blocked_from: ready-to-ship`, owner `devops → approver`.
-
-**1 transition** (`ready-to-ship → blocked`). **Consequence:** `machine_wip`
-3/1 → 2/1 (`ENG-008` leaves the counted `ready`..`ready-to-ship` range —
-`ENG-009`/`ENG-010` at `ready` are all that's left inside it). Approver-facing
-WIP 1/2 → 2/2 (**cap reached**); approval cap 1/3 → 2/3.
-
-`chained: none` — `blocked`, `blocked_on: approver`. This is the human gate
-the whole hop was driving toward; firing `continue ENG-008` again would only
-queue against a ticket with nothing left for a machine to do. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
-whole-board: both exit 0, clean, no `WAIVED:` lines.
 
 ## 2026-08-31 — scheduled sweep: no merges yet, stale sequencing-hold reason on ENG-009/ENG-010 corrected
 
@@ -298,4 +263,81 @@ binds first. No other ticket has new information to act on this pass.
 `ENG-010` wait on the machine-WIP cap; everything else is capped backlog
 with no fresh input. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 whole-board: exit 0, clean, no `WAIVED:` lines.
+
+## 2026-09-01 — same scheduled pass, continued: a git pull mid-pass surfaced two days of the other host's backlog
+
+Still the 09:30 `scheduled` pass above — recorded as a second dated entry
+rather than folded into the first because what follows was discovered
+*after* that entry was written and pushed, from a `git pull` this pass
+triggered itself (a `git fetch`/ancestor re-check before allocating a new
+ticket id) that fast-forwarded local `main` through merge commit `e281c71`
+("reconcile 26 diverged engineering-board files") and a follow-up commit
+from this instance's Windows host. Confirmed via `git reflog` before acting
+on any of it, not assumed from file contents alone.
+
+**Root cause of why this was still sitting unseen**:
+`inbox/2026-09-01-eng-events-dropped.md` (itself newly arrived, already
+answered `decision: approved` by the time it appeared) documents ~7.5 hours
+of continuous `watch schtasks` failures (exit 1, `00:05`–`07:45` today) on
+that host, including the two fires that would have processed a new
+PM-inbox request and `ENG-017`'s answered G1. Recovery confirmed via git
+history (two successful pushes at `09:17`/`09:28` local from the same host
+identity) — investigated and moved to `_handled/`, full detail in that
+file's own footer and `observations.md`.
+
+**Both concrete drops recovered by hand, in this pass:**
+
+- **`ENG-017`'s G1** (`decision: approved`, with a UI rider) — journaled,
+  design written (`agents/architect/designs/
+  ENG-017-presignup-lead-nurture-autopilot.md`, dispatched a read-only
+  investigation of both live repos first rather than trusting the PRD's own
+  evidence unverified — found one correction: `ENG-013` is not on `main`,
+  still unmerged). `awaiting-scope → designed`. **Does not advance to
+  `ready`** — machine WIP is 2/1 (`ENG-009`/`ENG-010`), already over cap;
+  starting a third ticket into that band would compound the violation
+  rather than let it shrink. No one-way door; the one real risk (CASL
+  consent exposure on unsolicited nurture sends) is named prominently in
+  the design with both the consent column and the feature's own on/off
+  toggle defaulted **off**, rather than the design silently deciding a
+  legal question the approver hasn't weighed in on.
+- **A new PM-inbox request** (brand-portal/FoodSwipe: multi-channel filters,
+  operational status, promo badges) — filed `ENG-026`. Full request-readback
+  run (PM reading + blind architect subagent reading, no repo access, not
+  shown the PM's reading): **one material divergence found** — the
+  request's own title asks for an independent per-channel visibility
+  toggle, but none of its three body tasks build one, and both readers
+  independently noticed the gap unprompted. Asked one question, framed as a
+  two-reading choice; held at `intake`. This is a standing, non-blocking
+  question (same shape as `ENG-007`'s), so it costs neither the
+  approver-facing WIP cap nor the approval cap — unlike a G1, nothing here
+  is confirmed enough yet to raise one.
+
+**Other new-to-this-host items, all already resolved or correctly
+inert — no further action taken:**
+`inbox/2026-09-01-eng-gate-violation-watch.md` (a Windows-host frontmatter
+PARSE failure on 8 ticket files, already fixed by `e281c71`'s own BOM strip
+— this pass's fresh `eng-gate-check.sh` runs confirm clean, corroborating
+rather than re-fixing); `inbox/2026-08-30-eng-loop-halted.md` (a daily
+hop-ceiling halt, two days moot, clears at midnight by design);
+`inbox/2026-08-30-eng007-continue-sequence-question.md` (a real, still-open,
+non-blocking question, now 3+ days old — **nudged** this pass, stamped
+`nudged:`); `agents/eng-manager/inbox/_processed/
+2026-08-29-restaurant-detail-write-partner-exposure.md` (an EM-finding
+already fully routed to `proposals.md` by the other host — found it
+substantially overlaps the 2026-08-31 `updateBrandOwner()` row already on
+this board; flagged in `observations.md` rather than merged/deleted
+unilaterally).
+
+**2 transitions this entry** (`ENG-017`: `awaiting-scope → designed`;
+`ENG-026`: `(new) → intake`), on top of the 0 from the entry above — both
+well under each ticket's own cap of 4. **Consequence:** no cap numbers
+change — neither `designed` nor a standing intake-question is counted
+anywhere.
+
+`chained: none` — `ENG-017` held by the machine-WIP cap; `ENG-026` held by
+its own open question, owned by the approver. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean,
+no `WAIVED:` lines. Re-verified `ENG-008`/`ENG-013` merge status fresh one
+more time before finishing (fetch + ancestor check, both repos): still not
+merged.
 
