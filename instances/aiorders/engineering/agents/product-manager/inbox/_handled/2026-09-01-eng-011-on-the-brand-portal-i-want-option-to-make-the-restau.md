@@ -49,3 +49,14 @@ Group C: Active Promotional Hooks(to be controlled from brand portal not admin p
 - High-Density Compact Layout: Use inline form controls, compact chip-selectors for array tags, and minimal spacing so internal staff can scan and update fields rapidly.
 - State & Schema Schema Mapping: Extend our existing `StoreFormValues` interface with an optional `eSettings` sub-object to maintain backward compatibility with existing API endpoints.
 - Basic Guardrails: Add client-side validation for operational cutoffs (e.g., alert if Last Order Time exceeds business closing hours).
+
+---
+
+**Processed 2026-09-01**, `scheduled` event pass (context `launchd`) — the
+filed title's `ENG-011` reference was in error (an unrelated, already-shipped
+ticket); allocated `ENG-026` instead. Full request-readback run (PM reading +
+blind architect reading); one material divergence found (the title's own
+visibility-toggle ask is not delivered by any of the body's three tasks) and
+raised as a standing question, `inbox/2026-09-01-eng026-visibility-toggle-question.md`.
+`ENG-026` held at `intake` pending the answer. See that ticket for the full
+readback.

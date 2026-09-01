@@ -9,21 +9,21 @@ time_spent:
 time_remaining:
 severity: P2
 priority:
-state: awaiting-scope
-owner: approver
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-09-01
 branch:
 depends_on: []
 blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-017-presignup-lead-nurture-autopilot.md
-  design:
+  design: agents/architect/designs/ENG-017-presignup-lead-nurture-autopilot.md
   adrs: []
   review:
   test_plan:
@@ -241,3 +241,76 @@ Append-only. One line per state transition, newest last.
   guard never fires on a ticket waiting on a human. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-017`) and
   whole-board: see board index.
+
+- `2026-09-01` `awaiting-scope → designed` (architect, `scheduled` event pass,
+  context `launchd` — the 09:30 safety-net sweep). This G1 arrived answered
+  (`decision: approved`, `decided: 2026-09-01T13:59:15.473904+00:00`) via a
+  `git pull` mid-pass that fast-forwarded local `main` past a large amount
+  of history from this instance's other host (merge commit `e281c71`,
+  "reconcile 26 diverged engineering-board files") — not something a local
+  event could have seen; caught here because a scheduled sweep re-checks
+  `inbox/` fresh rather than trusting its own earlier-in-pass read. Verified
+  fresh before acting: `inbox/2026-08-29-eng017-g1-scope.md`'s own
+  frontmatter carries the decision, journaled below.
+
+  **Approver's reply carries a rider, not just an approval**: "Build a new
+  section on admin portal for autopilot/nurturing so we have flexibility to
+  control this from the ui." Read as confirming/clarifying this ticket's own
+  scope (a staff-settable stage needs *some* staff-facing control surface;
+  this specifies it must be a real admin-portal UI section, not e.g. a
+  backend-only toggle) rather than new, separable scope — unlike `ENG-010`'s
+  rider, this doesn't introduce a materially different capability, so it's
+  folded into this ticket's own design rather than split into a new one.
+
+  **Design work done against live code, not assumed from the PRD's own
+  evidence** (which was itself already solid — this mostly confirmed it,
+  with two corrections): dispatched a read-only investigation of both live
+  repos (`git show origin/main:...` for `aiorders-api`, since that worktree
+  sits on `ENG-008`'s unmerged branch). Confirmed the `leads` table's actual
+  columns (no migration ever existed for it — same "created outside
+  migrations" pattern as `clover`), confirmed `admin-portal/handlers/
+  leads.ts`'s existing update route and its own admin/sub-admin gate,
+  confirmed the `outgoing-communications` `actor:'admin'` stub is genuinely
+  unimplemented and wrong-shaped for this anyway (wrong trigger set), and
+  confirmed the two actor-agnostic send primitives (`sendEmail`/`sendSMS`)
+  as the right reusable layer. **One correction to this ticket's own PRD**:
+  `ENG-013` — cited as "the same mechanism, already approved" — is not on
+  `main`; it's unmerged and `blocked` awaiting the approver's own merge. This
+  design mirrors its *pattern* (sound, already reviewed once) but shares no
+  code with it, and the two tickets have no file-level conflict (different
+  tables). Full detail: `agents/architect/designs/
+  ENG-017-presignup-lead-nurture-autopilot.md`.
+
+  **No one-way door** — two new nullable/defaulted columns plus one new
+  small log table, no existing route's behavior changes for a lead that
+  stays at the default stage, no new vendor, no auth-model change. Moved
+  straight through `designed` without a G2 — but does **not** advance to
+  `ready` this pass: machine WIP is 2/1 (`ENG-009`/`ENG-010`), already over
+  the approver's cap, and starting a third ticket into the counted
+  `ready`..`ready-to-ship` band would compound a violation already being
+  carried rather than shrunk. `designed`/`shaped`/`awaiting-scope` aren't
+  gated by this cap, so this ticket sits here the same way `ENG-014`/
+  `ENG-015`/`ENG-022` through `ENG-025` already do.
+
+  **One risk named prominently, not silently decided**: sending unsolicited
+  marketing email/SMS without consent is a CASL exposure, and the PRD's own
+  consent requirement (5) is `[proposed]`, not confirmed. The design adds a
+  `nurture_consent` column and a global on/off toggle, both defaulted
+  **false/off** — this ships the full mechanism now without the design
+  unilaterally deciding a legal question the approver hasn't weighed in on.
+  Flagged in the design's own Risks section, not buried.
+
+  **1 transition** (`awaiting-scope → designed`), well under the cap of 4.
+  **Consequence:** no cap numbers change — `designed` counts toward neither
+  machine WIP nor approver-facing WIP/approval cap.
+
+  **Journaled** in `agents/eng-manager/config/decision-journal.md`. Gate item
+  moved `inbox/2026-08-29-eng017-g1-scope.md` → `inbox/_handled/` with a
+  processed footer.
+
+  `chained: none` — `designed`, held at this state by the machine-WIP cap
+  (2/1, over) rather than genuinely blocked; re-check once `ENG-009` or
+  `ENG-010` reaches `shipped`, or via a dedicated `continue ENG-017` once
+  either does. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-017`) and whole-board: both exit 0, clean, no `WAIVED:`
+  lines.
