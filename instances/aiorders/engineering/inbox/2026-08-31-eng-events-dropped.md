@@ -496,3 +496,49 @@ A build-loop pass failed on this event twice — once on each attempt — so the
 Whatever triggered it has NOT been processed. The usual causes do not clear on their own: the automation account at its monthly spend limit, or a TCC/EPERM denial on the Mac. Check `traces/` for this pass's log.
 
 Raised by ENG-005's event-lifecycle guard. Before it existed, this event would have been consumed silently by the pass that died and the board would have looked like a quiet night.
+
+---
+
+**Investigated 2026-09-01T15:30**, `scheduled` event pass (context `launchd`).
+This file carried no `notified:` stamp and no closing note — unlike its
+2026-08-30 sibling, it had never actually been investigated; the board's own
+09:30-pass prose this same day grouped it with that sibling as "already
+resolved or correctly inert," which was wrong for this file specifically.
+Caught only because this pass read the file's own content directly instead
+of trusting that summary — corrected in `board/_index.md` and logged as an
+observation (`observations.md`) since it's a second, non-merge instance of
+board prose overclaiming a source file's state.
+
+**All 48 drops here are `watch schtasks` or `scheduled schtasks`, none
+`continue`/`intake`/`decision`/`finding`** — confirmed by reading every
+header in this file. Those two event types carry no unique payload of their
+own (a sweep finds whatever is still sitting in `inbox/`/the two agent
+inboxes regardless of which pass eventually runs it), so unlike the two
+concrete drops the 2026-09-01 sibling had to recover by hand, nothing here
+needs separate recovery — any later successful sweep already covers it, and
+several have run since.
+
+**This is the same outage, not a new one, and it ran longer than
+previously reported.** Drops resume at `12:46:01` after a ~12h quiet window
+(00:41–12:46, nothing dropped — that gap is consistent with passes
+succeeding, not with the outage already being over) and continue every
+~15 minutes, all exit status 1, with zero gap into the 2026-09-01 sibling's
+first entry at `00:05:55`. Read together, the two files describe one
+continuous stretch of failing Windows-host `watch`/`scheduled` fires from
+`12:46:01` on 2026-08-31 through `07:45:58` on 2026-09-01 — about 19 hours,
+not the ~7.5 hours the 09-01 investigation measured on its own file alone.
+That investigation's recovery evidence (two successful pushes at
+09:17/09:28 local, same host identity, 2026-09-01) still stands and still
+covers this longer window — the cause was transient and self-clearing
+either way — so the correction is to the duration on record, not to the
+conclusion.
+
+**Cannot root-cause further from here**, same limitation the 09-01
+investigation already named: the Windows host's own `traces/` is
+`.gitignore`d and host-local, unreachable from this Mac session. Not
+re-notified and not nudged — this is an incident notice, not a gate the
+approver answers, and its own recommendation ("find out why passes are
+failing") is satisfied by this note; re-raising a 2-day-old self-closing
+incident would be noise, and step 3's proposal path (not a fresh gate) is
+where the general "incident items have no closure step" gap is already
+tracked (`proposals.md`, 2026-09-01 row).

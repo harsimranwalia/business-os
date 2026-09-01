@@ -1230,3 +1230,17 @@ Append-only. One line per state transition, newest last.
   until the approver merges one or both PRs or replies to the gate item.
   Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
   (`ENG-013`) and whole-board: see pass notes below.
+
+- **2026-09-01, `scheduled` pass (~15:30, context `launchd`).** Merge
+  detection re-run: `git fetch` + `git merge-base --is-ancestor` on both
+  repos' worktrees for `feat/ENG-013-foodswipe-funnel-stage-control` against
+  `origin/main` — neither merged, ticket unchanged at `blocked`/
+  `blocked_on: approver`. The L1 merge-request item
+  (`inbox/2026-08-31-eng013-merge-request.md`) was `notified: 2026-08-31T11:05:16`
+  with no `nudged:` and no `decision:` — over 24h with no reply, so nudged
+  per `eng_build_loop.md` step 7: `lib/eng-notify.sh nudge`, sent cleanly
+  (`traces/eng-notify-2026-09-01.log`: `sent: active
+  2026-08-31-eng013-merge-request.md`), stamped `nudged: 2026-09-01T22:41:10`
+  by hand. First and only nudge. `chained: none` — still `blocked` on the
+  approver; merging either PR on GitHub is the only thing that advances this
+  ticket.

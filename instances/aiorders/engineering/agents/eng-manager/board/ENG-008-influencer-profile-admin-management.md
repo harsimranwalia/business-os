@@ -1192,3 +1192,17 @@ Append-only. One line per state transition, newest last.
   recorded at this identical state. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
   whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- **2026-09-01, `scheduled` pass (~15:30, context `launchd`).** Merge
+  detection re-run: `git fetch` + `git merge-base --is-ancestor` on both
+  repos' worktrees for `feat/ENG-008-influencer-admin-management` against
+  `origin/main` — neither merged, ticket unchanged at `blocked`/
+  `blocked_on: approver`. The L1 merge-request item
+  (`inbox/2026-08-31-eng008-merge-request.md`) was `notified: 2026-08-31T11:15:29`
+  with no `nudged:` and no `decision:` — over 24h with no reply, so nudged
+  per `eng_build_loop.md` step 7: `lib/eng-notify.sh nudge`, sent cleanly
+  (`traces/eng-notify-2026-09-01.log`: `sent: active
+  2026-08-31-eng008-merge-request.md`), stamped `nudged: 2026-09-01T22:41:10`
+  by hand. First and only nudge — none further after this regardless of how
+  long it stays open. `chained: none` — still `blocked` on the approver;
+  merging either PR on GitHub is the only thing that advances this ticket.
