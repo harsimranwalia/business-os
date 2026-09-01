@@ -12,6 +12,66 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-01 — scheduled sweep (09:30): no merges yet, inbox-filing-rule gap escalated to a proposal
+
+`scheduled` event pass, context `launchd` — the 09:30 safety-net sweep.
+Whole-board scope per this event's own contract. Mode check clean
+(`MODE=active`). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board (`ENG_ROOT` set explicitly to this instance): exit 0, clean, no
+`WAIVED:` lines.
+
+**Inboxes fresh-checked, not trusted from the 02:00 pass's record.**
+`agents/product-manager/inbox/`, `agents/eng-manager/inbox/`, and
+`inbox/requests/` all still empty. `inbox/` holds the same three items the
+last four passes have seen: `ENG-008`/`ENG-013` merge requests (`decision:`
+both still blank) and the self-closed `2026-08-30-eng-events-dropped.md`
+notice.
+
+**Merge detection.** `git fetch origin main` on both `_eng` worktrees (both
+clean, no uncommitted changes), then `git merge-base --is-ancestor` for all
+four PR branch heads against `origin/main`: `aiorders-api@57f8c4b` /
+`aiorders-admin-hub@63be255` (`ENG-008`), `aiorders-api@c95b25b` /
+`aiorders-admin-hub@a1c3bdf` (`ENG-013`) — **none merged.** Both tickets
+remain `blocked`/`blocked_on: approver`, unchanged.
+
+**Dead-end sweep.** Zero events fired between the 02:00 pass's own end
+(`02:07:54`) and this pass's start (`09:30:05`) — confirmed from
+`traces/eng-loop-2026-09-01.log` directly, not assumed — so the exhaustive
+whole-board tabulation from 08-31/02:00 still holds. Spot-checked
+`ENG-009`/`ENG-010`'s hold reason (machine-WIP cap, 2/1, over) against both
+tickets' own logs: still accurate, nothing further gone stale.
+
+**One proposal filed, not another observation.**
+`inbox/2026-08-30-eng-events-dropped.md` has now been re-read and reached
+the identical "fully investigated, below P0, nothing to do" conclusion by
+four consecutive passes (08-31 20:19 `watch`, 08-31 20:30 `scheduled`,
+09-01 02:00 `scheduled`, this one) — the exact threshold the 02:00 pass's
+own `observations.md` row named as the point to escalate from another
+observation to a proposal. Filed to `proposals.md`: `eng_build_loop.md` has
+no rule for when a self-closed (no-`decision:`-field) incident notice may
+leave `inbox/` for `_handled/`, so nothing short of a procedure change stops
+a fifth pass from repeating this. The item itself is left exactly where it
+is — the proposal changes the *rule*, not this pass's own unilateral
+authority to act on it.
+
+**Dispatch: nothing starts.** Machine WIP 2/1 (over cap, unchanged) —
+`ENG-009`/`ENG-010` stay at `ready`. Approver-facing WIP 2/2 (**cap
+reached**) — `ENG-016` through `ENG-021` stay un-raised; worth stating
+plainly rather than repeating the 08-31 entry's softer framing: raising any
+of their G1s would move that ticket to `awaiting-scope`, which needs a free
+approver-facing-WIP slot (confirmed against `ENG-009`'s own log, where
+exactly this state change was counted against this same cap) — so this is
+now cap-enforced, not merely a courtesy stagger, until `ENG-008` or
+`ENG-013` clears. Approval cap 2/3 (one free) is moot while the WIP-2 cap
+binds first. No other ticket has new information to act on this pass.
+
+**0 transitions.** No cap changes.
+
+`chained: none` — `ENG-008`/`ENG-013` wait on the approver; `ENG-009`/
+`ENG-010` wait on the machine-WIP cap; everything else is capped backlog
+with no fresh input. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board: exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — scheduled sweep: no merges yet, stale sequencing-hold reason on ENG-009/ENG-010 corrected
 
 `scheduled` event pass, context `launchd` — the 15:30 safety-net sweep.
