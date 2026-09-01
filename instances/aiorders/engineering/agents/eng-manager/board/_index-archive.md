@@ -12,6 +12,50 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-08-31 — continue ENG-013: release-readiness — both PRs opened, now blocked on the approver
+
+`continue` event pass, context `ENG-013`, drained immediately behind the
+`ENG-008` security-gate pass (`traces/eng-loop-2026-08-31.log`: `pass end:
+continue (exit 0, 589s)` at `10:59:15` → `draining queued event: continue
+(ENG-013)` → `pass start` at `10:59:16`). Narrow scope per the event's own
+contract (resume this ticket from its current state; no board-wide sweep).
+Mode check clean (`MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+whole-board: both exit 0, clean.
+
+Verified all four upstream gates fresh from the receipt files: migration,
+code review (round 2), quality, security — all **pass**. Both worktrees
+were clean on `ENG-008`'s branch; fetched, checked out
+`feat/ENG-013-foodswipe-funnel-stage-control`, confirmed both branches
+match this ticket's own frontmatter exactly (`aiorders-api@c95b25b`,
+`aiorders-admin-hub@a1c3bdf`), confirmed no PR already existed on either
+repo. Opened both (`aiorders-api` first): PR #5
+(https://github.com/harsimranwalia/aiorders-api/pull/5), PR #4
+(https://github.com/harsimranwalia/aiorders-admin-hub/pull/4). Restored
+both worktrees to `feat/ENG-008-influencer-admin-management` afterward.
+
+Wrote the L1 merge-request item
+(`inbox/2026-08-31-eng013-merge-request.md`), using the skill's current
+`pr_urls:` YAML-list format rather than `ENG-011`'s now-superseded single
+delimited string. Notify sent cleanly. State → `blocked`,
+`blocked_on: approver`, `blocked_from: ready-to-ship`, owner
+`devops → approver`.
+
+**1 transition** (`ready-to-ship → blocked`). **Consequence:** `machine_wip`
+4/1 → 3/1 (`ENG-013` leaves the counted `ready`..`ready-to-ship` range —
+`ENG-009`/`ENG-010` at `ready`, `ENG-008` at `ready-to-ship` remain).
+Approver-facing WIP 0/2 → 1/2; approval cap 0/3 → 1/3.
+
+One observation filed (`observations.md`): this pass's `eng-notify.sh
+raise` sent cleanly, unlike `ENG-011`'s recorded `SLACK_WEBHOOK_URL unset`
+gap at the same step.
+
+`chained: none` — `blocked`, `blocked_on: approver`. This is the human
+gate the whole hop was driving toward; firing `continue ENG-013` again
+would only queue against a ticket with nothing left for a machine to do.
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-013`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
 ## 2026-08-31 — continue ENG-008: security gate — PASS, now ready-to-ship
 
 `continue` event pass, context `ENG-008`. Narrow scope per the event's own
