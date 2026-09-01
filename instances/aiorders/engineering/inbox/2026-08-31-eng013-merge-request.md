@@ -12,7 +12,8 @@ pr_urls:
     url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/4
 raised: 2026-08-31
 notified: 2026-08-31T11:05:16
-decision:
+decision: changed
+decided: 2026-09-01T17:13:54.293916+00:00
 ---
 
 # Merge request — Foodswipe funnel page, staff-settable pipeline stages (ENG-013)
@@ -70,3 +71,9 @@ you) and advances the ticket once both are in.
 ## Decision
 
 Filled in by the approver.
+
+## Decision
+
+**changed** — 2026-09-01T17:13:54.293916+00:00
+
+You added manual update of stage to the card what about the funnel stages itself on the page, if I want custom pipeline flow stages not just per card. This ticket was meant to allow custom pipeline stages for the whole foodswipe funnel, the stage updates per card can be manual or automatic

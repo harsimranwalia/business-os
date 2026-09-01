@@ -758,7 +758,24 @@ Raised by ENG-005's event-lifecycle guard. Before it existed, this event would h
 # that is missing or does not parse — all charged, all spend a life. AC4's
 # direction is that an ambiguous outcome costs a hop; the opposite mistake is an
 # infinite free retry, and this whole block is the thing that could create one.
-NEVER_STARTED_SIGNATURE='monthly spend limit|cc_cli_limit_message|usage limit|claude not on PATH|credit balance is too low'
+#
+# `weekly limit`/`rate limit` added 2026-09-01: the Windows host hit a CLI
+# weekly rate limit overnight and every 5-minute `watch` fire from 00:00 to
+# 08:00 printed exactly
+#   ·· rate limit: rejected
+#   You've hit your weekly limit · resets 8am (America/Vancouver)
+#   !! success: You've hit your weekly limit · resets 8am (America/Vancouver)
+# — a 3-second, 4-line, exit-1 death that satisfies every OTHER condition of
+# `pass_never_started` but matched none of the phrases above, so none of it
+# was ever classified as never-started. 96 launches over 8 hours each spent a
+# real hop, retried twice, and dropped their event instead of arming
+# `backoff_arm` — the exact silent-stall failure this whole mechanism exists
+# to prevent, just from a signature gap rather than a missing mechanism. The
+# reset time in the message is also the reason the very next thing that
+# happened was three consecutive hour-long `watch` timeouts starting at
+# 08:00: the backlog that should have been drip-fed through the (working)
+# back-off window instead landed all at once the moment the limit lifted.
+NEVER_STARTED_SIGNATURE='monthly spend limit|cc_cli_limit_message|usage limit|weekly limit|rate limit|claude not on PATH|credit balance is too low'
 NEVER_STARTED_MAX_LINES=12
 NEVER_STARTED_MAX_SECONDS=60
 

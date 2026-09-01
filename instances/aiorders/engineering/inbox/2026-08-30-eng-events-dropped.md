@@ -7,6 +7,8 @@ ticket: ENG-009 <!-- merge note: local (this doc's chronologically first entry, 
 recommendation: find out why passes are failing before re-firing anything
 raised: 2026-08-30
 notified: 2026-08-30T21:08:08
+decision: rejected
+decided: 2026-09-01T16:37:56.836389+00:00
 ---
 
 # Engineering events were dropped today
@@ -719,3 +721,7 @@ have since cleared. Re-firing `continue ENG-023` is safe on that basis. This
 item itself is the notification the recommendation asked for — filed, not
 further gated, since a transient infra blip is below the P0 bar this
 instance surfaces to the approver proactively for.
+
+## Decision
+
+**rejected** — 2026-09-01T16:37:56.836389+00:00

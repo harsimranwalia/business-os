@@ -148,6 +148,38 @@ Each pass, in order:
    - **Risk acceptance** → the architect records it as an ADR, then the ticket
      continues past the security gate
 
+   **When more than one item is answered, resolve and commit one at a time —
+   oldest first — rather than reading every item's full history before
+   acting on any of them.** Observed 2026-09-01: an overnight vendor rate
+   limit (see the back-off note below) let a six-item backlog build up. The
+   pass that ran once the limit cleared spent its time gathering context
+   across the whole backlog — "the gate-check tooling, the caps/config, the
+   ticket templates, and the relevant skills" for every item at once — before
+   committing anything, hit the 3600s ceiling in `lib/eng-trigger.sh`
+   (`PASS_TIMEOUT_BASE_SECONDS`), and was killed with zero commits. The next
+   fire re-read the same backlog from scratch to work out what, if anything,
+   had actually happened, and repeated the same pattern twice more —
+   three consecutive hour-long timeouts, no forward progress. Committing
+   after each item bounds the loss: a kill mid-backlog then costs at most the
+   one item in flight, and the next pass's `git log` on the instance repo
+   tells it exactly where the previous one stopped, instead of it having to
+   re-derive that from uncommitted, partially-edited files.
+
+   **Read only what the item in front of you needs — not the rest of the
+   backlog "for context."** The 11:15 retry of the same 2026-09-01 incident
+   (above) obeyed "one at a time" at the planning level but then, before
+   resolving the first item, queued a combined read of four large files at
+   once — `ENG-007` (63KB), `ENG-008` (72KB), `ENG-013` (74KB), and the
+   decision-journal (39KB), reasoning that the tickets were "entangled." That
+   single ~250KB combined read, plus everything already in context from the
+   sweep, is what the pass was still silently chewing on 34 minutes later
+   with no commit made. Two tickets sharing history is not a license to load
+   both in full before acting on either: open only the ticket the item you
+   are resolving right now belongs to. If resolving it genuinely requires a
+   fact from another ticket, `grep` for that fact rather than reading the
+   file whole — the same rule step 6b already applies to artifact mentions.
+   Move to the next item's ticket only after the current one is committed.
+
    Never infer approval from silence. An unanswered item is not a rejection — it
    stays open and appears in the weekly report's "Waiting on you" section,
    oldest first.

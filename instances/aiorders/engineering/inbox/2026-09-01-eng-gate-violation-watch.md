@@ -6,6 +6,8 @@ project: aiorders
 ticket: unknown
 recommendation: investigate before the next release
 raised: 2026-09-01
+decision: rejected
+decided: 2026-09-01T16:38:16.887004+00:00
 ---
 
 # A pass left the board failing the receipt check
@@ -34,3 +36,7 @@ This is ENG-001's failure mode caught in the act: that ticket reached `main` rec
 Raised by the receipt check wired into `lib/eng-trigger.sh` (ENG-008). The
 check reads the filesystem, never the frontmatter — a ticket cannot satisfy it
 by writing `test_plan: done`.
+
+## Decision
+
+**rejected** — 2026-09-01T16:38:16.887004+00:00

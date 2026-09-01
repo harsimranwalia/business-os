@@ -6,6 +6,8 @@ project: aiorders
 ticket: unknown
 recommendation: investigate before re-enabling
 raised: 2026-08-30
+decision: rejected
+decided: 2026-09-01T17:03:01.281607+00:00
 ---
 
 # Engineering loop halted — whole department
@@ -20,3 +22,7 @@ over. If the day was legitimately busy, the budget is the thing to raise
 that fires on normal days teaches everyone to ignore it.
 
 Scheduled passes are unaffected, and every other ticket keeps moving.
+
+## Decision
+
+**rejected** — 2026-09-01T17:03:01.281607+00:00

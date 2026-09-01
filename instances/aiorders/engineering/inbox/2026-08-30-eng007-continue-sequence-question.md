@@ -7,7 +7,8 @@ ticket: ENG-007
 recommendation: File ticket 3 (points ledger / earn API) now, continuing the approved five-ticket loyalty sequence. Does not block anything currently in flight — answer when convenient.
 raised: 2026-08-30
 notified: 2026-08-30T07:43:29
-decision:
+decision: approved
+decided: 2026-09-01T17:02:39.576746+00:00
 ---
 
 # Continue the loyalty sequence — file ticket 3 (points ledger) next?
@@ -44,3 +45,9 @@ depends on ticket 3 existing yet. Either answer, `ENG-007` itself is already
 ## Decision
 
 Filled in by the approver.
+
+## Decision
+
+**approved** — 2026-09-01T17:02:39.576746+00:00
+
+yes

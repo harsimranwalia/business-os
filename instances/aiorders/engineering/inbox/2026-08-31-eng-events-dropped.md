@@ -6,6 +6,8 @@ project: aiorders
 ticket: unknown
 recommendation: find out why passes are failing before re-firing anything
 raised: 2026-08-31
+decision: rejected
+decided: 2026-09-01T16:38:59.834633+00:00
 ---
 
 # Engineering events were dropped today
@@ -496,3 +498,7 @@ A build-loop pass failed on this event twice — once on each attempt — so the
 Whatever triggered it has NOT been processed. The usual causes do not clear on their own: the automation account at its monthly spend limit, or a TCC/EPERM denial on the Mac. Check `traces/` for this pass's log.
 
 Raised by ENG-005's event-lifecycle guard. Before it existed, this event would have been consumed silently by the pass that died and the board would have looked like a quiet night.
+
+## Decision
+
+**rejected** — 2026-09-01T16:38:59.834633+00:00
