@@ -1787,7 +1787,7 @@ unblocked:
             already processed.
 
 Everything else still applies: mode check first (exit on sabbath/retreat), the
-WIP and approval caps, the lanes, and the rule that a pass stops at a human, at
+WIP limits, the lanes, and the rule that a pass stops at a human, at
 new implementation work, or at a failed gate.
 
 CHAINING — this is what makes the department event-driven rather than

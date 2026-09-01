@@ -73,13 +73,11 @@ intake:
     # numbered P1..Pn. Answered via a channel reply through lib/eng-notify.sh;
     # build_loop step 4 turns approved rows into tickets.
     gate_id_prefix: PROP
-    counts_against_approval_cap: false
     nudge: false
-    # Both exceptions on purpose. The cap exists to stop FINISHED work piling up
-    # on the approver; a proposal is not finished work and nothing is blocked
-    # behind it, and a weekly menu eating one of three approval slots would
-    # starve the gates that hold shipped code. Nothing to chase, so nothing
-    # chases.
+    # No nudge on purpose. A proposal is not a real gate decision: it is not
+    # finished work and nothing is blocked behind it, so it neither behaves
+    # like the approver's real decision queue nor needs protecting from it.
+    # Nothing to chase, so nothing chases.
     # The one carve-out. A P0 on a registered project that is NOT in the
     # internal lane — production down, or an actively exploitable
     # vulnerability in code with real users — becomes a ticket immediately,
@@ -165,19 +163,15 @@ wip:
   # the one thing no subscription buys more of.
 
   limit: 2               # deprecated alias — read approver_limit
-  awaiting_approver_cap: 3
-  # Counts EVERY ticket whose next action belongs to a human, not just items
-  # sitting in inbox/:
-  #   - open G1 / G2 / G3 items
-  #   - tickets `blocked` with blocked_on: approver (an L1 PR waiting to be
-  #     merged, a risk acceptance, a question only the approver can answer)
-  # `blocked` used to sit outside both caps, so an L1 PR awaiting the
-  # approver's merge freed a WIP slot and the department could start another
-  # ticket — accumulating exactly the unbounded pile of finished-but-unapproved
-  # work these caps exist to prevent. A ticket parked on a human counts
-  # against the approver's capacity whatever state it is in.
-  # At the cap: stop advancing anything into a gate state, and stop starting
-  # new tickets. More approvals waiting is not more throughput.
+  # There is no cap on how many decisions may sit queued for the approver at
+  # once. One lived here (awaiting_approver_cap: 3) — a life-os holdover the
+  # approver had removed, 2026-08-29: it does not apply to business-os. What
+  # survives its removal is the 2026-07-27 fix underneath: a ticket `blocked`
+  # with blocked_on: approver (an L1 PR awaiting merge, a risk acceptance, a
+  # question only the approver can answer) still counts against
+  # wip.approver_limit and still holds its WIP slot — it must never silently
+  # escape counting the way `blocked` once did, freeing a slot while finished
+  # work piled up unseen.
   blocked_escalation_days: 5      # blocked_on: agent — escalates to the weekly report
   blocked_on_approver_reminder_days: 3   # a human-blocked ticket resurfaces sooner
 
@@ -211,7 +205,7 @@ gates:
     # first). Still exactly ONE merge_request item — never one per repo. To
     # the approver, merging a multi-repo ticket is one decision; a second
     # item would say the same thing twice while counting the same ticket
-    # twice against wip.approver_limit and wip.awaiting_approver_cap.
+    # twice against wip.approver_limit.
     #
     # The one item carries every repo's PR link as a proper list — a
     # `pr_urls:` array of {repo, url} entries on the inbox item — never
@@ -222,12 +216,12 @@ gates:
     detect_merged_by: git_ancestry
     # On each build-loop pass: fetch, then check whether the branch head is an
     # ancestor of the project's default branch. Local, free, no API call.
-    # Merged → the ticket advances to `shipped`. Not merged → it stays counted
-    # against awaiting_approver_cap and resurfaces after 3 days.
+    # Merged → the ticket advances to `shipped`. Not merged → it keeps holding
+    # its WIP slot (wip.approver_limit) and resurfaces after 3 days.
     # Multi-repo: the ancestry check runs independently per repo, and the
     # ticket reaches `shipped` only when EVERY repo's branch is merged. One
     # repo merged first is a partial state, not done — the ticket stays
-    # `blocked` and stays counted.
+    # `blocked` and keeps holding its WIP slot.
   inbox_dir: inbox/
   # Never infer approval from silence. Explicit confirmation only.
 
@@ -239,7 +233,6 @@ gates:
     channel: instance_configured   # config/conventions.yaml → notify; default telegram
     on_raise: immediate
     nudge_after_hours: 24     # exactly one follow-up, then silence
-    stall_alert: true         # fires once when the approval cap is reached
     max_pings_per_item: 2
     # Hard ceiling on purpose. This system is a counterweight to the
     # approver's overwork pattern, not an amplifier: two pings is
@@ -508,7 +501,7 @@ build_loop:
       - "waiting on the approver — any gate, or blocked_on: approver"
       - blocked on anything else
       - terminal state (verified, advised, dropped)
-      - held by the WIP or approval cap — that wait is the design
+      - held by a WIP limit — that wait is the design
   # Advance rule: a ticket runs through CONSECUTIVE machine-owned states in a
   # single pass, stopping at the first state that needs a human or new
   # implementation work.

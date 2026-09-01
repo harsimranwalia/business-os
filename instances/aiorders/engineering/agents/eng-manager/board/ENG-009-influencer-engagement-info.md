@@ -4,17 +4,20 @@ title: Influencer engagement info — internal activity signal plus a staff-edit
 project: aiorders-admin-hub
 type: feature
 size: S
+time_estimate: a few hours to half a day
+time_spent: ~2h build (single pass — live-schema re-check, both repos, 15 new/changed tests, migration doc)
+time_remaining: review + quality (combined hop), security, release-readiness, then opening the L1 PRs — same remaining shape ENG-008 carried at this identical point
 severity: P3
-priority: 
-state: ready
+priority:
+state: building
 owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
-branch:
+updated: 2026-08-30
+branch: feat/ENG-009-influencer-engagement-info (aiorders-api@4eb4b1b, aiorders-admin-hub@328db29)
 depends_on: []
 blocks: []
 parent:
@@ -277,3 +280,300 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-009`) and
   whole-board: both exit 0, clean. Also recorded on the board index
   (`_index.md`, matching dated entry).
+
+- `2026-08-29` **approver override, filed by hand in an interactive session —
+  not a department pass.** Direct instruction: run `ENG-009` and `ENG-010`
+  next, ahead of `ENG-008` finishing its `in-review` gate, rather than
+  leaving the board to work the existing `.pending` queue in its prior
+  order (several unrelated `continue`/`decision`/`watch` fires for other
+  tickets were queued ahead of all four of these and would have burned
+  passes before touching any of them). `priority: → next` set directly by
+  the approver (this repo's own lever — `eng_build_loop.md`'s "never write
+  to priority yourself" binds *agents*, not the approver giving the
+  instruction directly). `traces/.pending` reordered by hand to
+  `continue ENG-009, continue ENG-010, continue ENG-008, continue ENG-013`
+  at the front, the rest of the prior queue preserved unchanged behind
+  them.
+
+  **Known risk, surfaced rather than silently accepted:** the sequencing
+  hold above exists for a real reason, not shallow-parallelism policy —
+  this ticket's own design and `ENG-008`'s both extend the *same
+  not-yet-created* handler file, and `ENG-008` is still `building` (not
+  yet at `in-review`), so the conflict this hold was written to prevent
+  hasn't actually been cleared yet. Proceeding anyway is the approver's
+  call to make with fuller context than the board has; if `ENG-009`'s build
+  hits that same file and finds `ENG-008`'s branch got there first, that is
+  the expected shape of the risk, not a surprise — a rebase, not a bug. No
+  other field changed; state stays `ready`, owner stays `eng-manager`.
+
+- `2026-08-29` **approver reversal, same interactive session, minutes
+  later.** New instruction: clear the `building`/`in-review` queue
+  (`ENG-008`, `ENG-013`) before going to `ready` tickets — the opposite of
+  the override just above. That override is superseded, not deleted (left
+  intact above for the audit trail). `priority: next → ` (empty) — reverted
+  to the original sequencing hold's own logic rather than left inconsistent
+  with it, since a `next` priority would rank this ticket ahead of
+  `ENG-008`/`ENG-013` (both unset) in any board-wide dispatch sweep, which
+  is exactly backwards from this instruction. `traces/.pending` reordered
+  by hand back to `continue ENG-008, continue ENG-013, continue ENG-009,
+  continue ENG-010` — see that file and the matching entry on `ENG-010`.
+  State stays `ready`, owner stays `eng-manager`; this ticket is once again
+  simply waiting its turn behind `ENG-008`, which is where the original
+  sequencing hold already had it.
+
+- `2026-08-29` **`continue` event pass, context `ENG-009`** — the queue
+  reaching this ticket's turn behind `ENG-008` and `ENG-013`, per the
+  approver's hand-reordering above. Narrow scope per this event's own
+  contract (resume this ticket from its current state; no board-wide
+  sweep). Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh` (`ENG_ROOT` exported to
+  the instance root), scoped (`ENG-009`) and whole-board: both exit 0,
+  clean.
+
+  **Re-checked the sequencing hold's own condition rather than assuming it
+  still holds.** Read `ENG-008`'s own frontmatter directly rather than
+  trusting the board's In-flight table: `state: building`. Its round-1 test
+  gap was closed this same pass sequence (`aiorders-api@dc6972a`, per its
+  own log) and it re-enters code review next, but it has not yet reached
+  `in-review`. The condition this ticket is held on — `ENG-008` reaching
+  `in-review` or later, both designs extending the same not-yet-created
+  `admin-portal/handlers/influencers.ts` — is therefore still unmet.
+  Checked `agents/eng-manager/inbox/`, `agents/product-manager/inbox/` and
+  `inbox/` for anything newly filed against this ticket specifically — none
+  found.
+
+  **0 transitions.** State stays `ready`, owner stays `eng-manager`,
+  `priority` stays empty. **Consequence:** machine WIP unaffected —
+  verified fresh from each counted ticket's own `state:` field: `ENG-008`
+  `building`, `ENG-009`/`ENG-010` `ready`, `ENG-013` `building` — still
+  4/1, over the new cap, draining naturally per the board header's
+  grandfather clause. Approver-facing WIP and approval cap both unaffected
+  — no gate touched.
+
+  **Dead-end sweep (scoped to this event):** nothing to resume — this is a
+  deliberate wait with a re-verified condition, not a stall. **Notify
+  sweep:** nothing to raise (no new gate item); nothing to nudge.
+
+  `chained: none` — held for sequencing, unchanged: `ENG-008` has not yet
+  reached `in-review`. Re-check once it does. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-009`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines. Also recorded on the
+  board index (`_index.md`, matching dated entry; oldest of its three prior
+  entries — `ENG-025` — rolled to `_index-archive.md` to make room, per the
+  keep-three rule).
+
+- `2026-08-29` **sequencing hold lifted — the condition this ticket has been
+  waiting on is now met** (eng-manager, `scheduled` event pass, context
+  `schtasks`, whole-board sweep). Re-checked `ENG-008`'s own frontmatter
+  fresh rather than trusting the last `continue ENG-009` pass's finding:
+  `state: in-qa`. Its round-2 code review + quality combined hop both
+  passed earlier this same day (`building → in-review → in-qa` — see
+  `ENG-008`'s own log). This ticket's hold condition — "re-check once
+  `ENG-008` reaches `in-review` or later" — is therefore met: `in-qa` is
+  later than `in-review`. `ENG-008`'s own chain (security next) is already
+  correctly fired and recorded (`chained: ENG-008`) — not re-fired here, to
+  avoid a second session racing the same ticket.
+
+  **0 transitions.** State stays `ready`, owner stays `eng-manager` — the
+  next transition (`ready → building`) needs an engineer actually writing
+  code, this pass's stopping point by design (`eng_build_loop.md` step 6).
+  **Consequence:** machine WIP unaffected — this ticket was already inside
+  the counted range; lifting the hold changes what happens next, not the
+  count.
+
+  **Dead-end sweep:** this re-check, plus raising `ENG-016`/`ENG-017`'s G1s
+  and correcting the board's stale "approval cap" framing, are this pass's
+  whole-board findings — see `_index.md`'s dated entry for the full sweep.
+  `ENG-010` remains correctly held (see its own log this same pass) — it is
+  sequenced behind both `ENG-008` **and** this ticket, and this ticket has
+  not built yet.
+
+  `chained: ENG-009` — the hold that was suppressing the chain is lifted;
+  `ready` is normally agent-owned and chains immediately once nothing else
+  holds it. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-009`) and whole-board: see board index.
+
+- `2026-08-30` `ready → building`: built per the design, both repos — staff
+  social-figure editing (reused `followers`/`engagement` columns) and the
+  derived internal activity signal (eng-manager, `continue` event pass,
+  context `ENG-009`, this ticket's turn at the front of `traces/.pending`).
+  Narrow scope per the event's own contract (resume this ticket from its
+  current state; no board-wide sweep). Mode check clean (business-os `.env`
+  → `MODE=` empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-009`) and
+  whole-board: both exit 0, clean.
+
+  **Both `_eng` worktrees existed, clean.** `aiorders-api` was sitting on
+  `ENG-013`'s branch (its own build long finished, now at `in-qa`);
+  `aiorders-admin-hub` was already sitting on `ENG-008`'s own branch
+  (`f2ea36c`, matching that ticket's frontmatter exactly) — this ticket's
+  own design explicitly assumes `ENG-008` has landed its handler and edit
+  form, so branching from its tip rather than `origin/main` is required, not
+  a convenience. `git fetch origin` on both confirmed no drift: `ENG-008`
+  still at `dc6972a`/`f2ea36c`, `origin/main` unchanged. Branched
+  `feat/ENG-009-influencer-engagement-info` off
+  `origin/feat/ENG-008-influencer-admin-management` in `aiorders-api` and off
+  the already-checked-out `ENG-008` tip in `aiorders-admin-hub` — neither
+  branch operation disturbed `ENG-008`'s or `ENG-013`'s own branch refs,
+  both remain fully intact and pushed.
+
+  **Live schema re-verified before writing the migration**, per this
+  instance's standing practice: Supabase MCP, read-only, project
+  `bmnmnejwdxbcqinqkwko`. Confirmed `social_stats_updated_at`/
+  `social_stats_platform` don't already exist, confirmed `followers`/
+  `engagement`'s live types match what the handler validates, and confirmed
+  via `list_migrations` that production's applied head is still
+  `20260829190000` — neither `ENG-008`'s nor `ENG-013`'s migration has
+  landed yet, so `20260830100000` was chosen to sort after both.
+
+  **Built exactly what the design named, with one interface resolution the
+  design couldn't have made itself.** The design's Interfaces section
+  specifies extending "`GET /admin-portal/influencers`" to return an
+  activity-augmented list — written against `ENG-008`'s own *design*, before
+  `ENG-008` actually built. What `ENG-008` actually shipped is a **per-id**
+  `GET /admin-portal/influencers/{id}` that the frontend never calls (the
+  list itself is read directly via the anon Supabase client in
+  `Influencers.tsx`'s `fetchData()`) — there is no list-shaped endpoint to
+  extend. Resolved by adding a third route, `GET
+  /admin-portal/influencers/activity` (checked in `handleInfluencers` ahead
+  of the generic per-id match, since that regex would otherwise read the
+  literal string "activity" as an id) returning one aggregate per
+  influencer, fetched once by the frontend and merged client-side by id —
+  same two-query-then-merge shape the design asked for, just split across
+  the handler/frontend boundary differently than assumed. Same category of
+  design-vs-shipped gap `ENG-008`'s own build hop hit on PUT-vs-PATCH; ran
+  the step 6b artifact-enumeration grep before considering this build done
+  (below) and found no other file in the department instructs or assumes
+  the list-shaped form, so this is a local resolution, not a cross-file fix.
+
+  **Both repos, exactly the components the design named:**
+  `supabase/migrations/20260830100000_add_influencer_social_stats.sql`
+  (two nullable columns, no backfill — see the migration doc); extended
+  `admin-portal/handlers/influencers.ts` — `followers`/`engagement`/
+  `social_stats_platform` added to `EDITABLE_FIELDS` and validated
+  (`followers`: integer 0–1e9; `engagement`: number 0–100; `platform`:
+  string ≤32 chars or null), `social_stats_updated_at` stamped server-side
+  whenever either numeric field is written, new `getInfluencerActivity`
+  (single unfiltered `SELECT` over `influencer_invitations`, grouped in
+  memory into `{invitations, visits, completed_visits, responded,
+  response_rate, last_activity_at}` per influencer — never one query per
+  influencer, matching the design's own stated constraint); `index.ts`
+  untouched (already routes `influencers` broadly). `src/pages/
+  Influencers.tsx` — edit form gains followers/engagement/platform inputs,
+  table gains an Activity column, dialog gains an Activity block plus
+  `follower_count` shown as labelled read-only context, and the existing
+  Followers/Engagement table cells and dialog fields now render "Not set"
+  rather than a fabricated `0`/`0.0%` when `social_stats_updated_at` is
+  null — exactly the behaviour the design's Data section specifies.
+  `activityById` fetched independently of `fetchData()`'s own
+  `Promise.all`, its own try/catch defaulting to `{}` on failure, so a
+  broken activity endpoint degrades the activity column/block to "no
+  activity data" without blanking the influencer list — the design's own
+  named failure behaviour. `constants.ts` left untouched, matching `ENG-008`'s
+  own established precedent of an inline fetch URL rather than a
+  centralised endpoint constant for this same handler family.
+
+  **One deliberate, minor deviation from the design's literal wording, flagged
+  rather than silently taken.** The design says `social_stats_updated_at` is
+  set "when either numeric field is present **and changed**." Implemented as
+  "present" only — no existing field in this handler diffs an incoming value
+  against the current row before writing (every other `EDITABLE_FIELDS`
+  entry is a blind apply), and adding a fetch-then-compare for just these two
+  fields would introduce a read-modify-write race none of the surrounding
+  code has. Functionally near-equivalent for the design's own stated goal
+  (an honest "is this stale" signal): a staff member re-submitting the same
+  figure is still confirming it's current as of now, which is an honest
+  thing for the timestamp to say. Covered by its own test
+  (`does not stamp ... when neither social field is written`) proving the
+  stamp is scoped to the two social fields, not "any field."
+
+  **Artifact-enumeration grep (step 6b) run before closing out this hop.**
+  Grepped `social_stats_updated_at`, `social_stats_platform`,
+  `influencers/activity`, and `getInfluencerActivity` across
+  `instances/`/`departments/`: only this ticket's own design doc and the
+  migration doc just written this pass reference any of them — no
+  *instruction* or *map* elsewhere in the department assumes a different
+  shape, so nothing else needed fixing. Also re-confirmed
+  `Access-Control-Allow-Methods` still agrees between `index.ts` and
+  `influencers.ts` (both list `PATCH`, unchanged by this ticket) — the exact
+  drift class `ENG-008`'s own build hop caught against this ticket's design
+  doc, checked here in the other direction for the same reason.
+
+  **Self-tested.** `aiorders-api`: `deno check` on the modified handler and
+  test file — clean. `deno test influencers.test.ts` — **32 passed, 0
+  failed** (17 pre-existing + 15 new: 8 rejection cases across
+  followers/engagement/social_stats_platform, 4 stamping-behaviour cases,
+  1 access + 2 aggregation cases for the new activity route). Whole-tree
+  `deno check handlers/*.ts` — 17 errors, matching the exact count every
+  prior ticket on this board has recorded, all in `auth.ts`/`partners.ts`/
+  `users.ts`, none touched here; confirmed `influencers.ts` itself
+  contributes zero. `aiorders-admin-hub`: `npm run lint` — 150 pre-existing
+  errors (unchanged count), 31 warnings; grepped for `Influencers.tsx`
+  specifically — the same one pre-existing `react-hooks/exhaustive-deps`
+  warning every prior pass on this file recorded, zero new. `npm run build`
+  — clean, same pre-existing chunk-size notice as every other ticket on this
+  board.
+
+  **Database migration doc written**
+  (`agents/database/migrations/ENG-009-influencer-engagement-info.md`) —
+  live re-verification of both new column names and the current applied
+  migration head, rollback statement, the same not-dry-run gap every prior
+  migration on this board carries forward, gate verdict **pass**.
+
+  **Both branches committed and pushed**
+  (`aiorders-api@4eb4b1b`, `aiorders-admin-hub@328db29`, both based on
+  `ENG-008`'s still-unmerged tip); no PR opened yet — devops's release step,
+  same as `ENG-008`. PR bodies drafted here:
+
+  *aiorders-api* — title: `Add internal activity signal and staff-editable
+  social stats for influencers (ENG-009)`. Body: two new nullable columns on
+  `influencers` (`social_stats_updated_at`, `social_stats_platform`); reuses
+  the existing, previously-unwritten `followers`/`engagement` columns for
+  the staff-entered figure via `PATCH admin-portal/influencers/{id}`
+  (extends `ENG-008`'s handler); new `GET admin-portal/influencers/activity`
+  (admin/sub-admin gated, service-role client — `influencer_invitations` has
+  no staff RLS policy) returns a per-influencer activity aggregate derived
+  from invitation history, computed on read, stored nowhere. Depends on
+  `ENG-008`'s branch (based off it, not `main`). Migration doc:
+  `agents/database/migrations/ENG-009-influencer-engagement-info.md`.
+
+  *aiorders-admin-hub* — title: `Add activity signal and social stats
+  editing to influencer board (ENG-009)`. Body: extends `ENG-008`'s edit
+  form and detail dialog with followers/engagement/platform fields; adds an
+  Activity column to the table and an Activity block to the dialog, sourced
+  from the new `aiorders-api` endpoint above; Followers/Engagement now show
+  "Not set" instead of a misleading `0`/`0.0%` before staff enter a value.
+  Depends on `ENG-008`'s branch (based off it, not `main`).
+
+  **1 transition** (`ready → building`; the build itself happened inside
+  it), well under the cap of 4 — the next hop (review + quality, combined)
+  is a fresh session's work by design, same as every other ticket at this
+  state on this board. **Consequence:** machine WIP unaffected — verified
+  fresh from each ticket's own `state:` field: `ENG-008` `ready-to-ship`,
+  `ENG-009` now `building`, `ENG-010` `ready`, `ENG-013` `in-qa` — still 4
+  inside the counted `ready..ready-to-ship` range, unchanged by this pass
+  (already inside it at `ready`; `building` is still inside it), draining
+  naturally per the board header's grandfather clause. Approver-facing WIP
+  and approval cap both unaffected — no gate touched this hop.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched;
+  `ENG-010` remains correctly held behind both `ENG-008` and this ticket
+  (see its own log). **Notify sweep:** nothing raised this pass (no gate
+  item written — a build hop doesn't notify). **Observation filed**
+  (`observations.md`): the design-doc-vs-shipped-endpoint-shape gap above,
+  as a second same-week data point (after `ENG-008`'s PUT/PATCH catch) that
+  a design written against a sibling ticket's own *design* rather than its
+  *shipped* code is a recurring, low-cost-to-catch class of drift on this
+  board — worth considering whether the architect should re-read the actual
+  diff, not just the design doc, when a ticket explicitly extends another.
+
+  `chained: ENG-009` — ticket sits at `building`, agent-owned (the build
+  itself is done; the next hop is code review + quality, combined, per this
+  loop's own design for why that isn't done in the same session) — not the
+  approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-009`) and whole-board: see board index.

@@ -39,7 +39,7 @@ and starts at `ready`.
 | `blocked_on` | Means | Consequence |
 |---|---|---|
 | `agent` | Waiting on another agent, a dependency, or a closed release window | Escalates to the weekly report after 5 working days |
-| `approver` | Waiting on a human: an L1 PR to be merged, a risk acceptance, a question only the approver can answer | **Counts against the approval cap**, resurfaces after 3 days |
+| `approver` | Waiting on a human: an L1 PR to be merged, a risk acceptance, a question only the approver can answer | **Holds its WIP slot** (`wip.approver_limit`), resurfaces after 3 days |
 
 A ticket blocked on the approver holds its WIP slot. Before this rule (fixed
 2026-07-27) `blocked` sat outside both caps, so an L1 PR awaiting a merge freed a

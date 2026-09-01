@@ -149,8 +149,8 @@ Each pass, in order:
      continues past the security gate
 
    Never infer approval from silence. An unanswered item is not a rejection — it
-   stays open, keeps counting against the approval cap, and appears in the weekly
-   report's "Waiting on you" section, oldest first.
+   stays open and appears in the weekly report's "Waiting on you" section,
+   oldest first.
 
 5. **Merge detection** — for every ticket `blocked` on an L1 PR (or PRs — a
    ticket may span more than one repo, `ENG-011` being the first): for
@@ -159,16 +159,16 @@ Each pass, in order:
    multi-repo ticket advances to `shipped` only once **every** repo's branch
    has merged — one repo merging does not ship the ticket, since the change
    is only coherent with all of them in. Partially merged → stays `blocked`,
-   stays counted against the approval cap, resurfaces after 3 days, and the
-   ticket log names which repo(s) are still outstanding so the next pass
-   doesn't re-derive it. Local git only: no API call, no cost.
+   still holds its WIP slot, resurfaces after 3 days, and the ticket log
+   names which repo(s) are still outstanding so the next pass doesn't
+   re-derive it. Local git only: no API call, no cost.
 
    **One gate item per ticket, never one per repo.** A ticket spanning N
    repos still gets exactly one merge-request item in `inbox/`, listing every
    repo's PR as its own distinct line — never N separate items for what is,
    to the approver, one decision ("merge this ticket"). A second item for the
-   same ticket would double-count it against both the approver-facing WIP
-   limit and the approval cap for work that is genuinely one unit, not two.
+   same ticket would double-count it against the approver-facing WIP limit
+   for work that is genuinely one unit, not two.
    See `skills/release-runner/SKILL.md` step 4 for the format.
 
    **A merge is not a gate.** Do not advance to `shipped` from a state that owes
@@ -277,9 +277,6 @@ Each pass, in order:
    - Any item with `notified:` older than 24h, no `nudged:`, and no `decision:`
      → `lib/eng-notify.sh nudge {file}`, stamp `nudged:`. **Exactly one
      nudge, ever.** After that it rides the daily brief and the weekly report.
-   - If the approval cap is now full and no stall alert has been sent for this
-     stall → `lib/eng-notify.sh stall`. The board having stopped is a state
-     change worth one message; it is not a reminder.
 
 8. **Dead-end sweep** — any ticket with no owner, any open bug with no owner, any
    ticket blocked past its threshold. Fix in the same pass or flag for the
@@ -647,7 +644,14 @@ stop, and the approver-facing WIP limit is 2.
 ## Guards
 
 - **Approver WIP limit (2)** — tickets whose path still runs through the
-  approver. At the limit, nothing new starts that will need them.
+  approver, including a ticket `blocked` on `blocked_on: approver` (an L1 PR
+  awaiting merge, a risk acceptance, a question only the approver can
+  answer) — it holds its slot there too, not just while a gate is open
+  (fixed 2026-07-27, after an L1 PR once freed a slot and sat invisible). At
+  the limit, nothing new starts that will need them. There is no separate
+  cap on how many decisions may be queued at once — one existed
+  (`awaiting_approver_cap`), a life-os holdover removed 2026-08-29 at the
+  approver's request; this WIP limit is the one lever on their side now.
 - **Machine WIP limit (1)** — tickets moving purely between agents, counting
   states `ready` through `ready-to-ship`. **The approver's correction,
   2026-08-29.** This used to scale with the plan tier (up to 12), reasoned as
@@ -659,12 +663,6 @@ stop, and the approver-facing WIP limit is 2.
   limit, nothing new enters `ready` until the one ticket in flight reaches
   `shipped`. One ticket, completed end to end, then the next — not several,
   each a little bit done.
-- **Approval cap (3)** — counts open G1/G2/G3 items **and** tickets blocked on
-  the approver, including L1 PRs awaiting a merge. At the cap, nothing
-  advances into a gate state and nothing new starts that will need them.
-  Before this counted blocked tickets (fixed 2026-07-27), an L1 PR freed a WIP
-  slot and sat invisible — the exact pile of finished-but-unapproved work
-  these caps exist to prevent.
 - **Release window** — **L2/L3 only.** No production release Friday after
   15:00, weekends, during `sabbath`/`retreat`, or while `ENG_RELEASE_FREEZE`
   is set. The Friday 15:30 pass therefore never releases an L2/L3 ticket; it

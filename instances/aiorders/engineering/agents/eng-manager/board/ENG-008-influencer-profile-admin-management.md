@@ -4,17 +4,27 @@ title: Influencer board admin management — region/campaign-type preference, ra
 project: aiorders-admin-hub
 type: feature
 size: M
+time_estimate: half a day to a couple of days
+time_spent: ~2h build, two code-review rounds (principal-engineer), ~30min
+  writing the missing test file, ~1h round-2 review + combined quality
+  gate, plus ~45min this pass (security gate + release-readiness, both
+  run fresh)
+time_remaining: ~15min — release-readiness is confirmed; all that's left
+  is opening the L1 PRs and writing the merge request, held this pass by
+  the approver-facing WIP cap (see log). No approver time_impact beyond
+  the eventual PR-merge click — closing a definition-of-done gap, not new
+  PRD scope
 severity: P3
 priority:
-state: building
-owner: eng-manager
+state: ready-to-ship
+owner: devops
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
-branch: feat/ENG-008-influencer-admin-management (aiorders-api@e240767, aiorders-admin-hub@f2ea36c)
+updated: 2026-08-30
+branch: feat/ENG-008-influencer-admin-management (aiorders-api@dc6972a, aiorders-admin-hub@f2ea36c)
 depends_on: []
 blocks: []
 parent:
@@ -22,9 +32,9 @@ links:
   prd: agents/product-manager/specs/ENG-008-influencer-profile-admin-management.md
   design: agents/architect/designs/ENG-008-influencer-profile-admin-management.md
   adrs: []
-  review:
-  test_plan:
-  security_review:
+  review: agents/principal-engineer/reviews/ENG-008.md
+  test_plan: agents/qa/test-plans/ENG-008.md
+  security_review: agents/security/reviews/ENG-008.md
   release:
   pr:
 ---
@@ -603,3 +613,466 @@ Append-only. One line per state transition, newest last.
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-008`) and whole-board: see board index.
+
+- `2026-08-29` **code review round 1: FAIL — automatic-failure #10, no
+  failure-case test on the new admin-auth-gated write path**
+  (principal-engineer, `continue` event pass, context `ENG-008`, this
+  fire's own turn at the front of `traces/.pending` finally reached).
+  Narrow scope per the event's own contract (resume this ticket from its
+  current state; no board-wide sweep). Mode check clean (business-os
+  `.env` → `MODE=` empty; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-008`) and whole-board: both exit 0, clean.
+
+  **Read the actual diff fresh from both worktrees.** Unlike `ENG-013`'s
+  own review, no `git show`-without-checkout trick was needed here — both
+  `_eng` worktrees were already sitting on *this* ticket's own branch
+  (`git status --branch` / `git log -1` in each: `feat/ENG-008-influencer-
+  admin-management` at `e240767` and `f2ea36c` respectively, tree clean),
+  confirmed to match this ticket's own frontmatter exactly before reading
+  anything. `git fetch origin main` then `git diff origin/main...HEAD` in
+  each worktree.
+
+  **Ran `skills/code-review-gate/SKILL.md` step 2 (the automatic-failure
+  scan) before any deeper review.** Found one: **#10**, same number
+  `ENG-013` hit earlier today. The new `PATCH /admin-portal/influencers/{id}`
+  (and `GET`) in `supabase/functions/admin-portal/handlers/influencers.ts`
+  is gated by `hasInfluencerAdminAccess` (admin/sub-admin) and validates six
+  fields individually (`staff_rating` 1–5, non-negative
+  `collaboration_count`, type checks on the rest) — a real auth-gated write
+  path with real validation branches, and **zero test coverage**: `git diff
+  --stat` against both branches shows only the handler, `index.ts`'s
+  routing/CORS line, the migration, and `Influencers.tsx` — no `.test.ts`
+  anywhere in either diff. This repo already carries direct precedent for
+  this exact shape on this exact board (`loyalty-config.test.ts` —
+  `ENG-007`; `brands.test.ts` — `ENG-011`), so the absence is a regression
+  against established practice, not a new bar. Full detail, including the
+  per-field breakdown and the fix shape, in
+  `agents/principal-engineer/notebook/2026-08-29-review-log.md`.
+
+  Per the skill's own step 2 instruction, stopped there rather than running
+  the full line-by-line review. A quick skim for anything else
+  automatic-failure-shaped found nothing: no secret, no silent catch
+  (`console.error` before every error response), no unbounded query (`GET`
+  is single-row by id), no new dependency (`Checkbox` /
+  `@radix-ui/react-checkbox` both pre-existing in `aiorders-admin-hub`'s
+  `package.json`, confirmed directly rather than assumed), no
+  commented-out code, no drive-by refactor (the CORS `Allow-Methods`
+  widening is required by the new `PATCH` route itself — same catch this
+  ticket's own building pass already made once, still correct), no
+  datastore-layer bypass (`adminSupabase.from(...)` matches
+  `loyalty-config.ts`/`foodswipe.ts`). The `AuthenticatedRequest`
+  interface's `any` fields are copied verbatim from `foodswipe.ts` —
+  confirmed by direct comparison — so this reads as matching surrounding
+  code, not a fresh violation.
+
+  **No receipt written** (`agents/principal-engineer/reviews/ENG-008.md`
+  stays absent — a receipt written on a fail would satisfy the exact
+  filesystem check it exists to prove). Verdict and finding written here
+  and to `agents/principal-engineer/notebook/2026-08-29-review-log.md`.
+  **QA's hop not run this round** — the combined-hop design discards it on
+  a review fail since the code is about to change (`config.yaml` →
+  `machine_gates.combined_hop`), so no point spending it yet.
+
+  **0 net frontmatter transitions** — `state` was `building` at pass start
+  and is `building` at pass end; the gate was reached (that's what
+  triggered this review) and immediately routed back on the fail verdict,
+  so nothing was ever persisted as `in-review`. `owner` unchanged
+  (`eng-manager`, this instance's established convention throughout the
+  machine-owned range). `time_estimate`/`time_spent`/`time_remaining`
+  filled in on the frontmatter this pass — the ticket had never carried
+  them before now; backfilled `time_estimate` from the PRD's own Cost
+  section rather than inventing a figure. `machine_wip` unaffected
+  (`ENG-008` was and remains inside the counted `ready`..`ready-to-ship`
+  range). Approver-facing WIP and approval cap both unaffected — no gate
+  raised, nothing resolved.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  `ENG-007`/`ENG-009`/`ENG-010`/`ENG-011`/`ENG-013` left untouched — each
+  has or will have its own `continue` event.
+
+  **Notify sweep:** nothing to raise — a failed *machine* gate doesn't
+  reach the approver (only G1/G2/G3/merge requests do); nothing to nudge.
+
+  **Observation filed** (`observations.md`): second code-review failure
+  recorded on this board, same day, same automatic-failure number, same
+  untested-write-path shape as `ENG-013` — both of today's new
+  `admin-portal` handlers missed their own test file identically. Not yet
+  a third occurrence of the pattern (the `engineering-standards.md` step
+  10 promotion threshold), but close to it.
+
+  `chained: ENG-008` — `building` is an agent-owned state (the implementing
+  engineer adds the missing test next), not the approver, not blocked, not
+  terminal, not held by a cap. `failed_gate` sends it back to `building`
+  and stops this pass there by design (`config.yaml` →
+  `build_loop.stop_at`), but a *fresh* session is exactly what the missing
+  work needs, per `eng_build_loop.md`'s "a pass stops after building on
+  purpose." Fired `/bin/sh departments/engineering/lib/eng-trigger.sh
+  continue ENG-008` before exiting. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-08-29` **round-1 gap closed: `influencers.test.ts` written, 17/17
+  passing — `building → building`, no transition, re-entering review next**
+  (eng-manager, `continue` event pass, context `ENG-008`, this ticket's turn
+  at the front of `traces/.pending`). Narrow scope per the event's own
+  contract (resume this ticket from its current state; no board-wide
+  sweep).
+
+  **Procedural note, stated plainly rather than glossed over**: this pass's
+  own mode check and pre-pass gate-check ran *after* the worktree edits
+  below, not before — a slip against this loop's own documented order, not
+  a deliberate deviation. Sequence actually followed: mode check
+  (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+  `mode:` empty) confirmed clean, then the build work, then
+  `departments/engineering/lib/eng-gate-check.sh` (with `ENG_INSTANCE`
+  exported — the script takes `[ENG-NNN]` only, not an instance path; the
+  first invocation attempt passed the instance path positionally and
+  fail-closed on `PARSE`, corrected before trusting any result), scoped
+  (`ENG-008`) and whole-board: both exit 0, clean. Run before any board or
+  ticket-log file was touched, so it still served the pre-pass check's real
+  purpose (catch a pre-existing violation before this pass's own writes
+  land) even though it wasn't literally this pass's first action. No
+  violation found either way.
+
+  **Both worktrees verified on this ticket's own branch before editing**:
+  `aiorders-api` and `aiorders-admin-hub`, `git status --branch` in each,
+  matching this ticket's frontmatter exactly (`e240767`, `f2ea36c`) — no
+  stale branch, no another ticket's work in the way.
+
+  **Read the review's fix note in full**
+  (`agents/principal-engineer/notebook/2026-08-29-review-log.md` →
+  `ENG-008`) before writing anything: one colocated `influencers.test.ts`,
+  same shape as `loyalty-config.test.ts` (`ENG-007`) —
+  `hasInfluencerAdminAccess` unit tests (admin, sub-admin, neither, the
+  `additional_roles` variant), a rejection test per field in
+  `EDITABLE_FIELDS`, a successful-`PATCH` case. Read `loyalty-config.test.ts`
+  itself (off `origin/loyalty-system`, since `ENG-007` is still unmerged) for
+  the exact style to mirror, rather than inventing a different shape for the
+  same repo.
+
+  **Two minimal, additive exports**, nothing else changed in
+  `influencers.ts`: `AuthenticatedRequest` and `hasInfluencerAdminAccess`,
+  matching `loyalty-config.ts`'s own precedent of exporting exactly what its
+  test needs to import.
+
+  **Wrote `influencers.test.ts`**: 5 `hasInfluencerAdminAccess` unit tests
+  (admin, sub-admin, an unrelated role, the `additional_roles` positive
+  variant, the `additional_roles` negative variant); 2 access/method tests
+  through `handleInfluencers` itself (403 for a non-admin caller, 405 for
+  `DELETE`) via an `uncalledAuth()` helper — same throwing-`Proxy` shape
+  `loyalty-config.test.ts` uses, so a validation failure that touched
+  `adminSupabase` would fail loudly rather than silently passing; 8 `PATCH`
+  rejection tests, one per `EDITABLE_FIELDS` entry (`city_preference` got
+  two — non-array, and an array with a non-string element, since both are
+  genuinely distinct branches of that field's own check — plus one for the
+  empty-body guard); 1 successful-`PATCH` test against a hand-built fake
+  `adminSupabase` (`.from().update().eq().select()` resolving `{data, error}`)
+  — the first Supabase-client mock in this repo; `loyalty-config.test.ts`
+  named the exact same gap and explicitly left it open ("this repo still has
+  no precedent or infrastructure for mocking a Supabase client"). Built
+  narrowly for this one chain shape, not offered as shared test
+  infrastructure — the next handler that needs this will very likely need a
+  different chain (`.select().eq().maybeSingle()`, `.insert()`, ...) and
+  extracting a general mock now would be guessing at a shape from one data
+  point.
+
+  **A real bug, caught by the new test, fixed in the same hop**:
+  `hasInfluencerAdminAccess({ role: "restaurant" })` returned `undefined`,
+  not `false` — `userProfile.additional_roles && ...` short-circuits to
+  `undefined` when the key is absent, and `false || undefined` is
+  `undefined`, not `false`. Violates the function's own declared `boolean`
+  return type. No production impact (the sole call site only ever does
+  `if (!hasInfluencerAdminAccess(...))`, and `!undefined === !false`), but
+  in scope to fix here since the function was already being touched for the
+  `export` this test needed, not a drive-by refactor of untouched code.
+  Fixed by wrapping the whole expression in `Boolean(...)` — same logic,
+  same short-circuiting, now actually returns a boolean. Filed as its own
+  observation (`observations.md`) rather than silently folded in, since it's
+  a second same-day case of a review-closing test finding something the
+  review's own read hadn't.
+
+  **Self-tested**: `deno check` on `influencers.ts` and
+  `influencers.test.ts` — clean, zero errors. `deno test
+  influencers.test.ts` — **17 passed, 0 failed** (first run: 16/17, the
+  `hasInfluencerAdminAccess` bug above; second run, after the fix: 17/17).
+  Whole-tree `deno check supabase/functions/admin-portal/handlers/*.ts` — 17
+  errors, matching the exact count the original building pass recorded and
+  attributed to `auth.ts`/`partners.ts`/`users.ts`, none touched by this
+  ticket; re-confirmed rather than assumed unchanged. `aiorders-admin-hub`
+  untouched this pass (`git status --short` clean) — no re-run needed, its
+  own last self-test still stands.
+
+  **Committed and pushed**: `aiorders-api@dc6972a` on
+  `feat/ENG-008-influencer-admin-management` (2 files changed, both the test
+  file and the `Boolean(...)` fix folded into one commit — they're the same
+  hop, closing the same gap, not two separate concerns). `aiorders-admin-hub`
+  unchanged, still `f2ea36c`. Frontmatter `branch:`, `time_spent:`,
+  `time_remaining:` updated to match.
+
+  **0 transitions** — `state` was `building` at pass start and remains
+  `building`: the fix is done, but round-2 review is a fresh session's work,
+  same as round 1 was (`eng_build_loop.md`: "a pass stops after building on
+  purpose"). `owner` unchanged (`eng-manager`). **Consequence:** machine WIP
+  unaffected — verified fresh from each ticket's own `state:` field, not the
+  board header: `ENG-008` `building`, `ENG-009`/`ENG-010` `ready`, `ENG-013`
+  `building` = 4 inside the counted `ready..ready-to-ship` range, unchanged
+  by this pass. Approver-facing WIP and approval cap both unaffected — no
+  gate touched this hop.
+
+  **Noted, not reconciled** (out of scope for this ticket-scoped pass, third
+  pass in a row to notice and defer it): `ENG-007`'s own ticket file still
+  reads `state: shipped` while `board/_index.md`'s header and In-flight
+  table still show it `blocked` — same staleness `ENG-025`'s own design pass
+  already flagged in `observations.md`. Left exactly as found; not this
+  event's ticket.
+
+  **Dead-end sweep:** scoped to this event's own lineage per its narrower
+  contract — rest of the board untouched, not re-verified here. **Notify
+  sweep:** nothing raised this pass (no gate item written); nothing to
+  nudge. **Observation filed** (`observations.md`): the
+  `hasInfluencerAdminAccess` bug above, framed as a second same-day data
+  point for the standing "promote colocated tests to a required step"
+  question `ENG-013`'s and this ticket's own round-1 rows already raised.
+
+  `chained: ENG-008` — `building` is agent-owned (round-2 code review +
+  quality, combined hop, is the next step — not the approver, not blocked,
+  not terminal, not held by a cap), and per this loop's own design that
+  review is a fresh session's work rather than continuing in this one. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before exiting. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-08-29` **round 2: code review + quality, combined hop — both PASS.
+  `building → in-review → in-qa`** (principal-engineer + qa, `continue`
+  event pass, context `ENG-008`, this ticket's turn at the front of
+  `traces/.pending`). Narrow scope per the event's own contract (resume
+  this ticket from its current state; no board-wide sweep). Mode check
+  clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml`
+  → `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+  **Both worktrees checked before reading anything.** `aiorders-admin-hub`
+  was already on this ticket's own branch (`f2ea36c`, matching frontmatter
+  exactly). `aiorders-api` was mid-flight on `ENG-013`'s own branch
+  (`feat/ENG-013-foodswipe-funnel-stage-control`) — a shared worktree, not
+  this ticket's to disturb — so its diff was read via `git show`/`git diff`
+  against the remote refs directly (`origin/main...origin/feat/ENG-008-influencer-admin-management`,
+  confirmed at `dc6972a`, matching frontmatter), same technique round 1's
+  own log named for exactly this situation on a sibling ticket.
+
+  **Automatic-failure scan: 0/10.** Round 1's #10 (zero test coverage on
+  the auth-gated write path) is closed —
+  `supabase/functions/admin-portal/handlers/influencers.test.ts` (new, 161
+  lines): 5 `hasInfluencerAdminAccess` unit tests, a 403 and a 405 test
+  through `handleInfluencers` itself via a throwing-`Proxy` `adminSupabase`
+  (fails loudly if a rejected branch ever reached the datastore), one
+  rejection test per `EDITABLE_FIELDS` entry (8 cases) plus the empty-body
+  guard, one successful-`PATCH` case. #4 (`any`-typed `AuthenticatedRequest`)
+  unchanged since round 1 — re-confirmed rather than re-litigated:
+  `foodswipe.ts`'s own interface diffed directly this round, byte-for-byte
+  identical, so this is the same already-adjudicated finding.
+
+  **Verified independently rather than trusted from the ticket log.**
+  Extracted `influencers.ts`/`influencers.test.ts` into an isolated temp
+  directory (self-contained, no repo-internal imports) rather than check
+  out `ENG-013`'s worktree: `deno check` — clean; `deno test` — **17
+  passed, 0 failed**, reproducing the build pass's own claimed result
+  exactly; `deno lint` — 4 pre-existing `no-explicit-any` hits, all on the
+  interface named above, not a new finding. **Mutation-tested the
+  regression fix**: reverted the `Boolean(...)` wrap by hand and re-ran —
+  `hasInfluencerAdminAccess rejects an unrelated role` failed exactly as
+  expected (16/17), confirming the test fails for the reason it exists,
+  per `engineering-standards.md`'s mutation-testing bar, then restored.
+  `aiorders-admin-hub` (already on this ticket's branch): `npm run lint` —
+  150 problems, matching `ENG-013`'s own recorded baseline exactly; grepped
+  for `Influencers.tsx` specifically — one pre-existing
+  `react-hooks/exhaustive-deps` warning (confirmed pre-dating this diff),
+  zero errors, zero new. `npm run build` — clean, same pre-existing
+  chunk-size notice as every prior ticket on this board.
+
+  **New finding, not blocking this ticket:** the admin/sub-admin
+  access-check shape (`hasFoodswipeAccess`/`hasInfluencerAdminAccess`/
+  `hasLoyaltyConfigAccess`) is now duplicated across three handler files
+  written on three different tickets today, and has forked into two
+  incompatible conventions — `foodswipe.ts`/`influencers.ts` dereference
+  the profile directly (throws on null/undefined); `loyalty-config.ts`
+  (`ENG-007`) is null-safe throughout, added for a documented reason. This
+  ticket correctly matched its nearest same-day sibling (`foodswipe.ts`) —
+  the right per-ticket call given the codebase already disagrees with
+  itself — but the fork predates and outlives this ticket. Filed as a
+  proposal (`agents/eng-manager/proposals.md`, `by: principal-engineer`,
+  size `S`) per step 3, not fixed inline.
+
+  **QA/quality gate run in the same hop** (combined per `config.yaml` →
+  `machine_gates.combined_hop`): `agents/qa/test-plans/ENG-008.md` written,
+  one row per PRD acceptance criterion (all 8 covered at least at the
+  validation boundary). Real, named gaps carried forward rather than
+  hidden: no live-database round trip for any of the six new/changed
+  columns (same repo-wide gap `ENG-007`'s plan already named); the one
+  success test exercises 2 of 6 editable fields end-to-end, the other four
+  only at the validation boundary; `staff_rating: null` (the explicit
+  clear-rating path) and the new `GET` endpoint's success/404 branches are
+  inspection-only, not automated. None of these falls inside
+  automatic-failure #10's actual scope (the auth *failure* case, which is
+  tested) and none contradicts the approved design, so none blocks this
+  verdict — carried forward to whoever next touches this surface, same as
+  `ENG-007`'s own plan did.
+
+  **Receipts written:** `agents/principal-engineer/reviews/ENG-008.md`
+  (pass, round 2) and `agents/qa/test-plans/ENG-008.md` — both `links.review`
+  and `links.test_plan` set on this ticket in the same pass.
+
+  **2 transitions** (`building → in-review → in-qa`), well under the cap of
+  4 — security is a separate hop by explicit config
+  (`machine_gates.sequential_after_quality`), needing QA's finished test
+  plan as its own input, so this pass stops here by design rather than
+  pushing further. **Consequence:** machine WIP unaffected — `ENG-008` was
+  and remains inside the counted `ready..ready-to-ship` range. Approver-
+  facing WIP and approval cap both unaffected — no gate raised (a machine
+  gate passing doesn't reach the approver).
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched;
+  `ENG-007`/`ENG-009`/`ENG-010`/`ENG-011`/`ENG-013` each have or will have
+  their own `continue` event. **Notify sweep:** nothing to raise (no gate
+  item written — machine gates don't notify) or nudge. **Observation
+  filed** (`observations.md`): independently reproducing every self-tested
+  number from the two prior passes (17/17 tests, 150 lint errors, the
+  mutation-tested regression) found zero discrepancies — worth one line as
+  a positive data point on this board's own self-report reliability so far.
+
+  `chained: ENG-008` — `in-qa` is agent-owned (security is the next gate,
+  a fresh session per `machine_gates.sequential_after_quality`) — not the
+  approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: see board index.
+
+- `2026-08-30` **security gate: PASS. Release-readiness confirmed. `in-qa →
+  in-security → ready-to-ship` — held there, not chained into opening the
+  PR, by the approver-facing WIP cap** (security, then devops — `continue`
+  event pass, context `ENG-008`, this ticket's turn at the front of
+  `traces/.pending`). Narrow scope per the event's own contract (resume
+  this ticket from its current state; no board-wide sweep). Mode check
+  clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml`
+  → `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-008`) and whole-board: both exit 0, clean.
+
+  **Read the actual diff fresh from both remotes, no worktree disruption.**
+  `aiorders-admin-hub` was on this ticket's own branch already; `aiorders-api`
+  was mid-flight on `ENG-013`'s branch, so read via `git fetch origin` then
+  `git diff origin/main...origin/feat/ENG-008-influencer-admin-management`
+  in each, same technique round 2's own review used on this identical
+  situation. Confirmed both branch heads match this ticket's frontmatter
+  exactly (`dc6972a`, `f2ea36c`) before reading anything.
+
+  **Threat-modelled the change, then walked OWASP A01–A10** (full detail in
+  the receipt). Traced the auth chain by hand rather than trusting the
+  design doc's claim: `authenticate()` in `admin-portal/index.ts`
+  (unmodified by this diff) verifies the JWT server-side via
+  `supabase.auth.getUser()`, then reads `role`/`additional_roles` from the
+  `profiles` table by the verified `user.id` — so `hasInfluencerAdminAccess`'s
+  input is server-derived, never a client-asserted claim. Independently
+  re-read `influencers.test.ts` in full and confirmed the 403 (non-admin,
+  any method) and 405 (DELETE, admin) cases are real, automated, and use a
+  throwing `Proxy` for `adminSupabase` so a wrongly-permissive branch would
+  fail loudly rather than silently pass — automatic-failure #10's own
+  concern, independently re-verified rather than trusted from QA's plan.
+
+  **One classification correction, not a blocking finding:** the new `GET`
+  endpoint's `select('*')` returns `email`/`phone` alongside the new
+  fields — real PII, so **Confidential** per `security-baseline.md`'s
+  table, not the design doc's own "business-internal" framing. Not new
+  exposure: the admin board's existing `fetchData()` already does the same
+  `select('*')` client-side, to the same or a broader audience, and this
+  new endpoint has no caller anywhere in this diff (grepped to confirm) —
+  a dormant route, gated at least as tightly as the display path it
+  parallels. Noted precisely in the receipt so it isn't lost, not treated
+  as a fresh gap.
+
+  **No blocking finding.** Secrets scan (diff + both branches' commit
+  messages) clean. No new dependency (`Checkbox`/`@radix-ui/react-checkbox`
+  confirmed pre-existing in `package.json`, already vendored). CORS
+  `Allow-Methods` widening and the raw `error.message`-on-500 pattern both
+  match precedent already accepted at `ENG-007`'s review, not new gaps this
+  diff introduces. No rate limit on `PATCH` — consistent with every other
+  `admin-portal` handler, lower stakes than `ENG-007`'s precedent (marketing
+  metadata, not a financial rate table) — not blocking.
+
+  **Receipt written**: `agents/security/reviews/ENG-008.md` (verdict pass).
+  `links.security_review` set on the ticket in the same write, per
+  `skills/security-gate/SKILL.md` step 9 (write on `pass` only).
+
+  **Release-readiness held in the same pass** (devops role,
+  `skills/release-runner/SKILL.md`): window check skipped (L1 — step 1
+  doesn't apply). Upstream gates re-verified present, not assumed: code
+  review pass (round 2), migration pass
+  (`agents/database/migrations/ENG-008-influencer-profile-admin-management.md`),
+  quality pass (17/17), security pass (above) — all four receipts exist and
+  are non-empty. Readiness checklist: **rollback** — drop the four new
+  columns, reasoned and traced (constraint semantics, backfill logic,
+  additive-only shape) but not live-drilled, same repo-wide host constraint
+  (no Docker/psql/supabase CLI reachable) `ENG-007`'s own release record
+  carried at this identical boundary and still reached a `pass` verdict on
+  release-readiness — followed that precedent rather than inventing a
+  stricter bar for a strictly lower-risk migration (four nullable/defaulted
+  `ADD COLUMN`s + one unconditional `UPDATE` on 306 rows, no `DROP`, no
+  function, no trigger). **Observability** — every unexpected-error branch
+  logs server-side via `console.error` before responding (confirmed in the
+  security review's own OWASP walk), through Supabase's existing
+  function-log mechanism, same as every other handler in this router.
+  **Cost** — $0/month delta, same Supabase project, no new service; no cost
+  notice required. Readiness checklist **passes**.
+
+  **Step 4 (route by autonomy, L1: open a PR and write the merge request)
+  deliberately not executed this pass.** Checked `agents/eng-manager/board/_index.md`
+  fresh before acting: approver-facing WIP is genuinely **2/2** (`ENG-016`,
+  `ENG-017`, both G1 scope gates raised 2026-08-29, both re-confirmed
+  unanswered by grepping `inbox/` for `^decision:` directly rather than
+  trusting the board table). `eng_build_loop.md`'s own Guards section names
+  an L1 PR awaiting merge as one of the three things that count against
+  this exact cap, and states plainly "at the limit, nothing new starts that
+  will need them" — opening `ENG-008`'s PR now would be exactly that: a
+  third concurrent item requiring the approver's attention while the one
+  lever they were given over this cap (2026-08-29, replacing the old
+  uncapped `approval_cap`) sits full. No stated carve-out for a ticket
+  already in flight before the cap filled (unlike machine WIP, which
+  explicitly grandfathers tickets in flight when its own limit changed) —
+  read the absence of that carve-out as deliberate rather than an
+  oversight, and held rather than guessed generously. Confirmed no PR
+  already existed in either repo first (`gh pr list --head
+  feat/ENG-008-influencer-admin-management --state all`, both repos: empty)
+  — this is a fresh hold, not a missed recovery.
+
+  **3 transitions** (`in-qa → in-security → ready-to-ship`), well under the
+  cap of 4 — the fourth possible transition (`ready-to-ship → blocked`, via
+  the PR) is exactly the one withheld above. **Consequence:** `machine_wip`
+  unaffected — `ENG-008` was and remains inside the counted
+  `ready..ready-to-ship` range (still 4, per the board's own header count).
+  Approver-facing WIP **unchanged at 2/2** — the entire point of holding
+  here. Approval cap: n/a (removed 2026-08-29).
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched;
+  `ENG-009`/`ENG-010`/`ENG-013` each have or will have their own `continue`
+  event. This ticket's own log now ends in a valid, accounted-for
+  machine-owned state with a reasoned, cap-justified hold — not a stall.
+
+  **Notify sweep:** nothing to raise (a machine gate passing doesn't reach
+  the approver) or nudge.
+
+  **Observation filed** (`observations.md`): first time on this board the
+  approver-facing WIP cap has been checked at the exact `ready-to-ship →
+  PR-open` boundary rather than at intake/G1 time — worth a pattern note
+  since `eng_build_loop.md` discusses this cap mostly in the context of new
+  starts, and this is a different, later place it binds.
+
+  `chained: none` — **held by the approver-facing WIP cap (2/2)**, one of
+  the explicit non-chain conditions (`eng_build_loop.md`: "held by a cap
+  (WIP or approvals) — it waits, and that wait is the design"). Firing
+  `continue ENG-008` again would only re-derive the same cap check; the
+  ticket resumes correctly once either `ENG-016` or `ENG-017` clears (the
+  `decision` event that answers either one is the natural trigger — no
+  polling needed) or the next `scheduled`/`watch` sweep finds the cap
+  freed. Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-008`) and whole-board: both exit 0, clean, no `WAIVED:` lines.

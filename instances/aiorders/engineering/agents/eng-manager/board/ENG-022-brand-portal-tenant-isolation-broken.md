@@ -265,3 +265,48 @@ not need this ticket to ship first, only to not repeat its bug.
   filed (`observations.md`) corroborating the open `proposals.md` race fix
   (2026-08-27 row: skip the launch when a `decision` event's named gate item
   is already in `_handled/`).
+
+- `2026-08-29` no state change (eng-manager, `continue` event pass, context
+  `ENG-022` — this fire's own turn at the front of `traces/.pending`, drained
+  after `continue ENG-013`). Narrow scope per this event's own contract —
+  this ticket only. Mode check clean (business-os `.env` → `MODE=` empty;
+  instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean.
+
+  Ticket sits at `designed`, owner `eng-manager`; per the design's own
+  no-one-way-door finding the next step is straight to `ready` (G2 doesn't
+  apply). Checked whether a machine-WIP slot is actually free rather than
+  trusting the board index: read `ENG-008`, `ENG-009`, `ENG-010`, `ENG-013`
+  frontmatter directly — `state: building`, `ready`, `ready`, `building`
+  respectively, all unchanged. Machine WIP is still 4/1, over the
+  2026-08-29-corrected cap of 1, none of the four has reached `shipped` yet.
+  The board's own header already names `ENG-022` inside the range
+  (`ENG-014` through `ENG-025`) that stays at its current backlog state
+  until the count drains — this pass's read matches that instruction exactly,
+  so `designed → ready` does not happen this pass.
+
+  Checked all three inboxes for anything filed against `ENG-022` specifically:
+  both prior gate items for this ticket (`2026-08-29-eng022-p0-incident.md`,
+  and `ENG-023`'s G1 which cross-references it) are already in `_handled/`.
+  One live item in `agents/eng-manager/inbox/`
+  (`2026-08-29-restaurant-detail-write-partner-exposure.md`) names `ENG-022`
+  only as a comparison point for a different file/ticket (`aiorders-admin-hub`
+  `restaurants.ts`, filed during `ENG-015`'s design) — already classified
+  out of scope by the `ENG-010` continue pass; re-confirmed, still correct,
+  not this event's ticket, left untouched.
+
+  **0 transitions.** State stays `designed`, owner stays `eng-manager`.
+  **Consequence:** machine WIP unaffected (still 4/1, over cap, draining
+  naturally); approver-facing WIP and approval cap both unaffected — no gate
+  touched.
+
+  **Dead-end sweep (scoped to this event):** nothing to resume — this is a
+  deliberate wait on a re-verified cap, not a stall. **Notify sweep:**
+  nothing to raise (no new gate item); nothing to nudge.
+
+  `chained: none` — held by the machine WIP cap (4/1, over cap; no new
+  ticket enters `ready` until it drains to ≤1). Re-check once one of
+  `ENG-008`/`ENG-009`/`ENG-010`/`ENG-013` reaches `shipped`. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-022`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.

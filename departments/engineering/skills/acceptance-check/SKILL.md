@@ -97,9 +97,9 @@ item, shape it the same way a brand-new intake would: new ticket, problem
 statement, PRD, acceptance criteria, non-goals, a recommendation — the
 complete `skills/prd-writer/SKILL.md` process, with no shortcut just because
 the shape already existed on paper — then raise its own G1 to `inbox/` like
-any other ticket. WIP and approval caps apply exactly as `eng_build_loop.md`
-specifies; if a cap is in the way, say so in the ticket log and leave it for
-the next pass rather than working around the cap.
+any other ticket. The WIP limit applies exactly as `eng_build_loop.md`
+specifies; if it's in the way, say so in the ticket log and leave it for
+the next pass rather than working around it.
 
 None of this is the department commissioning itself
 (`docs/engineering-team.md`, "The department cannot commission itself") — the

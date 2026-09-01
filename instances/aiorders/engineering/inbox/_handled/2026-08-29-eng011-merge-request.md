@@ -8,7 +8,8 @@ recommendation: merge — migration, code review, quality, and security all pass
 pr_url: "aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/3 | aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/3"
 raised: 2026-08-29
 notified: 2026-08-29T17:04:29
-decision:
+decision: approved
+decided: 2026-08-30T01:43:13.118048+00:00
 ---
 
 # Merge request — Client stage & health visibility on the Brands admin page (ENG-011)
@@ -59,3 +60,26 @@ advances the ticket once both are in.
 ## Decision
 
 Filled in by the approver.
+
+## Decision
+
+**approved** — 2026-08-30T01:43:13.118048+00:00
+
+merged
+
+---
+
+**Processed 2026-08-29**, `watch` event pass (context `schtasks`) — found
+this item still sitting in `inbox/` well after its own `decided:` timestamp;
+earlier same-day passes on `ENG-007` and `ENG-025` had each noticed it in
+passing and correctly left it for a pass whose own scope covered it. Not
+taken on the "merged" text alone: independently re-derived via `git
+merge-base --is-ancestor` in this department's own worktrees for **both**
+repos (`aiorders-api`, `aiorders-admin-hub`) against their respective
+`origin/main` — both confirmed merged. Deploy itself further confirmed live
+(not just merged) via the Supabase MCP connection (migration applied,
+`admin-portal` function redeployed and carrying the merged code) and GitHub
+Actions run status (`aiorders-admin-hub`'s Cloudflare Pages deploy). Ticket
+advanced `blocked → shipped`; full detail on the ticket's own log and
+`agents/devops/releases/2026-08-29-aiorders-admin-hub-ENG-011.md`. Journaled
+in `agents/eng-manager/config/decision-journal.md`.

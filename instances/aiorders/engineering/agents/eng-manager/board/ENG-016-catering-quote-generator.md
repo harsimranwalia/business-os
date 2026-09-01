@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P2
 priority: next
-state: shaped
-owner: product-manager
+state: awaiting-scope
+owner: approver
 lane: full
 blocked_on:
 blocked_from:
@@ -107,3 +107,47 @@ ready to raise the moment a WIP slot frees.
   work to do. Re-check on the next `decision`/`watch`/`scheduled` pass that
   clears `ENG-014` or `ENG-015`, or via a dedicated `continue ENG-016` once
   either does.
+
+- `2026-08-29` `shaped → awaiting-scope` (product-manager, `scheduled` event
+  pass, context `schtasks`). This is exactly the re-check this ticket's own
+  prior entry named: `ENG-014` and `ENG-015` have both since reached
+  `designed` (past their own G1s), confirmed fresh from each ticket's own
+  frontmatter rather than trusted from the board table — approver-facing
+  WIP is 0/2, fully free. Mode check clean (business-os `.env` → `MODE=`
+  empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-016`) and
+  whole-board: both exit 0, clean.
+
+  **Also corrected while re-checking the cap, not assumed from the board
+  header:** `agents/eng-manager/config/config.yaml` records `approval_cap`
+  as removed 2026-08-29 at the approver's request — the only real
+  approver-side lever left is `wip.approver_limit` (2). The board index's
+  repeated "Approval cap 3" framing is stale relative to that removal; fixed
+  in this pass's board update rather than propagated further.
+
+  No new readback needed — the G1 content was already fully drafted in the
+  PRD at `shaped` time (see PRD's own Decision section, now updated to
+  `status: awaiting-scope`). Raised
+  `inbox/2026-08-29-eng016-g1-scope.md`, ran
+  `departments/engineering/lib/eng-notify.sh raise` (logged
+  `SLACK_WEBHOOK_URL unset — cannot notify`, non-fatal per the script's own
+  design — the item still sits in `inbox/` and the control center), stamped
+  `notified: 2026-08-29T23:13:49`.
+
+  **Picked ahead of `ENG-017`/`ENG-019`/`ENG-020`/`ENG-021` per the board's
+  own dispatch ordering** (`eng_build_loop.md` step 6): `priority: next`
+  outranks the unset priority the other three carry; `ENG-018` excluded
+  outright (`priority: hold`). Exactly two free approver-facing WIP slots
+  and exactly two tickets ordered ahead of the rest (`ENG-016`, then
+  `ENG-017`) — both raised this pass, filling the cap to 2/2 without
+  exceeding it.
+
+  **1 transition** (`shaped → awaiting-scope`), well under the cap of 4 —
+  `awaiting-scope` is owned by the approver, this pass's own stopping
+  point. **Consequence:** approver-facing WIP 0/2 → 1/2 (this G1); machine
+  WIP unaffected (`awaiting-scope` sits outside the counted range).
+
+  `chained: none` — `awaiting-scope`, owned by the approver; the chaining
+  guard never fires on a ticket waiting on a human. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-016`) and
+  whole-board: see board index.

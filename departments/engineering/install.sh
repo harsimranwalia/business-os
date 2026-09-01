@@ -100,7 +100,10 @@ wip:
                         # before the next starts (the approver's correction,
                         # 2026-08-29; see departments/engineering/agents/eng-manager/config.yaml)
   approver_limit: 2    # items awaiting the approver at once
-  approval_cap: 3       # gates queued across the whole board
+  # No cap on decisions queued for the approver (awaiting_approver_cap /
+  # approval_cap, removed 2026-08-29) — that was a life-os holdover that
+  # doesn't apply here. approver_limit above is the one WIP lever on the
+  # approver's side.
 EOF
 
 # agents/eng-manager/config/, NOT config/. This emitted config/projects.md while
@@ -239,7 +242,7 @@ emit agents/eng-manager/board/_index.md <<'EOF'
 **Machine WIP 1** (`config/config.yaml` → `wip.machine_limit`) — counts states
 `ready` through `ready-to-ship`. One ticket in flight at a time, shipped
 before the next starts. **Currently 0/1.**
-**Approver-facing WIP 2 — currently 0/2. Approval cap 3 — currently 0/3.**
+**Approver-facing WIP 2 — currently 0/2.**
 
 `priority:` is a field on every ticket, and **only the approver sets it.** It is
 not `severity`, which is the agent's read of how bad a problem is.

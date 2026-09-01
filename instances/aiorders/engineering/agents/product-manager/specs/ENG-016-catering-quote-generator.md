@@ -1,7 +1,7 @@
 ---
 ticket: ENG-016
 project: config-site-builder
-status: draft
+status: awaiting-scope
 size: L
 author: product-manager
 created: 2026-08-29
@@ -327,11 +327,10 @@ catering-specific pricing model, or wiring this into the general
 
 ## Decision
 
-Not yet raised. **Held at `shaped`, not advanced to `awaiting-scope` this
-pass** — the approver-facing WIP cap (2) is currently full (`ENG-014`,
-`ENG-015`, both still open), and this ticket's own path runs through G1.
-Will raise G1 once one of those two clears; see the ticket's own log for
-the fresh cap check made before this decision.
+**Raised** 2026-08-29 (`scheduled` event pass, context `schtasks`) —
+`ENG-014` and `ENG-015` have both since cleared their own G1s (both at
+`designed`), freeing the approver-facing WIP cap (2) back to 0/2. G1 sent:
+`inbox/2026-08-29-eng016-g1-scope.md`. Awaiting the approver's decision.
 
 - **The approver's answer:** —
 - **Date:** —

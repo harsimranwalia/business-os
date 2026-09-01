@@ -10,7 +10,7 @@ time_remaining:
 severity: P2
 priority:
 state: designed
-owner: architect
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
@@ -23,7 +23,7 @@ blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-025-feedback-recurring-issues.md
-  design:
+  design: agents/architect/designs/ENG-025-feedback-recurring-issues.md
   adrs: []
   review:
   test_plan:
@@ -241,3 +241,96 @@ Append-only. One line per state transition, newest last.
   before this pass exits. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-025`) and
   whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
+
+- `2026-08-29` `designed → designed` (architect, `continue` event pass,
+  context `ENG-025`) — narrow scope per this event's own contract (resume
+  this ticket from its current state; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=` empty; instance `config/config.yaml` →
+  `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-025`) and whole-board: both exit 0, clean.
+
+  **Incidental discovery, not reconciled here.** `ENG-007`'s own ticket file
+  now reads `state: shipped` (`blocked → shipped`, "control center, merge
+  detected... recorded on Harry's say-so; ancestry not consulted") though
+  `_index.md`'s header and In-flight table still show it `blocked` — that
+  transition happened outside this pass, by a human dashboard action, not by
+  a build-loop write. `inbox/2026-08-29-eng007-merge-request.md` carries no
+  `decision:` field, so its gate item is also not yet resolved/archived to
+  match. Same shape as the `ENG-011` discovery `ENG-007`'s own pass logged
+  earlier today — flagged as an observation (`observations.md`) rather than
+  reconciled, out of scope for a ticket-scoped `continue ENG-025` pass; pre-
+  and post-pass whole-board gate checks both ran clean regardless.
+
+  Did the architect's design work this ticket's prior entry deferred to a
+  dedicated session. Read `restaurant-portal` fresh from its `_eng` worktree
+  (`eng/base`, clean, 2 commits behind `origin/main` — both unrelated CI/
+  deploy-workflow commits, confirmed via `git log b3a81ef..origin/main`
+  before fast-forwarding; safe, no risk to this design). Read
+  `src/pages/feedback/Index.tsx` in full: confirmed the PRD's Evidence
+  claims firsthand — flat list plus exactly two aggregate stats (total
+  count, average rating), fetches the restaurant's entire feedback history
+  in one call, no per-category breakdown exists today. Read
+  `src/services/brandPortalApi.ts`'s `RestaurantFeedback` interface:
+  `sub_type`/`nature` both nullable, `type` non-null — confirms a `sub_type
+  ?? type` fallback is needed for grouping. Read `aiorders-api`'s
+  `brand-portal/feedback.ts`, `catering.ts`, and `utils.ts` (worktree
+  sitting on `ENG-008`'s branch; `git diff origin/main...HEAD --stat`
+  confirmed that branch touches only `admin-portal/handlers/influencers.ts`
+  and its own migration, nowhere near `brand-portal/`, so safe to read
+  without switching branches) to confirm the PRD's access-check warning
+  firsthand rather than trusting its wording: `feedback.ts`'s `getFeedback`
+  calls `verifyRestaurantAccess(supabase, user.id, restaurant_id)` (wrong
+  argument order against `utils.ts`'s real signature) and checks the
+  returned object's truthiness (`if (!hasAccess)`, always false on an
+  object) instead of `.hasAccess` — confirmed live, same bug class
+  `ENG-022` is already scoped to fix, and confirmed **not** one this
+  design's own change touches or depends on (see below).
+
+  **Design conclusion: no backend change needed.** All three acceptance
+  criteria are answerable from data the page already has in the browser —
+  `sub_type`/`nature`/`type` are already present on every fetched row, and
+  the existing call already returns full history with no date filter. Wrote
+  `agents/architect/designs/ENG-025-feedback-recurring-issues.md`: one new
+  exported pure function (`groupRecurringIssues`) plus one new "Recurring
+  Issues" `Card` section, both in `Index.tsx`, no new file, no new backend
+  action, no new table/column/migration, no one-way door, no G2, no ADR.
+  Documented three of my own design calls the PRD explicitly left open
+  (count-≥-2 recurrence threshold, all-time windowing, keeping the helper
+  inline rather than a new module) under Approach/Alternatives rather than
+  deciding them silently.
+
+  **State stays `designed`** — exit condition (tech design written) is now
+  met, but the flip to `ready` belongs to whichever pass finds machine WIP
+  clear, same convention `ENG-014`'s and `ENG-015`'s own entries used.
+  **`owner: architect → eng-manager`.** **Not chained** — machine WIP
+  verified fresh immediately before this decision, each ticket's own
+  `state:` field read directly rather than trusting `_index.md`'s header:
+  `ENG-007` `shipped` (outside range, see discovery above), `ENG-008`
+  `building`, `ENG-009` `ready`, `ENG-010` `ready`, `ENG-011` `blocked`
+  (outside range), `ENG-013` `building` — 4/1 (`ENG-008`, `ENG-009`,
+  `ENG-010`, `ENG-013`), still over the one-ticket cap. `chained: none` —
+  held by the machine WIP cap.
+
+  **0 net board consequence**: `machine_wip` unaffected (still 4/1 —
+  `designed` sits outside the counted `ready`...`ready-to-ship` range);
+  approver-facing WIP and approval cap both unaffected by this ticket's own
+  transition (this pass did not touch either cap's count — the `ENG-007`
+  discovery above is noted, not acted on). In-flight table's `ENG-025` row:
+  Owner column updated to `eng-manager`, State unchanged.
+
+  **Dead-end sweep (scoped to this event):** no other action needed on
+  `ENG-025` itself.
+
+  **Notify sweep:** nothing to raise — this pass produced a design doc, not
+  a gate item. Nothing with `notified:` older than 24h and no `decision:`
+  found in this event's narrow scope — nothing to nudge.
+
+  **Observation filed** (`observations.md`): the `ENG-007`/control-center
+  discovery above.
+
+  `chained: none` — `designed`, held by the machine WIP cap (4/1). Resume
+  happens when a future pass finds the cap clear. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-025`) and
+  whole-board: both run clean, no `WAIVED:` lines. Board holds four dated
+  entries once this one is added — oldest (`ENG-014`) moved to
+  `_index-archive.md`, per the keep-three rule.

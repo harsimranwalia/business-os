@@ -909,11 +909,10 @@ function renderEng() {
     return;
   }
   const s = d.stats;
-  const overCap = s.waiting_on_harry >= s.approval_cap;
   let h = '';
 
   h += '<div class="stats">' +
-    `<div class="stat${overCap ? ' over' : ''}"><b>${s.waiting_on_harry}/${s.approval_cap}</b>waiting on you</div>` +
+    `<div class="stat"><b>${s.waiting_on_harry}</b>waiting on you</div>` +
     `<div class="stat"><b>${s.in_flight}/${s.machine_limit}</b>in flight</div>` +
     `<div class="stat"><b>${s.open_bugs}</b>open bugs</div>` +
     `<div class="stat"><b>${s.shipped_recent}</b>verified</div>` +

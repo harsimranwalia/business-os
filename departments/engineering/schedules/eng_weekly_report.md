@@ -72,14 +72,11 @@ Sections, in this order:
    reply back, bucket **G2** — which fires a pass immediately. The build
    loop's step 4 turns each approved row into a ticket.
 
-   **This item does not count against the approval cap, and gets no 24h nudge.**
-   Both are deliberate exceptions to how every other gate item is handled. The
-   cap exists to stop finished work piling up on the approver — a proposal is
-   not finished work, nothing is blocked behind it, and letting a weekly menu
-   consume one of three approval slots every week would starve the gates that
-   actually hold shipped code. The nudge is skipped for the same reason: there
-   is nothing to chase. It appears once, it expires at 30 days, and that is
-   the whole mechanism.
+   **This item gets no 24h nudge.** A proposal is not finished work and
+   nothing is blocked behind it, so it doesn't behave like a real gate
+   decision competing for the approver's attention — there is nothing to
+   chase. It appears once, it expires at 30 days, and that is the whole
+   mechanism.
 
 4. **Blocked** — anything blocked on an agent past 5 working days, framed as a
    decision: unblock it or kill it. (Tickets blocked on the approver appear

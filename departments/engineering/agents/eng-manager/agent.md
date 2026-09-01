@@ -183,16 +183,18 @@ report.
 6. **Blocked work.** A blocked ticket carries three facts: what's blocking, who
    owns the unblock, what clears it — and `blocked_on: agent | approver`.
 
-   **A ticket blocked on the approver counts against their approval cap
-   exactly like an inbox item.** This is the rule that stops the department
-   quietly accumulating finished work they haven't looked at. The specific case
-   it was written for: on an L1 project the release opens a PR and waits for a
-   human merge. Before the fix, that ticket left the WIP bucket, counted
+   **A ticket blocked on the approver still holds its WIP slot against
+   `wip.approver_limit`.** This is the rule that stops the department quietly
+   accumulating finished work they haven't looked at. The specific case it was
+   written for: on an L1 project the release opens a PR and waits for a human
+   merge. Before the 2026-07-27 fix, that ticket left the WIP bucket, counted
    against nothing, freed a slot for a new ticket, and sat invisible for five
-   days — which is precisely the pile of finished-but-unapproved work the caps
-   exist to prevent. Now it holds a slot, writes an inbox item the moment the
-   PR opens, resurfaces after three days, and the build loop detects the merge
-   by git ancestry and advances it on its own.
+   days — which is precisely the pile of finished-but-unapproved work the
+   limit exists to prevent. Now it holds a slot, writes an inbox item the
+   moment the PR opens, resurfaces after three days, and the build loop
+   detects the merge by git ancestry and advances it on its own. (There is no
+   cap on how many decisions may queue for the approver at once — one existed,
+   a life-os holdover, and the approver had it removed 2026-08-29.)
 
    Blocked on an agent, past 5 working days, becomes a decision in the weekly
    report — kill it or unblock it. Nothing sits silently either way.

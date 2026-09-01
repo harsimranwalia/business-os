@@ -271,3 +271,94 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
   whole-board: both exit 0, clean. Also recorded on the board index
   (`_index.md`, matching dated entry).
+
+- `2026-08-29` **approver override, filed by hand in an interactive session —
+  not a department pass.** Same instruction and reasoning as the matching
+  entry just added to `ENG-009`'s log this same moment: run `ENG-009` and
+  `ENG-010` next, ahead of `ENG-008` finishing its `in-review` gate, instead
+  of letting `.pending` work through several unrelated fires queued ahead
+  of all four tickets first. `priority: → next` set directly by the
+  approver. `traces/.pending` reordered by hand to `continue ENG-009,
+  continue ENG-010, continue ENG-008, continue ENG-013` at the front, rest
+  of the prior queue preserved behind them.
+
+  **Known risk, same as ENG-009's:** this ticket's own design also extends
+  the same not-yet-created handler file `ENG-008` (still `building`, not
+  yet `in-review`) is building against — the conflict the sequencing hold
+  exists to prevent hasn't actually cleared. Approver's call to accept that
+  risk; if it surfaces, it's a rebase, not a bug. No other field changed;
+  state stays `ready`, owner stays `eng-manager`.
+
+- `2026-08-29` **approver reversal, same interactive session, minutes
+  later.** Matching `ENG-009`'s own entry just added: new instruction is to
+  clear the `building`/`in-review` queue (`ENG-008`, `ENG-013`) before
+  going to `ready` tickets, superseding (not deleting) the override just
+  above. `priority: next → ` (empty), reverted to match the original
+  sequencing hold's own logic. `traces/.pending` reordered by hand to
+  `continue ENG-008, continue ENG-013, continue ENG-009, continue ENG-010`.
+  State stays `ready`, owner stays `eng-manager` — back to simply waiting
+  behind `ENG-008`.
+
+- `2026-08-29` `continue ENG-010`: sequencing hold re-checked, still unmet,
+  `ready → ready` (no chain) (eng-manager, `continue` event pass, context
+  `ENG-010` — draining the approver's hand-reordered queue, last of the four
+  (`ENG-008`, `ENG-013`, `ENG-009` already worked this pass sequence)).
+  Narrow scope per this event's own contract (resume this ticket from its
+  current state; no board-wide sweep). Mode check clean (business-os `.env`
+  → `MODE=` empty; instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+  whole-board: both exit 0, clean.
+
+  **Re-checked the sequencing hold's own condition rather than assuming it
+  still holds — same check just run for `ENG-009`, same result.** This
+  ticket sits at `ready`, held pending `ENG-008` reaching `in-review` or
+  later — both tickets' designs extend the same not-yet-created
+  `admin-portal/handlers/influencers.ts`. Read `ENG-008`'s own frontmatter
+  and ticket-log tail directly rather than trusting this board's In-flight
+  table: `state: building`, latest entry confirms round-1's test gap was
+  closed this same pass sequence (`aiorders-api@dc6972a`) and round-2 code
+  review is next, but it has not yet reached `in-review`. The hold's
+  condition is therefore still unmet. Checked `agents/eng-manager/inbox/`,
+  `agents/product-manager/inbox/` and `inbox/` for anything newly filed
+  against `ENG-010` specifically — none found (the one item sitting in
+  `agents/eng-manager/inbox/`, `2026-08-29-restaurant-detail-write-partner-
+  exposure.md`, is unrelated to this ticket, out of scope for this event).
+
+  **0 transitions.** State stays `ready`, owner stays `eng-manager`,
+  `priority` stays empty (per the approver's own reversal recorded above).
+  **Consequence:** machine WIP unaffected — verified fresh from each
+  counted ticket's own `state:` field: `ENG-008` `building`, `ENG-009`/
+  `ENG-010` `ready`, `ENG-013` `building` — still 4/1, over the new cap,
+  draining naturally per the board header. Approver-facing WIP and approval
+  cap both unaffected — no gate touched.
+
+  **Dead-end sweep (scoped to this event):** nothing to resume — this is a
+  deliberate wait with a re-verified condition, not a stall. `ENG-008`
+  (the dependency) is already chained and progressing under its own event.
+  **Notify sweep:** nothing to raise (no new gate item); nothing to nudge.
+
+  `chained: none` — held for sequencing, unchanged from the prior entry:
+  `ENG-008` has not yet reached `in-review`. Re-check once it does. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-08-29` sequencing hold re-checked, still correctly held — the
+  ticket ahead of it changed, not the outcome (eng-manager, `scheduled`
+  event pass, context `schtasks`, whole-board sweep). `ENG-008` itself has
+  now reached `in-qa` (past `in-review`), so the letter of this ticket's
+  own stated condition is technically met — but this ticket's own `## Notes`
+  names it explicitly as **last of the three** influencer tickets,
+  sequenced behind `ENG-009` as well as `ENG-008` (same admin-UI file,
+  `src/pages/Influencers.tsx`). `ENG-009`'s hold was lifted this same pass
+  (see its own log) but it has not built yet — `state: ready`, no branch.
+  This ticket's hold therefore still applies, now keyed on `ENG-009`
+  reaching `in-review` or later rather than `ENG-008`.
+
+  **0 transitions.** State stays `ready`, owner stays `eng-manager`.
+  **Consequence:** machine WIP unaffected — already inside the counted
+  range.
+
+  `chained: none` — held for sequencing: re-check once `ENG-009` reaches
+  `in-review` or later. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.

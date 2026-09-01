@@ -46,11 +46,6 @@ Starting a third parallel ticket produces a queue of finished-but-unapproved
 work landing on the approver, which is the failure this department was built
 to prevent.
 
-Also check `wip.awaiting_approver_cap` (default 3). It counts open G1/G2/G3
-items **and** every ticket blocked on the approver — including L1 PRs waiting
-to be merged. At the cap, don't start anything new and don't advance anything
-into a gate state.
-
 ### 2. Split by surface, not by layer of effort
 
 One sub-ticket per owning agent per coherent unit of work:
@@ -118,7 +113,7 @@ before and after, anything held at `ready` and why.
 ## Failure modes to avoid
 
 - **Breaking the WIP limit** because the work "feels parallel". It isn't; the
-  approver's approval capacity is the real constraint.
+  approver's WIP limit is the real constraint.
 - **Sub-tickets that span two agents.** Split again.
 - **Assigning work with an open question in it.** Send it back to design instead.
 - **Sequencing by convenience** rather than by dependency — the frontend building

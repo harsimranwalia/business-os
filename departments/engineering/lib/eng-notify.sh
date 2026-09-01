@@ -14,8 +14,6 @@
 #   1. one message when it's raised
 #   2. one nudge if it's still unanswered after 24h
 #   3. nothing else — after that it rides the daily brief and weekly report
-# Plus one message if the board actually stalls (approval cap reached), because
-# that is a state change, not a reminder.
 #
 # This system exists to be a counterweight to the approver's attention, not an
 # amplifier. Three pings is not urgency; a ping every hour would be.
@@ -23,7 +21,6 @@
 # Usage:
 #   eng-notify.sh raise <inbox-file>     first notice
 #   eng-notify.sh nudge <inbox-file>     the 24h follow-up
-#   eng-notify.sh stall                  approval cap reached, board stopped
 
 set -uo pipefail
 
@@ -71,9 +68,8 @@ except Exception as e:
   fi
 }
 
-# How many decisions are already waiting? the approver needs to know whether this is
-# one of one or three of three — it's the difference between "when you get a
-# minute" and "the board has stopped".
+# How many decisions are already waiting? Context for the approver — one thing
+# to look at reads differently from five.
 waiting_count() {
   local n=0
   # `for f in "$INBOX"/*.md` with a -f guard, not zsh's (N) glob qualifier:
@@ -88,18 +84,6 @@ waiting_count() {
 }
 
 fm() { grep -m1 "^$1:" "$ITEM" 2>/dev/null | sed "s/^$1:[[:space:]]*//"; }
-
-if [ "$MODE" = "stall" ]; then
-  OLDEST=$(ls -t "$INBOX"/*.md 2>/dev/null | tail -1)
-  post ":octagonal_sign: *Engineering — the board has stopped*
-
-All 3 approval slots are full, so the department has stopped taking on new work until you clear one. Nothing is broken; it is waiting on you.
-
-Oldest: \`$(basename "${OLDEST:-none}" .md)\`
-
-Reply \`approve {TICKET}\` / \`reject {TICKET}\` / \`changed {TICKET}: what to change\`, or open the Engineering tab."
-  exit 0
-fi
 
 [ -f "$ITEM" ] || { echo "[$(date '+%H:%M:%S')] no such item: $ITEM" >> "$LOG"; exit 0; }
 
@@ -118,11 +102,12 @@ esac
 
 # The most useful line in the message: what happens if he does nothing. Without
 # it, every notification reads as equally urgent, which is how a system starts
-# manufacturing urgency.
-if [ "$N" -ge 3 ]; then
-  CONSEQUENCE="*The board has stopped* — 3 of 3 approval slots used. Nothing new starts until you clear one."
+# manufacturing urgency. No hard cap on how many decisions may queue — just an
+# honest count of what's waiting.
+if [ "$N" -gt 1 ]; then
+  CONSEQUENCE="If you do nothing: this ticket waits, the rest of the board keeps moving. ${N} decisions waiting on you right now."
 else
-  CONSEQUENCE="If you do nothing: this ticket waits, the rest of the board keeps moving. ${N} of 3 approval slots used."
+  CONSEQUENCE="If you do nothing: this ticket waits, the rest of the board keeps moving."
 fi
 
 PREFIX=""

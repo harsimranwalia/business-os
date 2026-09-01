@@ -73,7 +73,7 @@ for eng in "$BUSINESS_OS_ROOT"/instances/*/engineering; do
 Run the engineering department's weekly report pass.
 
 This is NOT an eng-trigger.sh event — there is no ticket, no chaining, no WIP
-or approval cap in play. Do not touch any ticket's state and do not act on any
+limit in play. Do not touch any ticket's state and do not act on any
 gate; this pass reads the board and writes a report, nothing else.
 
 WHERE THINGS LIVE. There are TWO roots, and every relative path in the

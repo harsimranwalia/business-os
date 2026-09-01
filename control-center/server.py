@@ -386,7 +386,7 @@ def list_engineering(instance_id=None):
         return {"instance": None, "instances": [], "tickets": [], "by_state": {},
                 "states": ENG_STATES, "bugs": [], "waiting": [], "blocked_on_harry": [],
                 "deciding": [], "submitted": [],
-                "stats": {"waiting_on_harry": 0, "approval_cap": 0, "in_flight": 0,
+                "stats": {"waiting_on_harry": 0, "in_flight": 0,
                           "machine_limit": 0, "open_bugs": 0, "shipped_recent": 0},
                 "empty": "No engineering instance yet — run departments/engineering/install.sh "
                          "to onboard a business."}
@@ -509,8 +509,17 @@ def list_engineering(instance_id=None):
     in_flight = [t for t in tickets
                  if t["state"] in {"ready", "building", "in-review", "in-qa",
                                    "in-security", "ready-to-ship"}]
+    # A ticket blocked on the approver (e.g. an L1 merge request) already has
+    # its own inbox item — in `waiting` while undecided, in `deciding` once
+    # answered but not yet cleared (merge not detected/marked yet). Either way
+    # that item IS the decide card. Without this filter the same PR showed
+    # twice: once here, once in the inbox-item list. Only show a ticket here
+    # when it's blocked on the approver for something that never got an inbox
+    # item (a risk acceptance, a direct question) — nothing else surfaces it.
+    inbox_item_tickets = {w["ticket"] for w in waiting + deciding if w.get("ticket")}
     blocked_on_harry = [t for t in tickets
-                        if t["state"] == "blocked" and t["blocked_on"] == "approver"]
+                        if t["state"] == "blocked" and t["blocked_on"] == "approver"
+                        and t["id"] not in inbox_item_tickets]
 
     limits = eng_limits(inst)
     return {
@@ -531,7 +540,6 @@ def list_engineering(instance_id=None):
         "activity": eng_activity(inst),
         "stats": {
             "waiting_on_harry": len(waiting) + len(blocked_on_harry),
-            "approval_cap": limits["approval_cap"],
             "in_flight": len(in_flight),
             "machine_limit": limits["machine_limit"],
             "open_bugs": len(bugs),
@@ -700,7 +708,7 @@ def eng_merge_check(ticket_id, force=False, instance_id=None):
     for f in inst["inbox"].glob("*.md"):
         t = f.read_text()
         if re.search(rf"^ticket:[ \t]*{ticket_id}\s*$", t, re.MULTILINE) and \
-           re.search(r"^gate:[ \t]*merge-request", t, re.MULTILINE):
+           re.search(r"^gate:[ \t]*merge\s*$", t, re.MULTILINE):
             handled.mkdir(parents=True, exist_ok=True)
             f.write_text(re.sub(r"^decision:[ \t]*$", "decision: merged", t,
                                 count=1, flags=re.MULTILINE))
@@ -745,10 +753,14 @@ def eng_decide(filename, decision, note, instance_id=None):
 
 
 def eng_limits(inst):
-    """Read the WIP and approval caps from this instance's config rather
-    than hardcoding. business-os's own vocabulary (`approver_limit`,
-    `approval_cap`) — "harry" isn't a word a shared template can use."""
-    defaults = {"approver_limit": 2, "machine_limit": 6, "approval_cap": 3}
+    """Read the WIP limits from this instance's config rather than
+    hardcoding. business-os's own vocabulary (`approver_limit`) — "harry"
+    isn't a word a shared template can use. There is deliberately no cap on
+    how many decisions may be waiting at once (the awaiting-approver queue
+    cap was a life-os holdover business-os doesn't use, removed 2026-08-29) —
+    `approver_limit` is the one WIP lever on the approver's side, and it's a
+    limit on tickets in flight, not on decisions queued."""
+    defaults = {"approver_limit": 2, "machine_limit": 6}
     cfg = inst["config"]
     if not cfg.exists():
         return defaults

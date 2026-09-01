@@ -10,7 +10,7 @@ time_remaining:
 severity: P1
 priority:
 state: designed
-owner: architect
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
@@ -23,7 +23,7 @@ blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-015-agency-reseller-brand-scoping.md
-  design:
+  design: agents/architect/designs/ENG-015-agency-reseller-brand-scoping.md
   adrs: []
   review:
   test_plan:
@@ -336,3 +336,99 @@ Append-only. One line per state transition, newest last.
   pass's unfulfilled one. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
   whole-board: exit 0, clean.
+
+- `2026-08-29` `designed` (no state change; `owner: architect → eng-manager`),
+  `continue` event pass, context `ENG-015` — the fire the immediately-preceding
+  pass re-queued, now reaching the lock. Narrow scope per this event's own
+  contract (resume this ticket from its current state; no board-wide sweep).
+  Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: both exit 0, clean.
+
+  **Did the architect's own design work this ticket had twice deferred to a
+  dedicated session** (the `watch` and `decision` passes above both said so
+  explicitly). Read both repos fresh from the `_eng` worktrees
+  (`aiorders-api` and `aiorders-admin-hub`, both sitting on `ENG-008`'s
+  branch; confirmed via `git diff origin/main...HEAD --stat` in each that
+  branch touches only `admin-portal/handlers/influencers.ts`,
+  `admin-portal/index.ts` and one influencer migration in the API repo and
+  only `Influencers.tsx` in the admin-hub repo — none of it anywhere near
+  `restaurants`/`brands`, so safe to read without switching branches, same
+  reasoning `ENG-014`'s design pass used).
+
+  Traced the two confirmed defects to the exact lines the PRD's Evidence
+  paragraph names (`getRestaurants()`'s unconditional `adminSupabase` call;
+  `restaurants`' only `INSERT`-capable policies excluding both partner
+  roles) and went further where the file itself demanded it: `getRestaurantById()`,
+  in the same file, has the identical unconditional-service-role shape and
+  is reachable directly by id, so it's fixed alongside `getRestaurants()`
+  rather than left as a same-shaped hole next to the one being closed.
+  Confirmed `brands.partner_id` is real and live (`aiorders-admin-hub`'s
+  generated `types.ts`: `brands_partner_id_fkey`, nullable uuid) but that
+  neither it nor any policy on `public.brands` appears anywhere in
+  `aiorders-api`'s tracked migration history — the table predates tracked
+  migrations entirely, a wider version of the untracked-schema gap the PRD
+  already named for `profiles`. Confirmed `AddRestaurantModal.tsx`'s
+  unconditional `approved: true` is the exact acceptance-criterion-5 gap and
+  traced its actual insert path (direct client-side `.insert()`, RLS-scoped,
+  not through the edge function) to size the fix correctly as an RLS
+  `WITH CHECK` plus a frontend conditional, not a backend-only change.
+
+  **Found and did not fix a third, adjacent exposure**: `updateRestaurant()`
+  and `updateBrandOwner()`, same file, same unconditional-`adminSupabase`
+  shape, reachable today via `RestaurantDetails.tsx`
+  (`/restaurants/:id/details`) and `Activation.tsx`
+  (`/restaurants/:id/activation`) — neither route carries a partner-specific
+  block in `ProtectedRoute.tsx` the way `/influencers`/`/billing` do. This is
+  a write capability the PRD never named or investigated, and its own
+  non-goals explicitly cap this ticket to "the two confirmed gaps" — filed
+  as a finding rather than folded in or silently dropped:
+  `agents/eng-manager/inbox/2026-08-29-restaurant-detail-write-partner-exposure.md`
+  (`agent: architect`, `type: finding`, `severity: P1` — a real but
+  workaround-shaped exposure, not the "production down / actively
+  exploited" bar the P0 carve-out in `schedules/eng_build_loop.md` step 3
+  requires, so it goes through the normal proposal path, not straight to a
+  ticket). One observation also filed (`observations.md`): whether the
+  Brands page itself already scopes to a partner's own brands is
+  unconfirmed, for the same untracked-`brands`-RLS reason — not chased
+  further, since the PRD names Restaurants, not Brands, as the leaking page.
+
+  **Wrote the design**:
+  `agents/architect/designs/ENG-015-agency-reseller-brand-scoping.md`.
+  `touches_data: true` (two additive RLS policies on `public.restaurants`,
+  no new column), `touches_models: false`, `one_way_doors: []`, `adrs: []` —
+  extending an existing role and an existing ownership column into the one
+  handler file and one insert path that missed them, the same verdict
+  `ENG-022` reached for the same shape of fix; no G2 needed. Full
+  alternatives-considered, risk list (including the two findings above and
+  the "no live Postgres on this host" test-coverage gap `ENG-007`/`ENG-011`
+  already put on record), and QA's manual-verification checklist are in the
+  design doc itself, not duplicated here.
+
+  **Machine WIP checked fresh before deciding anything else** — read each
+  counted ticket's own `state:` field directly rather than trusting the
+  board's prose: `ENG-007` `ready-to-ship`, `ENG-008` `building`, `ENG-009`
+  `ready`, `ENG-010` `ready`, `ENG-013` `building` (`ENG-011` `blocked`, not
+  counted in the `ready`...`ready-to-ship` range) — **5/1, still over the
+  corrected one-ticket cap**, unchanged since `ENG-014`'s own design pass
+  found the same count. Per the board's own header, no new ticket enters
+  `ready` until this clears.
+
+  **State stays `designed`** — its exit condition (a written design) is now
+  met, but the flip to `ready` belongs to whichever pass finds the cap
+  clear. **`owner: architect → eng-manager`**, naming the next actor, same
+  convention `ENG-014`'s equivalent entry used. **Not chained** — held by
+  the machine WIP cap, verified fresh above rather than assumed from the
+  board header. `chained: none` — held by cap.
+
+  **0 net board consequence**: `machine_wip` unaffected (still 5/1 —
+  `designed` sits outside the counted range); approver-facing WIP and
+  approval cap both unaffected. In-flight table's `ENG-015` row: Owner
+  column to `eng-manager`, State unchanged.
+
+  **Dead-end sweep (scoped to this ticket only, per this event's own
+  contract):** no other action needed on `ENG-015` itself.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-015`) and whole-board: both exit 0, clean, no `WAIVED:` lines.

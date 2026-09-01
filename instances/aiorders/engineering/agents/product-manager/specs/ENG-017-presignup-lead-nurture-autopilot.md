@@ -1,7 +1,7 @@
 ---
 ticket: ENG-017
 project: aiorders-api
-status: draft
+status: awaiting-scope
 size: L
 author: product-manager
 created: 2026-08-29
@@ -242,12 +242,12 @@ build a new outbound channel — see Non-goals.
 
 ## Decision
 
-Not yet raised. **Held at `shaped`, not advanced to `awaiting-scope` this
-pass** — the approver-facing WIP cap (2) is currently full (`ENG-014`,
-`ENG-015`, both still open) per `eng_build_loop.md`'s Guards. Will raise G1
-once a slot frees; see the ticket's own log for the fresh cap check made
-before this decision. Filed alongside `ENG-018` (the demonstration-account
-half of the same raw request) — see that PRD for the sibling scope.
+**Raised** 2026-08-29 (`scheduled` event pass, context `schtasks`) —
+`ENG-014` and `ENG-015` have both since cleared their own G1s (both at
+`designed`), freeing the approver-facing WIP cap (2) back to 0/2. G1 sent:
+`inbox/2026-08-29-eng017-g1-scope.md`. Awaiting the approver's decision.
+Filed alongside `ENG-018` (the demonstration-account half of the same raw
+request) — see that PRD for the sibling scope.
 
 - **The approver's answer:** —
 - **Date:** —

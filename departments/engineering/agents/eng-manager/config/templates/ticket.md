@@ -98,8 +98,7 @@ review round) also carries elapsed time and a revised remaining estimate — see
   in the pipeline, not a shortcut.
 - **`blocked` requires `blocked_on` set and three things in the log:** what's
   blocking, who owns the unblock, and what condition clears it. `blocked_on:
-  approver` counts against the approval cap and holds its WIP slot — see
-  `definition-of-done.md`.
+  approver` holds its WIP slot — see `definition-of-done.md`.
 - **`blocked` also requires `blocked_from`, written on entry and read on the way
   out.** It holds the state the ticket left — `building`, `in-review`,
   `in-security`, whatever it was. Set it in the same write that sets `state:

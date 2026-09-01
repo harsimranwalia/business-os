@@ -308,14 +308,17 @@ that only grows is the same backlog with a different filename.
 There is a fourth thing that reaches the approver, and it is not a gate: on
 an **L1** project the release opens a PR and asks a human to merge it. That's
 a **merge request** — the ticket goes `blocked` with `blocked_on: approver`,
-keeps its WIP slot, counts against the approval cap, resurfaces after three
-days, and the build loop detects the merge itself by local git ancestry.
-Three of five registered projects are L1, so this is the common path.
+keeps its WIP slot, resurfaces after three days, and the build loop detects
+the merge itself by local git ancestry. Three of five registered projects
+are L1, so this is the common path.
 
 It's called out because it was originally missing: an L1 release just set
-`blocked` and stopped, which freed a WIP slot, counted against nothing, and
-let the department accumulate an invisible pile of finished work waiting on
-the approver — precisely what the caps exist to prevent. Fixed 2026-07-27.
+`blocked` and stopped, which freed a WIP slot and let the department
+accumulate an invisible pile of finished work waiting on the approver.
+Fixed 2026-07-27. (There is deliberately no cap on how many decisions may be
+queued for the approver at once — business-os doesn't ration the approver's
+queue the way an inherited life-os limit once did, removed 2026-08-29. The
+one WIP lever on the approver's side is `wip.approver_limit`.)
 
 **Five machine gates. The approver is never involved.**
 

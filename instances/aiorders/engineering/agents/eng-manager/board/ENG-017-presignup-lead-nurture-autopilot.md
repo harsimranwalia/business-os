@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P2
 priority:
-state: shaped
-owner: product-manager
+state: awaiting-scope
+owner: approver
 lane: full
 blocked_on:
 blocked_from:
@@ -209,3 +209,35 @@ Append-only. One line per state transition, newest last.
   `ENG-015`, or via a dedicated `continue ENG-017` once either does. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-017`) and
   whole-board: both exit 0, clean.
+
+- `2026-08-29` `shaped → awaiting-scope` (product-manager, `scheduled` event
+  pass, context `schtasks`). The re-check this ticket's own prior entry
+  named: `ENG-014` and `ENG-015` have both since reached `designed` (past
+  their own G1s), confirmed fresh from each ticket's own frontmatter —
+  approver-facing WIP is 0/2 before this pass's own two raises. Mode check
+  clean (business-os `.env` → `MODE=` empty; instance `config/config.yaml`
+  → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-017`) and
+  whole-board: both exit 0, clean.
+
+  G1 content already fully drafted in the PRD at `shaped` time; no new
+  readback needed. Raised `inbox/2026-08-29-eng017-g1-scope.md` immediately
+  after `ENG-016`'s (this pass's other raise — `ENG-016`'s `priority: next`
+  outranks this ticket's unset priority, so it went first; among the
+  remaining unset-priority backlog this ticket has the lowest id, per
+  `eng_build_loop.md` step 6's dispatch ordering). Ran
+  `departments/engineering/lib/eng-notify.sh raise` (logged
+  `SLACK_WEBHOOK_URL unset — cannot notify`, non-fatal — item still sits in
+  `inbox/` and the control center), stamped `notified:
+  2026-08-29T23:13:50`.
+
+  **1 transition** (`shaped → awaiting-scope`), well under the cap of 4.
+  **Consequence:** approver-facing WIP 1/2 → 2/2 (this G1, after `ENG-016`'s
+  in the same pass) — now at cap; nothing further should start into an
+  approver-facing state until one of these two clears. Machine WIP
+  unaffected.
+
+  `chained: none` — `awaiting-scope`, owned by the approver; the chaining
+  guard never fires on a ticket waiting on a human. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-017`) and
+  whole-board: see board index.

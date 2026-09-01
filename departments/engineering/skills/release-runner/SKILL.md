@@ -92,12 +92,12 @@ links than repos touched. (A single-repo ticket keeps the plain `pr_url:`
 string — no change there.) This is not hypothetical: ENG-011 (2026-08-29), the
 first two-repo ticket, correctly wrote one item but packed both links into one
 `pr_url:` string with a `|` separator, and the approver caught it. The ticket
-keeps its WIP slot and counts against the approval cap while it waits.
+keeps its WIP slot while it waits.
 
 Before this (fixed 2026-07-27) an L1 release just set `blocked` and stopped: the
 ticket left the WIP bucket, counted against nothing, freed a slot for a new
 ticket, and sat invisible for five working days — building the exact pile of
-finished-but-unapproved work the caps exist to prevent. New projects register at
+finished-but-unapproved work the WIP limit exists to prevent. New projects register at
 L1 by default, so on most instances this is the common path, not an edge case.
 
 The build loop detects the merge itself on each pass, by local git ancestry

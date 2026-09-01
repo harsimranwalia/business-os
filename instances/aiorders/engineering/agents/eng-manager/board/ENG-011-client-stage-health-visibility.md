@@ -8,17 +8,17 @@ time_estimate: half a day to a couple of days
 time_spent: not separately clocked — build, review, QA, security and the
   database gate all completed in an unrecorded prior pass (see Log); read as
   most of the estimate consumed
-time_remaining: ~0 build time; merge and verify remain
+time_remaining: "0 — verified, closed out"
 severity: P3
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-30
 branch: feat/ENG-011-client-stage-health-visibility (same name, both repos)
 depends_on: []
 blocks: []
@@ -30,7 +30,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-011.md
   test_plan: agents/qa/test-plans/ENG-011.md
   security_review: agents/security/reviews/ENG-011.md
-  release:
+  release: agents/devops/releases/2026-08-29-aiorders-admin-hub-ENG-011.md
   pr: "aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/3 | aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/3"
 ---
 
@@ -620,5 +620,231 @@ Append-only. One line per state transition, newest last.
   the whole hop was driving toward; firing `continue ENG-011` again would
   just re-queue against a ticket with nothing left for a machine to do until
   the approver merges one or both PRs or replies to the gate item. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+  whole-board: see pass notes.
+
+- `2026-08-29` `blocked → shipped` (eng-manager, `watch` event pass, context
+  `schtasks`). Per this event's own contract, swept all three watched inboxes
+  fresh: `agents/product-manager/inbox/` and `agents/eng-manager/inbox/`
+  held only already-`_handled/`-or-`.gitkeep` entries plus one new,
+  unrelated P1 finding (`2026-08-29-restaurant-detail-write-partner-exposure.md`,
+  handled separately per its own log/`proposals.md`); `inbox/` held exactly
+  one live item — **this ticket's own merge request**, found carrying
+  `decision: approved`, `decided: 2026-08-30T01:43:13.118048+00:00`, and a
+  trailing "merged" line, a hand-edit rather than a reply through
+  `lib/eng-notify.sh`'s channel, consistent with every gate answer on this
+  instance but `ENG-002`'s. Multiple earlier passes today (`ENG-007`'s and
+  `ENG-025`'s own logs) had already noticed this same fact in passing and
+  explicitly left it "for whichever pass owns reconciling it," out of scope
+  for their own narrower events — this `watch` sweep's job is exactly that
+  scope. Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
+  whole-board: both exit 0, clean.
+
+  **Not taken on the text alone — independently re-derived via git ancestry
+  in this department's own worktrees, both repos:**
+
+  ```
+  $ cd _eng/aiorders-api && git fetch origin
+  $ git merge-base --is-ancestor origin/feat/ENG-011-client-stage-health-visibility origin/main
+  MERGED
+  $ cd _eng/aiorders-admin-hub && git fetch origin
+  $ git merge-base --is-ancestor origin/feat/ENG-011-client-stage-health-visibility origin/main
+  MERGED
+  ```
+
+  Per `eng_build_loop.md` step 5, a multi-repo ticket ships only once every
+  repo's branch has merged — confirmed for both, not just one.
+
+  **Deploy verified live, not assumed from the merge alone**, using the
+  Supabase MCP connection read-only against `bmnmnejwdxbcqinqkwko` plus
+  GitHub's own run status:
+  - `list_migrations` shows `20260829190000_add_last_order_at_to_platform_analytics`
+    applied; `pg_get_functiondef('public.calculate_platform_analytics')`
+    returns the live function already carrying `last_order_at` in both its
+    `RETURNS TABLE` signature and its body — the merged shape, not the
+    pre-migration one.
+  - The `admin-portal` edge function (`version: 115`, `updated_at:
+    2026-08-30T02:47:37Z`, deployed from the approver's own checkout) —
+    the same redeploy `ENG-007`'s own reconciliation pass this session
+    confirmed carries that ticket's handler live also carries this ticket's
+    `last_order_at`-driven derivation code.
+  - `aiorders-admin-hub`: a GitHub Actions Cloudflare Pages workflow didn't
+    exist at this ticket's own merge commit (`e12342d`) — it was added two
+    commits later (`698b7c1`, then `ceb9552`). The first run failed
+    (missing environment scoping); the second (`ceb9552`) succeeded
+    (`gh run list`: `completed/success`, `57s`) and, being a descendant of
+    `e12342d`, deployed the full current `main` — this ticket's `Brands.tsx`
+    change included. No CI/CD ran for this repo at merge time, but the
+    frontend is confirmed live anyway, not just merged.
+
+  **Wrote the release record**
+  (`agents/devops/releases/2026-08-29-aiorders-admin-hub-ENG-011.md`),
+  covering both repos as one release (this ticket's own precedent as the
+  first two-repo ticket on this board). Moved
+  `inbox/2026-08-29-eng011-merge-request.md` → `inbox/_handled/` with a
+  processed footer. **Journaled**
+  (`agents/eng-manager/config/decision-journal.md`) as an L1 merge, both
+  repos.
+
+  **State: `blocked → shipped`**, `blocked_on`/`blocked_from` cleared per
+  `eng_build_loop.md` step 8 (cleared on the way out of `blocked`), `owner:
+  approver → devops` per `definition-of-done.md`'s `shipped`-state
+  ownership. `links.release` set above. **1 transition this pass**, well
+  under the cap of 4. **Consequence:** `machine_wip` unaffected (`blocked`
+  and `shipped` both sit outside the counted `ready`..`ready-to-ship`
+  range — no change). Approver-facing WIP **2/2 → 1/2**; approval cap **2/3
+  → 1/3** — this ticket's merge request was the only thing occupying one of
+  each slot (`ENG-007`'s own slot had already been vacated by its earlier,
+  separate control-center bypass, per its own reconciliation this same
+  pass — see board index for the combined arithmetic).
+
+  **Dead-end sweep:** this ticket's log now ends in a valid, accounted-for
+  state with the chain record below. `ENG-007` was also touched this pass
+  (its own separate reconciliation, same underlying cause — a control-center
+  action outrunning the tracked gate item); no wider board sweep beyond
+  these two — out of scope for a `watch` event's own narrower contract.
+
+  **Notify sweep:** nothing raised this pass — a gate closing doesn't get
+  re-notified. No stall — approval cap now 1/3, well under.
+
+  **Observations filed** (`observations.md`): resolution of the
+  long-flagged `ENG-011`/`ENG-007` board staleness (closing the loop several
+  prior passes explicitly deferred); the `admin-portal` redeploy carrying
+  two tickets' handler changes in one event; the `aiorders-admin-hub`
+  Cloudflare Pages workflow's existence and its first-run failure/second-run
+  fix, both landing after this ticket's own merge but still covering it.
+
+  `chained: ENG-011` — `shipped` is product-manager-owned next
+  (`skills/acceptance-check/SKILL.md` triggers on entering `shipped`), not
+  the approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-011`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-011`) and whole-board: see pass notes.
+
+- `2026-08-30` `shipped → verified` (product-manager, `skills/acceptance-check/SKILL.md`,
+  `continue` event pass, context `ENG-011`). Narrow scope per this event's
+  own contract (resume this ticket from its current state; no board-wide
+  sweep). Mode check clean (business-os `.env` → `MODE=` empty; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+  **Checked against the live result, not the proxies** — the skill's own
+  standing instruction, and the first time this board has actually run this
+  skill to completion. No browser access on this host (same gap the release
+  record named for monitoring dashboards), so verification used three
+  independent live paths instead of trusting the migration/review/QA/security
+  receipts' own static checks: (1) reading the exact deployed source at
+  `origin/main` in both `_eng` worktrees via `git show`, without touching
+  either worktree's checked-out branch (`aiorders-api` was mid-`ENG-013`,
+  `aiorders-admin-hub` mid-`ENG-008` — both left undisturbed); (2) sampling
+  real production rows through the read-only Supabase MCP connection
+  (`bmnmnejwdxbcqinqkwko`) to catch data-shape issues synthetic unit-test
+  inputs can't; (3) one live unauthenticated `curl` against the actual
+  production endpoint.
+
+  **Criteria walked, against `agents/product-manager/specs/ENG-011-client-stage-health-visibility.md`:**
+  1. **Stage shown, finite set — PASS.** `admin-portal/handlers/brands.ts`'s
+     `deriveStage` (live at `origin/main`, both repos) and `Brands.tsx`'s
+     `getStagePill` confirmed by direct read: 3 real branches (`live`/
+     `onboarding`/`inactive`) plus a `default → '-'` branch for anything
+     else, never a crash. Cross-checked against 15 real production `brands`
+     rows (Supabase MCP): real `is_active`/`onboarding_step` values map
+     cleanly, no nulls or unexpected types found.
+  2. **Stage alone answers "is client" — PASS.** One `stage` field on the
+     `Brand` interface; no second `isClient`-shaped field anywhere in either
+     diff at `origin/main`.
+  3. **Stage filter — PASS.** `<Select value={stageFilter}
+     onValueChange={setStageFilter}>` confirmed present in the rendered JSX
+     (`Brands.tsx` line ~859), wired into `filteredBrands` via `matchesStage
+     = stageFilter === 'all' || brand.stage === stageFilter`, `&&`-composed
+     with the three pre-existing filters — independently re-read at the
+     merged commit, not trusted from QA's trace.
+  4. **Clearing the filter — PASS.** `"All Stages"` option's `value="all"`
+     short-circuits `matchesStage` to `true` unconditionally — same
+     mechanism as criterion 3, confirmed in the same read.
+  5. **Health indicator shown — PASS, with a live issue found and routed
+     (not blocking this criterion).** `deriveHealth`/`getHealthPill`
+     confirmed with 4 real branches (`active`/`at_risk`/`inactive`/
+     `no_data`) plus a safe default. Traced the full live data path beyond
+     what any prior gate checked: confirmed `calculate_platform_analytics()`
+     actually emits 49 brand-level rollup rows in production (not just in
+     its declared `RETURNS TABLE` shape), confirmed the KV key format
+     `analytics:brand:{id}` matches exactly between the writer
+     (`platform-analytics`'s `KVKeys.brand()`) and the reader
+     (`admin-portal`'s `readBrandAnalytics`), and confirmed a real successful
+     write occurred this morning (`2026-08-30T00:00:06Z`,
+     "brands=49, restaurants=60") with current `last_order_at` values. While
+     checking this, found the hourly cron feeding that cache has 401'd on
+     every run since `01:00:00Z` today (7/7 as of this pass) — a live,
+     ongoing production issue, unrelated to this ticket's own diff (onset
+     predates this ticket's own `decided:` timestamp, and
+     `platform-analytics`'s auth path was never touched by this ticket).
+     Health data is real and correctly derived, just growing staler than the
+     ~1h the design assumed. Filed as `BUG-001`
+     (`agents/qa/bugs/BUG-001-platform-analytics-cron-401.md`, P2, owner
+     devops) and routed as a proposal
+     (`agents/eng-manager/proposals.md`, 2026-08-30 row) per
+     `eng_build_loop.md` step 3 — not authorized to fix inline, and P2 per
+     `bug-triage/SKILL.md` doesn't send this ticket back to `building` (the
+     defect isn't in this ticket's own diff, so there's nothing here for
+     `building` to fix).
+  6. **Non-staff request rejected — PASS, independently verified live.**
+     `admin-portal/index.ts`'s `authenticate()` (shared middleware, runs
+     before every handler including `brands`) rejects a missing
+     `authorization` header before any handler code runs. Not left at
+     "pass by construction" the way QA's own gate did — sent a real
+     unauthenticated `GET` to
+     `https://backend.aiorders.io/functions/v1/admin-portal/brands` this
+     pass: `401 UNAUTHORIZED_NO_AUTH_HEADER`. Closes the gap QA's test plan
+     named explicitly as not independently re-verified.
+
+  **Non-goals check** — clean. Grepped both diffs at `origin/main`: no
+  ticket/support code, no weighted health score, no agency/reseller scoping
+  change, no configurable stage taxonomy (`ONBOARDING_FINAL_STEP` is a fixed
+  constant), `Leads.tsx`/`FranchiseeLeads.tsx` untouched.
+
+  **Cost check** — matches. Release record: $0/month delta, one additive
+  column, no new vendor. Matches the PRD's own Cost section exactly.
+
+  **Step 6b (continue an approved sequence)** — checked, does not apply.
+  This PRD carries no "feature shape and sequencing" section naming a next
+  item — the raw request's "tickets" item was split out as its own standing
+  question, already answered and already carried to `ENG-012`, already
+  `dropped`, in an earlier pass. Nothing left to auto-continue.
+
+  **Notebook entry written**:
+  `agents/product-manager/notebook/2026-08-30-acceptance.md` — what the cost
+  estimate got right (held at $0/month, evidence-grounded G1 defaults all
+  survived unchanged), what it missed (reusing an already-live pipeline
+  inherits that pipeline's own operational risk, on a timeline this ticket
+  doesn't control — worth a Risks-section line on future PRDs with the same
+  shape), and the no-browser-access substitution method for reuse next time.
+
+  **State: `shipped → verified`**, `owner: devops → eng-manager` per the
+  skill's own step 6 routing. **1 transition this pass**, well under the cap
+  of 4. **Consequence:** `machine_wip` unaffected (`shipped` and `verified`
+  both sit outside the counted `ready`..`ready-to-ship` range — no change).
+  Approver-facing WIP and approval cap both unaffected — no gate raised or
+  answered for this ticket this pass; `BUG-001`'s proposal row is a
+  department-originated finding for the approver's next batched G1, not a
+  gate on this ticket.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+  valid, accounted-for terminal state. No wider board sweep — out of scope
+  for a `continue` event naming `ENG-011` specifically.
+
+  **Notify sweep:** nothing raised for this ticket (reaching `verified`
+  doesn't notify). `BUG-001`'s proposal rides the weekly batch like every
+  other proposal, no immediate notify.
+
+  **Observations filed** (`observations.md`): the no-browser-access
+  substitution method (read deployed source at the merged commit, sample
+  live data via Supabase MCP, one live unauthenticated probe) as a reusable
+  pattern for the next ticket that hits the same host gap.
+
+  `chained: none` — `verified` is terminal (acceptance-check's own step 6
+  routing, and `definition-of-done.md`'s state table). Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-011`) and
   whole-board: see pass notes.
