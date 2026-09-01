@@ -6,6 +6,8 @@ project: aiorders
 ticket: unknown
 recommendation: find out why passes are failing before re-firing anything
 raised: 2026-09-01
+decision: approved
+decided: 2026-09-01T16:23:42.685518+00:00
 ---
 
 # Engineering events were dropped today
@@ -336,3 +338,19 @@ A build-loop pass failed on this event twice — once on each attempt — so the
 Whatever triggered it has NOT been processed. The usual causes do not clear on their own: the automation account at its monthly spend limit, or a TCC/EPERM denial on the Mac. Check `traces/` for this pass's log.
 
 Raised by ENG-005's event-lifecycle guard. Before it existed, this event would have been consumed silently by the pass that died and the board would have looked like a quiet night.
+
+## 09:00:54 — watch schtasks
+
+A build-loop pass failed on this event twice — once on each attempt — so the event has been dropped rather than retried forever.
+
+**Last exit status:** 124
+
+Whatever triggered it has NOT been processed. The usual causes do not clear on their own: the automation account at its monthly spend limit, or a TCC/EPERM denial on the Mac. Check `traces/` for this pass's log.
+
+Raised by ENG-005's event-lifecycle guard. Before it existed, this event would have been consumed silently by the pass that died and the board would have looked like a quiet night.
+
+## Decision
+
+**approved** — 2026-09-01T16:23:42.685518+00:00
+
+If the monhtly limit is hit, then do not retry tasks rather check that the limit is reset then only it makes sense to retry tasks instead of just retying tasks for no reason
