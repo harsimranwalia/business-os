@@ -151,3 +151,29 @@ ready to raise the moment a WIP slot frees.
   guard never fires on a ticket waiting on a human. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-016`) and
   whole-board: see board index.
+
+- `2026-09-01` **no state change — `board/_index.md` corrected instead**
+  (`watch` event pass, context `launchd`). Found this ticket's own file and
+  PRD (both `awaiting-scope`, G1 raised and notified `2026-08-29T23:13:49`,
+  never answered) disagreeing with `_index.md`'s In-flight table and
+  "Waiting on the approver" section, both of which read `shaped` /
+  `product-manager` / "G1-drafted, ready to raise" for this ticket. Root
+  cause: the 09:30 pass's own `git pull` (`e281c71`, "reconcile 26 diverged
+  engineering-board files") kept a rival host's account of the index
+  wholesale for internal consistency with several other tickets that really
+  were behind on that host — but that host had never learned this ticket's
+  G1 was raised on 2026-08-29, so its narrative was not stale, it was
+  genuinely missing an event. Checked `decision-journal.md` (no `ENG-016`
+  row) and this ticket's own PRD `status:` before concluding staleness
+  rather than a legitimate reset — neither shows one. Corrected `_index.md`
+  in place (In-flight row, header WIP accounting, "Waiting on the approver"
+  section) rather than this ticket's own file, which was already right.
+  Also nudged the open G1 (`inbox/2026-08-29-eng016-g1-scope.md`,
+  `nudged: 2026-09-01T10:20:06`) — notified 2.5 days ago, never nudged
+  before, missed by every intervening pass because they all read the index
+  rather than this file. Filed a proposal
+  (`agents/eng-manager/proposals.md`) so a future cross-host reconciliation
+  re-derives the In-flight table from each ticket's own frontmatter instead
+  of keeping one side's board-index prose wholesale.
+  `chained: none` — still `awaiting-scope`, owned by the approver; unchanged
+  by this correction.
