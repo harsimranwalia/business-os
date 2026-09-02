@@ -13,7 +13,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-09-02
 branch:
 depends_on: []
 blocks: []
@@ -382,5 +382,54 @@ Append-only. One line per state transition, newest last.
 
   `chained: none` — still held by the machine-WIP cap (2/1, over), not by
   the sequencing reason this ticket's log previously cited. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean, no `WAIVED:` lines.
+
+- `2026-09-02` **both hold reasons cleared, dispatched — chain fired for the
+  build hop** (eng-manager, `scheduled` event pass, context `launchd`,
+  15:30 — whole-board sweep). Re-checked this ticket's own two hold reasons
+  directly rather than carrying forward either the board index or this
+  log's own last entry, same ticket-file-over-table discipline `ENG-009`'s
+  2026-09-02 09:30 entry established for the identical class of drift.
+
+  **Sequencing hold:** last stated as waiting on `ENG-009` reaching
+  `in-review` or later (this ticket's `## Notes` names it last of three
+  sequenced against the same file, `src/pages/Influencers.tsx`). `ENG-009`'s
+  own board file now reads `state: blocked`, `blocked_from: ready-to-ship`
+  as of today — past `in-review`, `in-qa`, and `in-security` entirely;
+  `ENG-008` (the earlier dependency) is at the identical point. Both
+  tickets' PRs on both repos re-confirmed still open via `gh pr view` this
+  pass (not merged, so no conflict has landed yet), but the risk the hold
+  existed to prevent — building against a design either dependency might
+  still change — is over: neither diff changes further from here, only
+  merges. Condition satisfied.
+
+  **Machine-WIP hold:** this log's own last entry cited "2/1, over" as of
+  2026-08-31. Re-derived fresh from each counted ticket's own frontmatter
+  rather than trusted forward: `ENG-008`/`ENG-013` (`blocked`,
+  `blocked_from: ready-to-ship` since 2026-08-31) and now `ENG-009`
+  (`blocked`, `blocked_from: ready-to-ship`, today's 09:02 devops hop) have
+  all three left the counted `ready`..`ready-to-ship` range — matching
+  `ENG-009`'s own log and this pass's board-index update. `ENG-010` is the
+  sole remaining occupant: **1/1, exactly at cap, not over.** It is the
+  ticket the slot belongs to, not one waiting behind it — the cap bars a
+  *new* ticket from entering `ready`, not this one from proceeding.
+
+  **Both hold reasons this ticket's log has ever cited are now satisfied.**
+  No branch exists yet (`branch:` empty in frontmatter) — the actual build
+  has not started. Per this loop's own design ("a pass stops after
+  `building`... each heavy step gets its own session with fresh context"),
+  this whole-board sweep does not start the implementation itself; it hands
+  off to a dedicated hop instead.
+
+  **0 transitions this pass** — state stays `ready`; `building` gets written
+  by the session that actually opens the branch, not by a detection pass.
+  **Consequence:** none yet — machine WIP stays 1/1 until that hop starts.
+
+  `chained: ENG-010` — sole occupant of the machine-WIP-1 slot, agent-owned
+  (`eng-manager`), not the approver, not blocked, not terminal, no cap left
+  actually holding it. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-010`
+  before this pass exits. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
   clean, no `WAIVED:` lines.

@@ -7,6 +7,7 @@ ticket: ENG-026
 recommendation: Answer to unblock shaping. Does not block anything currently in flight — answer when convenient.
 raised: 2026-09-01
 notified: 2026-09-01T10:03:26
+nudged: 2026-09-02T15:37:50
 decision:
 ---
 
