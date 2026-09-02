@@ -5,12 +5,12 @@ project: aiorders-admin-hub
 type: feature
 size: S
 time_estimate: a few hours to half a day
-time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed) + ~30m review/quality round 2
-time_remaining: security, release-readiness, then opening the L1 PRs
+time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed) + ~30m review/quality round 2 + ~25m security gate (pass, one three-strike proposal filed)
+time_remaining: release-readiness, then opening the L1 PRs
 severity: P3
 priority:
-state: in-qa
-owner: eng-manager
+state: ready-to-ship
+owner: devops
 lane: full
 blocked_on:
 blocked_from:
@@ -27,7 +27,7 @@ links:
   adrs: []
   review: agents/principal-engineer/reviews/ENG-009.md
   test_plan: agents/qa/test-plans/ENG-009.md
-  security_review:
+  security_review: agents/security/reviews/ENG-009.md
   release:
   pr:
 ---
@@ -1016,6 +1016,106 @@ Append-only. One line per state transition, newest last.
   `chained: ENG-009` — `in-qa` is agent-owned (security next, fresh
   session — needs this pass's own test plan), not the approver, not
   blocked, not terminal, not held by a cap. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+  before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-09-02` **security gate: PASS — now `ready-to-ship`** (security,
+  `continue` event pass, context `ENG-009` — the chain fired by the
+  round-2-PASS pass above). Narrow scope per the event's own contract
+  (resume this ticket only; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`,
+  scoped (`ENG-009`) and whole-board: both exit 0, clean.
+
+  **Re-derived both diffs from disk rather than trusting the review's own
+  account.** Both worktrees fetched, confirmed clean, at the recorded
+  commits (`aiorders-api@d37e0c9`, `aiorders-admin-hub@92bcacd`).
+  `git merge-base --is-ancestor 57f8c4b/63be255 HEAD` re-run fresh on both
+  — both **true**, matching round 2's own finding. Read both isolated
+  commits (`git show`) in full, plus the current file state of
+  `hasInfluencerAdminAccess` and `handleSaveInfluencer`'s merged body
+  directly, rather than taking the code-review receipt's word for what
+  survived the rebase.
+
+  **Threat-modelled the change** (4 questions, full detail in the
+  receipt): the new route and the three new writable fields sit behind
+  the exact same single gate every pre-existing field already sits
+  behind — confirmed by reading `handleInfluencers` line-by-line, not
+  assumed from the design doc. No new data-classification tier: the
+  activity aggregate carries counts/dates only, no PII; `social_stats_platform`
+  is a staff-typed label rendered through a plain (auto-escaped) JSX text
+  node, not an injection sink.
+
+  **Negative-auth cases independently re-verified**, including one
+  re-run specific to the new route: `deno test` executed fresh this pass
+  (not taken from the prior hop's log) — **34 passed, 0 failed**, and
+  `handleInfluencers GET activity rejects a non-admin caller with 403`
+  (a throwing-`Proxy` `adminSupabase`, mutation-sensitive, not a shape
+  check) passed individually. `hasInfluencerAdminAccess rejects a
+  missing profile` and `PATCH strips fields outside the editable
+  allowlist before writing` — both `ENG-008`'s own closing-round
+  regression tests — independently grepped present and green, not
+  inferred from round 2's receipt. `deno check` on both changed files:
+  clean.
+
+  **OWASP A01–A10 walked**, each marked applicable or `n/a` with a
+  reason; full table in the receipt. Nothing blocking.
+
+  **One finding, non-blocking, and it is this gate's third occurrence of
+  the same class — the three-strike rule fires.** `getInfluencerActivity`'s
+  catch block returns raw `error.message` in a 500 body, same shape
+  `ENG-013` (1st) and `ENG-008` (2nd) already carried in this exact file
+  family; this is the 3rd gate-reviewed occurrence. Disposition unchanged
+  from the first two (role-gated, copies rather than introduces the
+  pattern) — **not** a reason to fail this round. Per
+  `skills/security-gate/SKILL.md` step 10, logged
+  (`agents/security/notebook/2026-09-02-findings.md`) and **proposed** to
+  `principal-engineer` — who owns `engineering-standards.md`, not this
+  agent —
+  in `agents/principal-engineer/notebook/2026-09-02-security-proposal-verbose-error-response.md`.
+  Proposal only; the standards file itself is untouched by this pass.
+
+  **Secrets**: both isolated commits scanned in full (the only two
+  commits added since `ENG-008`'s own security review already scanned
+  every ancestor) for key/token/password/PEM/service-role patterns — no
+  leaked credential, two benign matches (a code comment, the forwarded
+  user session token, same pattern already cleared on `ENG-008`).
+  **Dependencies**: none new on either repo — confirmed by re-reading
+  both diff stats (3 files/1 file, no `package.json`/`deno.json`/lockfile
+  among them). **LLM checklist**: n/a, design frontmatter confirms
+  `touches_models: false`, matches both diffs.
+
+  **SOC 2 evidence trail checked complete**: ticket → PRD → design →
+  migration review (pass) → code review (round 2, pass) → QA (pass) →
+  this verdict → release record (pending). No gap.
+
+  **Receipt written**: `agents/security/reviews/ENG-009.md` (verdict
+  `pass`). `links.security_review` set on this ticket in the same write.
+  `time_spent`/`time_remaining` updated in frontmatter in the same edit
+  as this entry — only release-readiness (opening the PRs) remains.
+
+  **1 transition** (`in-qa → ready-to-ship`), well under the cap of 4 —
+  same precedent `ENG-008`'s own security-gate pass set (the gate's own
+  `in-security` state is not persisted to frontmatter on a pass; SKILL.md
+  step 9 writes `ready-to-ship` directly). **Consequence:** `machine_wip`
+  unaffected — `ENG-009` stays inside the counted `ready`..`ready-to-ship`
+  range, `in-qa` and `ready-to-ship` both counted. No approver-facing or
+  approval-cap change — a security-gate pass isn't a gate item to the
+  approver, and `owner` moving to `devops` is an agent-to-agent handoff,
+  not a human wait.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this
+  ticket's own lineage to resume. **Notify sweep:** nothing to raise (a
+  security pass isn't a gate item to the approver); nothing to nudge.
+  **Observations/proposals filed:** the three-strike standards proposal
+  above is the only new one this pass — the frontend-test-harness
+  proposal and the unbounded-`influencer_invitations`-query precedent are
+  both already tracked elsewhere and unchanged by this pass.
+
+  `chained: ENG-009` — `ready-to-ship` is agent-owned (devops's
+  release-readiness hop next: open the PR), not the approver, not
+  blocked, not terminal, not held by a cap (still inside the same counted
+  machine-WIP range this ticket already occupied). Firing
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
   before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
   whole-board: both exit 0, clean, no `WAIVED:` lines.
