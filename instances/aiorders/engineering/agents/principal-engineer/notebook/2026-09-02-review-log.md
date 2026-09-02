@@ -51,3 +51,32 @@ same fix failing to travel to a branch cut before it existed. Proposal
 filed (`agents/eng-manager/proposals.md`) naming the general gap: nothing
 in this board's merge-detection or code-review inputs checks a ticket's
 branch against a sibling it was branched from, only against `main`.
+
+**Round 2: PASS, plus the quality gate — now in-qa.**
+
+- **What changed:** the rebase-and-refix hop carried `ENG-008`'s fix
+  commits onto this branch on both repos (`aiorders-api@d37e0c9`,
+  `aiorders-admin-hub@92bcacd`); `git merge-base --is-ancestor` on both
+  fix commits now returns true, reversing round 1's finding. One real
+  test-file conflict on `aiorders-api` (two independent blocks appended
+  after the same last test) hand-resolved; the flagged `aiorders-admin-hub`
+  hunk auto-merged with zero conflicts. Both re-verified by reading the
+  reconstructed result in full, not by trusting the merge's exit status —
+  see the receipt for what was checked.
+- **Automatic-failure scan:** 0/10 open, re-run fresh against the
+  post-rebase diff (not carried forward from round 1). One accepted
+  precedent (unbounded `influencer_invitations` query, 4th occurrence of
+  this exact class on this board).
+- **Verification:** `deno test` actually **executed** this round — `deno`
+  2.9.6 installed on this host during the rebase hop — 34 passed, 0
+  failed. First ticket on this board where `aiorders-api`'s suite runs
+  rather than being hand-traced.
+- **Quality gate (QA):** test plan written,
+  `agents/qa/test-plans/ENG-009.md` — all 4 acceptance criteria covered
+  (executed or inspected); no open P0/P1 bug.
+- **Receipts:** `agents/principal-engineer/reviews/ENG-009.md` (verdict
+  `pass`, round 2), `agents/qa/test-plans/ENG-009.md`. `links.review` /
+  `links.test_plan` set on the ticket.
+- **Verdict:** pass. State `building → in-review → in-qa`. Next hop:
+  security (fresh session, per `eng_build_loop.md`'s sequencing — needs
+  this round's own test plan).

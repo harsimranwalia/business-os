@@ -5,11 +5,11 @@ project: aiorders-admin-hub
 type: feature
 size: S
 time_estimate: a few hours to half a day
-time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed)
-time_remaining: review + quality round 2, security, release-readiness, then opening the L1 PRs
+time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed) + ~30m review/quality round 2
+time_remaining: security, release-readiness, then opening the L1 PRs
 severity: P3
 priority:
-state: building
+state: in-qa
 owner: eng-manager
 lane: full
 blocked_on:
@@ -25,8 +25,8 @@ links:
   prd: agents/product-manager/specs/ENG-009-influencer-engagement-info.md
   design: agents/architect/designs/ENG-009-influencer-engagement-info.md
   adrs: []
-  review:
-  test_plan:
+  review: agents/principal-engineer/reviews/ENG-009.md
+  test_plan: agents/qa/test-plans/ENG-009.md
   security_review:
   release:
   pr:
@@ -928,6 +928,94 @@ Append-only. One line per state transition, newest last.
   `chained: ENG-009` — `building` is agent-owned (review + quality round 2
   is the next hop's work), not the approver, not blocked, not terminal, not
   held by a cap. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+  before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-09-02` **code review round 2: PASS, plus the quality gate — now
+  in-qa** (principal-engineer then qa, `continue` event pass, context
+  `ENG-009` — the chain fired by the rebase-and-refix hop above). Narrow
+  scope per the event's own contract (resume this ticket only; no
+  board-wide sweep). Mode check clean (business-os `.env` → `MODE=active`).
+  Pre-pass `eng-gate-check.sh`, scoped (`ENG-009`) and whole-board: both
+  exit 0, clean, no `WAIVED:` lines. Ticket hop count
+  (`traces/.hops-2026-09-02-ENG-009`) at 3 coming in, well inside the
+  `max_5x` tier's 20/ticket ceiling.
+
+  **Re-derived both diffs from disk rather than trusting round 1's or the
+  rebase hop's own account.** Both worktrees fetched, confirmed clean, at
+  the recorded commits (`aiorders-api@d37e0c9`, `aiorders-admin-hub@92bcacd`).
+  `git merge-base --is-ancestor` re-run fresh on both fix commits
+  (`57f8c4b`, `63be255`) against this branch's tip — both now **true**,
+  reversing round 1's finding. `git merge-base origin/feat/ENG-008-...
+  {this-branch}` on each repo returns exactly `ENG-008`'s own tip, meaning
+  this branch forks cleanly off `ENG-008`'s current head with zero
+  divergence — the rebase did what it claimed.
+
+  **Both merge outcomes read in full, not trusted from the rebase's exit
+  code.** `aiorders-api`'s hand-resolved test-file conflict: read all 380
+  lines of `influencers.test.ts` — `ENG-008`'s two closing-round tests and
+  every one of `ENG-009`'s own are present exactly once, correctly
+  sequenced, no duplication. `aiorders-admin-hub`'s zero-conflict
+  auto-merge: read `handleSaveInfluencer` in full — `ENG-008`'s conditional
+  `accepts_paid`/`accepts_barter` omission and `ENG-009`'s unconditional
+  `social_stats_platform` entry are both present and correctly combined in
+  the same object literal.
+
+  **Automatic-failure scan: 0/10 open**, re-run fresh against the
+  post-rebase diff. One accepted precedent unchanged from round 1
+  (`getInfluencerActivity`'s unbounded query — 4th occurrence of this
+  exact class on this board, cardinality-bounded, architect-evaluated).
+
+  **Verification independently reproduced, not taken on the rebase hop's
+  word:** `deno check` on both changed files — clean. `deno test
+  influencers.test.ts` — **34 passed, 0 failed**, actually executed
+  (`deno` 2.9.6, installed on this host during the rebase hop) — first
+  ticket on this board where `aiorders-api`'s suite runs rather than being
+  hand-traced. `npm run lint` (`aiorders-admin-hub`) — 150 errors/31
+  warnings, unchanged baseline, `Influencers.tsx` carrying its one
+  pre-existing warning, zero new. `npm run build` — clean, 3340 modules,
+  same pre-existing chunk-size notice. Checked one incidental question
+  this round raised — whether `fetchActivity`'s `supabase.supabaseUrl`
+  usage was a novel, untested client-API surface — via `git log
+  -S"supabase.supabaseUrl"`: `ENG-008`'s own build introduced this pattern
+  first, `ENG-009` reuses it verbatim.
+
+  **Quality gate (QA): test plan written**,
+  `agents/qa/test-plans/ENG-009.md` — all 4 acceptance criteria covered
+  (executed Deno.test cases for AC1/2/4, shared-mechanism inspection for
+  AC3, matching AC5/6's precedent on `ENG-008`'s own plan). No open P0/P1
+  bug anywhere on this board (`agents/qa/bugs/` empty).
+
+  **Receipts written:** `agents/principal-engineer/reviews/ENG-009.md`
+  (verdict `pass`, round 2), `agents/qa/test-plans/ENG-009.md`.
+  `links.review`/`links.test_plan` set on this ticket in the same edit as
+  this entry. `time_spent`/`time_remaining` updated in frontmatter per
+  `definition-of-done.md`'s time-tracking rule.
+
+  **Named, non-blocking gaps** (full detail in the review receipt): the new
+  activity endpoint's 500 path is untested (same standing gap this file's
+  other two endpoints already carry); the defensive `if (!id) continue`
+  branch in `getInfluencerActivity` is untested against data the live
+  schema doesn't currently produce; `index.ts`'s 404 `availableRoutes` hint
+  list doesn't name the new route (cosmetic, pre-existing incompleteness,
+  never consulted by the router itself). None block this round.
+
+  **2 transitions** (`building → in-review → in-qa`), well under the cap
+  of 4 — stopped deliberately, not by the cap: security is a separate hop
+  by design, needs this pass's own just-written test plan, and
+  `eng_build_loop.md` calls for a fresh session there. `machine_wip`
+  unaffected (`ENG-009` stays inside the counted `ready`..`ready-to-ship`
+  range). Approver-facing WIP and approval cap both unaffected — no gate
+  raised this pass.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing to raise (a review/
+  quality pass isn't a gate item to the approver).
+
+  `chained: ENG-009` — `in-qa` is agent-owned (security next, fresh
+  session — needs this pass's own test plan), not the approver, not
+  blocked, not terminal, not held by a cap. Firing
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
   before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
   whole-board: both exit 0, clean, no `WAIVED:` lines.

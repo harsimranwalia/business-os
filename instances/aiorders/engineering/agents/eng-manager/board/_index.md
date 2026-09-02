@@ -10,9 +10,11 @@ advanced by one shallow step per pass.** This was 12 (the `max_5x` tier value)
 earlier the same day; see that file for the full rationale.
 
 **Currently 2/1 — over the new cap, but shrinking.** `ENG-009` sits at
-`building` — **not `ready`**; this table said `ready` from 2026-09-01 09:30
-through this pass, a stale correction the 09:30 pass that day made in error
-(see this pass's own dated entry below for the full evidence trail). `ENG-010`
+`in-qa` as of this pass (code review round 2 + the quality gate both
+passed; security is the next hop) — earlier today this table wrongly said
+`ready` from 2026-09-01 09:30 onward, a stale correction the 09:30 pass
+that day made in error, itself corrected by this file's own 09:30
+dated entry below (full evidence trail there). `ENG-010`
 sits at `ready`, correctly, sequenced behind it. `ENG-008` and `ENG-013` both
 left this range on 2026-08-31 — each one's security gate passed, then its own
 devops release-readiness hop opened its PR(s) and moved it to
@@ -68,7 +70,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ID | Title | Project | State | Priority | Owner | Size | Updated |
 |---|---|---|---|---|---|---|---|
 | ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
-| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | building | | eng-manager | S | 2026-09-02 |
+| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | in-qa | | eng-manager | S | 2026-09-02 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-31 |
