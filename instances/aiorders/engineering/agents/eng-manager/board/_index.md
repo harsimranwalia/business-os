@@ -178,72 +178,6 @@ future pass — the WIP-2 cap is already over, so none of their G1s may be
 raised regardless of the (nonexistent) approval cap this board used to
 cite.
 
-## 2026-09-02 — scheduled sweep (02:00): fully quiet — no merges, no answers, one drift note filed
-
-`scheduled` event pass, context `launchd` — the four-times-daily safety
-net. Mode check clean (`MODE=active`). Pre-pass `eng-gate-check.sh`,
-whole-board: exit 0, clean, no `WAIVED:` lines (confirmed by running it
-directly this pass rather than trusting an injected result).
-
-**Business/technical intake:** `agents/product-manager/inbox/` and
-`agents/eng-manager/inbox/` hold only their `_handled`/`_processed`
-archives; `inbox/requests/` holds only its `.gitkeep`. Nothing new to
-shape or route.
-
-**Gate returns:** `git status` on the whole repo is clean and `HEAD` is
-still `975a435` — the exact commit the prior (~20:39) pass ended on — so
-nothing has touched this instance since. All nine loose `inbox/` items
-re-read directly regardless: the four carrying a `decision:` field
-(`ENG-007` continue-sequence, `ENG-008` and `ENG-013` merge requests,
-`ENG-026` readback question) are all still blank, and `ENG-016`'s G1
-(which carries no `decision:` key at all — see the drift note below) still
-ends "Filled in by the approver." with nothing after it. No hand-edit, no
-reply.
-
-**Merge detection:** checked via `gh pr view` on all four PRs, not just
-local ancestry. `aiorders-api` #6 and `aiorders-admin-hub` #5 (`ENG-008`),
-`aiorders-api` #5 and `aiorders-admin-hub` #4 (`ENG-013`) — all four still
-`OPEN`, `mergedAt: null`. Both tickets unchanged at `blocked`/`blocked_on:
-approver`.
-
-**Notify sweep:** nothing qualifies. `ENG-007`/`ENG-008`/`ENG-013`/`ENG-016`
-were each already nudged once (exactly one nudge, ever — already spent).
-`ENG-026`'s readback question is `notified: 2026-09-01T10:03:26`; current
-UTC is `2026-09-02T09:03:13`, so it's ~22h59m old — still under the 24h
-threshold by minutes, correctly left alone.
-
-**One drift note, filed rather than fixed.** `ENG-016`'s G1
-(`inbox/2026-08-29-eng016-g1-scope.md`) has no `decision:` key in its
-frontmatter at all — unlike every other gate item on this board (e.g.
-`ENG-009`/`ENG-010`'s G1s, per `observations.md` 2026-08-29), which carry
-`decision:` blank until answered. This pass only found it by reading the
-file directly; a heuristic that greps `^decision:` across `inbox/*.md` to
-find answered gates (the shortcut this board's own recent entries
-describe using) would never see this file at all, blank or answered,
-since the key doesn't exist to match. Logged to `observations.md` rather
-than fixed — it's a single hand-authored gate item, not a template this
-pass has reason to touch, and the ticket itself is unaffected: read
-directly, it's still unambiguously unanswered.
-
-**Dead-end sweep:** nothing to re-walk. No commit, no inbox edit, no merge
-since the ~20:39 pass — the chain-integrity conclusion every pass today
-already reached stands unchanged: every `ready`/`designed`/`shaped` ticket's
-last `chained:` line reads `none` with a valid cap/hold reason.
-
-**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1
-(`ENG-009`/`ENG-010` at `ready`, over cap, draining naturally); approver-facing
-WIP 3/2 (`ENG-008`, `ENG-013`, `ENG-016` all still block it, none cleared).
-No ticket sits in a state this pass could legally advance.
-
-**0 ticket-state transitions.** 1 observation filed. Rolled the ~15:46
-watch-sweep entry to archive, keeping the live board's cap of three.
-
-`chained: none` — nothing in this pass's scope sits in a state owned by
-an agent; every in-flight ticket is either approver-blocked or WIP-capped,
-same as every pass today. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
-clean, no `WAIVED:` lines.
-
 ## 2026-09-02 — scheduled sweep (09:30): found and resumed ENG-009's broken chain, masked ~28h by a wrong board-index correction
 
 `scheduled` event pass, context `launchd` — the four-times-daily safety
@@ -427,4 +361,66 @@ in-flight ticket is unchanged from the 09:30 pass: approver-blocked
 `chained: none` for all of them, same reasons as before. Post-pass
 `eng-gate-check.sh`, scoped (`ENG-009`) and whole-board: both exit 0,
 clean, no `WAIVED:` lines.
+
+## 2026-09-02 — watch sweep (~10:58): self-triggered by ENG-009's own merge-request write, nothing new
+
+`watch` event pass, context `launchd` — fired immediately behind the
+`continue ENG-009` pass's own commit (`d407096`, `10:57:26`). Narrow scope
+per this event's own contract: sweep the three watched inboxes only, act
+on what's new, ignore what's already processed.
+
+Mode check clean (`MODE=active`, repo-root `.env`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
+**Traced this fire to its source before treating it as new**, same
+discipline as the three duplicate watch fires on 2026-09-01
+(`board/_index-archive.md`). `git status` on `business-os` is fully clean
+and `HEAD` is `d407096` — exactly the commit the `continue ENG-009` pass
+ended on, per its own log entry directly above. A direct mtime sweep of
+`inbox/*.md` shows exactly one file newer than that pass's start:
+`inbox/2026-09-02-eng009-merge-request.md` (`10:52`), the L1 merge-request
+item that same pass wrote, notified (`traces/eng-notify-2026-09-02.log`,
+`10:51:07`), and already accounted for in its own log and in this board's
+"Waiting on the approver" section. Not new information — that pass's own
+bookkeeping tripping the fingerprint, identical in shape to every watch
+duplicate fire recorded yesterday.
+
+**All three inboxes swept anyway, not trusted from the paragraph above.**
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
+their `_handled`/`_processed` archives — nothing loose. `inbox/requests/`
+holds only its `.gitkeep`. `inbox/`'s ten loose items, each checked
+individually rather than as a batch:
+
+- Four `gate: incident` items (`2026-08-30-eng-loop-halted`,
+  `2026-08-30-eng-events-dropped`, `2026-08-31-eng-events-dropped`,
+  `2026-09-01-eng-gate-violation-watch`) each already carry an
+  "Investigated" addendum from an earlier pass concluding "no further
+  action; not a gate the approver answers" (or the 08-31 file's equivalent
+  closing note). Mtimes on all four predate today. Nothing to do.
+- Six `decision:`-bearing items (`ENG-007` continue-sequence question,
+  `ENG-008`/`ENG-013`/`ENG-009` merge requests, `ENG-016` G1, `ENG-026`
+  readback question) all still show `decision:` blank (or, for `ENG-016`,
+  no `decision:` key at all — the drift already logged in
+  `observations.md`). Each is already notified and, where 24h has passed,
+  already nudged its one permitted time (`ENG-007`, `ENG-008`, `ENG-013`,
+  `ENG-016`); `ENG-026` and `ENG-009` are both under the 24h threshold and
+  correctly not yet nudged. No hand-edit on any of them — only `ENG-009`'s
+  file has today's mtime, and that's its own raising pass, not a reply.
+
+**No dispatch, no chaining.** Nothing in this pass's scope was newly
+unblocked: the one ticket this fire traces back to (`ENG-009`) is already
+`blocked`/`blocked_on: approver` with its own `chained: none` correctly
+recorded by the pass that put it there. Machine WIP unchanged (`ENG-010`
+alone at `ready`, 1/1); approver-facing WIP unchanged (4/2, over cap,
+already named above).
+
+**0 ticket-state transitions.** No new observations, no new proposals —
+nothing surfaced that isn't already tracked. Rolled the 02:00
+scheduled-sweep entry to archive, keeping the live board's cap of three.
+
+`chained: none` — no ticket in this pass's scope was touched or unblocked;
+this pass only confirmed that what already looked settled is in fact
+settled. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board: exit 0, clean, no `WAIVED:` lines.
 
