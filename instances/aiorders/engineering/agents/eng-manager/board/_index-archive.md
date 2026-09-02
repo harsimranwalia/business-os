@@ -12,6 +12,87 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-02 — continue ENG-009: release-readiness done, both PRs opened stacked on ENG-008, now blocked on the approver
+
+`continue` event pass, context `ENG-009` — the chain fired by the 09:30
+`scheduled` pass's own resumption above. Narrow scope per this event's own
+contract: resume this ticket only, no board-wide sweep. Mode check clean
+(`MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+**All four upstream gates re-verified from the receipt files themselves**
+(migration, code review round 2, QA test plan, security — all **pass**),
+not trusted from the ticket's own log summary. Both worktrees were already
+clean on this ticket's own branch at its recorded commits; no existing PR
+found before creating one.
+
+**The one judgment call this hop made:** this ticket's branch is built on
+top of `ENG-008`'s branch, not `main` (confirmed by ancestry check,
+matching what the build hop's own PR-body draft already flagged), and
+`ENG-008` is still unmerged. Opening against `main` as usual would have
+pulled `ENG-008`'s three commits into this diff too, duplicating its own
+still-open PR. Opened both PRs with `--base
+feat/ENG-008-influencer-admin-management` instead — confirmed by diffing
+against that base first that this produces exactly ENG-009's own change
+(314 insertions/3 files on `aiorders-api`; 196+/10- on 1 file on
+`aiorders-admin-hub`) and nothing of `ENG-008`'s.
+
+**Opened both PRs**: `aiorders-api`
+https://github.com/harsimranwalia/aiorders-api/pull/7,
+`aiorders-admin-hub`
+https://github.com/harsimranwalia/aiorders-admin-hub/pull/6. Wrote the L1
+merge-request item (`inbox/2026-09-02-eng009-merge-request.md`), `pr_urls:`
+as a YAML list, an explicit Sequencing section explaining the stacked-base
+choice and both legal ways to resolve merge order. Notified cleanly
+(`traces/eng-notify-2026-09-02.log`).
+
+**Caught and corrected a wrong claim in an existing proposal while
+deciding how to stamp `notified:`.** The 09:30 pass's own proposal
+(`proposals.md`, 2026-09-02 row) asserted `ENG-008`'s/`ENG-013`'s
+merge-request timestamps were genuine UTC, unlike the PM-agent items under
+investigation. Checked directly rather than carried forward: both are
+textually identical to their own trace-log line, zero gap, same
+local-time-mislabeled-as-UTC pattern as every other gate item on this
+board. Corrected the proposal's three cells in place (see `ENG-009`'s own
+board-file log for the full diff) — the bug is board-wide, not
+PM-agent-specific, and there is no second, already-correct path to match
+against. Stamped this item's own `notified:` consistently with the actual,
+verified convention.
+
+**Cap check, not a hold.** Approver-facing WIP was already `3/2`, over
+cap, going in. This transition makes it `4/2`. Per the loop's own guard,
+the cap gates *new* work from starting that will need the approver, not a
+ticket already at `ready-to-ship` reaching its required, non-discretionary
+L1 conclusion — `ENG-008`/`ENG-013` already set this exact precedent. Not
+treated as a reason to hold.
+
+State → `blocked`, `blocked_on: approver`, `blocked_from: ready-to-ship`,
+owner `devops → approver`. `links.pr` set to both PR URLs. **1 transition**
+(`ready-to-ship → blocked`), well under the cap of 4. **Consequence:**
+machine WIP `2/1 → 1/1` (`ENG-009` leaves the counted `ready`..`ready-to-ship`
+range; `ENG-010` alone remains, exactly at cap). Approver-facing WIP
+`3/2 → 4/2`.
+
+**Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+valid, accounted-for state with the chain record below. **Notify sweep:**
+this pass's own gate item raised and stamped; nothing else newly eligible.
+**1 proposal corrected**, no new observations.
+
+Full detail — receipts verified, the base-branch reasoning, the PR bodies,
+the proposal correction, the full log record: `ENG-009`'s own board file,
+2026-09-02 release-readiness entry.
+
+`chained: none` — `blocked`, `blocked_on: approver`. This is the human gate
+the whole hop was driving toward; firing `continue ENG-009` again would
+only queue against a ticket with nothing left for a machine to do until the
+approver merges one or both PRs or replies to the gate item. Every other
+in-flight ticket is unchanged from the 09:30 pass: approver-blocked
+(`ENG-008`, `ENG-013`, `ENG-016`, `ENG-026`) or WIP-capped (`ENG-010`,
+`ENG-014`, `ENG-015`, `ENG-017`, `ENG-018`–`ENG-021`, `ENG-022`–`ENG-025`),
+`chained: none` for all of them, same reasons as before. Post-pass
+`eng-gate-check.sh`, scoped (`ENG-009`) and whole-board: both exit 0,
+clean, no `WAIVED:` lines.
+
 ## 2026-09-02 — scheduled sweep (09:30): found and resumed ENG-009's broken chain, masked ~28h by a wrong board-index correction
 
 `scheduled` event pass, context `launchd` — the four-times-daily safety
