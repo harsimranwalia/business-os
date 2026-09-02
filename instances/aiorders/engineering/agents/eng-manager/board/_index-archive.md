@@ -12,6 +12,78 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-01 — scheduled sweep (20:30): two self-closed incidents get their own closing note; otherwise unchanged
+
+`scheduled` event pass, context `launchd` — the four-times-daily safety
+net. Mode check clean (`MODE=active`). Pre-pass `eng-gate-check.sh`,
+whole-board: exit 0, clean, no `WAIVED:` lines.
+
+**Business/technical intake:** `agents/product-manager/inbox/` and
+`agents/eng-manager/inbox/` hold only their `_handled`/`_processed`
+archives; `inbox/requests/` holds only its `.gitkeep`. Nothing new to
+shape or route.
+
+**Gate returns:** all nine loose `inbox/` items re-read directly. Every
+`decision:` field is still blank, and no file's mtime is newer than
+15:41 (the 15:30 pass's own writes) — nothing answered since the 15:46
+`watch` pass.
+
+**Merge detection:** checked via `gh pr view` on all four PRs rather than
+only local ancestry, since GitHub state is exactly what a local `watch`
+can't see between scheduled sweeps. `aiorders-api` #6 and
+`aiorders-admin-hub` #5 (`ENG-008`), `aiorders-api` #5 and
+`aiorders-admin-hub` #4 (`ENG-013`) — all four still `OPEN`, `mergedAt:
+null`. Both tickets unchanged at `blocked`/`blocked_on: approver`.
+
+**Two incident files verified individually and closed in place.**
+`inbox/2026-08-30-eng-loop-halted.md` and
+`inbox/2026-09-01-eng-gate-violation-watch.md` were each already
+correctly investigated and resolved — not a repeat of the false-group-
+summary failure from earlier today (that one, on
+`2026-08-31-eng-events-dropped.md`, involved a file that was *never*
+actually looked at; these two were, individually, by the 09:30 pass's own
+"same scheduled pass, continued" entry in `board/_index-archive.md`, and
+correctly excluded from that entry's own group claim). Neither had a
+closing note appended to the file itself, unlike their
+`eng-events-dropped` siblings, so a future pass sweeping `inbox/` fresh
+would have no signal short of re-reading the archive. Appended a short
+closing note to each, in the same style and pointing back to the archive
+record rather than re-deriving it — no new investigation, no decision
+required, no nudge (incident notices self-close; they aren't a gate the
+approver answers).
+
+**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1
+(`ENG-009`/`ENG-010` at `ready`, over cap); approver-facing WIP 3/2
+(`ENG-008`, `ENG-013`, `ENG-016` all still block it). No ticket sits in a
+state this pass could legally advance.
+
+**Notify sweep:** nothing qualifies. `ENG-008`/`ENG-013`'s merge requests
+and `ENG-016`'s G1 were each already nudged once (2026-09-01, per their
+own frontmatter) — exactly one nudge, ever. `ENG-007`'s continue-sequence
+question was already nudged this morning. `ENG-026`'s readback question
+is `notified: 2026-09-01T10:03:26`, ~10.5h old — under the 24h nudge
+threshold, correctly left alone.
+
+**Dead-end sweep:** nothing changed since the 15:46 `watch` pass (no new
+commits on `origin/main`, no inbox edits besides this pass's own two
+closing notes, no merges) — the chain-integrity conclusion it and the
+15:30 pass already reached stands unchanged: every `ready`/`designed`/
+`shaped` ticket's last `chained:` line reads `none` with a valid cap/hold
+reason, nothing broken. Not re-walked ticket by ticket, since re-deriving
+an unchanged conclusion from unchanged inputs is exactly the waste this
+instance's own proposals already flag.
+
+**0 ticket-state transitions.** 2 incident files closed in place; 1 board
+correction (rolled the ~10:25 entry to archive, keeping the cap of three).
+
+`chained: none` — nothing in this pass's scope sits in a state owned by
+an agent; every in-flight ticket is either approver-blocked (`ENG-008`,
+`ENG-013`, `ENG-016`, `ENG-026`) or WIP-capped (`ENG-009`, `ENG-010`,
+`ENG-014`, `ENG-015`, `ENG-017`, `ENG-018`–`ENG-021`, `ENG-022`,
+`ENG-023`, `ENG-024`, `ENG-025`), same as every pass today. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
 ## 2026-09-01 — watch sweep (~15:46): duplicate fire off the 15:30 scheduled pass's own writes, nothing new
 
 `watch` event pass, context `launchd` — queued while the 15:30 `scheduled`

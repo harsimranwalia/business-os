@@ -9,15 +9,19 @@ end (through `shipped`) before the next one starts, not several tickets each
 advanced by one shallow step per pass.** This was 12 (the `max_5x` tier value)
 earlier the same day; see that file for the full rationale.
 
-**Currently 2/1 — over the new cap, but shrinking.** `ENG-009` and `ENG-010`
-sit at `ready`. `ENG-008` and `ENG-013` both left this range today — each
-one's security gate passed, then its own devops release-readiness hop opened
-its PR(s) and moved it to `blocked`/`blocked_on: approver` — all were already
-in flight when the cap changed and are **not** being reverted or paused; they
-drain naturally as each reaches `shipped`. **No new ticket enters `ready`
-until this count is back at or under 1** — `ENG-014` through `ENG-025` stay
-at `designed`/`shaped`/`awaiting-scope` (backlog grooming only, not gated by
-this cap) until then.
+**Currently 2/1 — over the new cap, but shrinking.** `ENG-009` sits at
+`building` — **not `ready`**; this table said `ready` from 2026-09-01 09:30
+through this pass, a stale correction the 09:30 pass that day made in error
+(see this pass's own dated entry below for the full evidence trail). `ENG-010`
+sits at `ready`, correctly, sequenced behind it. `ENG-008` and `ENG-013` both
+left this range on 2026-08-31 — each one's security gate passed, then its own
+devops release-readiness hop opened its PR(s) and moved it to
+`blocked`/`blocked_on: approver` — all four were already in flight when the
+cap changed and are **not** being reverted or paused; they drain naturally as
+each reaches `shipped`. **No new ticket enters `ready` until this count is
+back at or under 1** — `ENG-014` through `ENG-025` stay at
+`designed`/`shaped`/`awaiting-scope` (backlog grooming only, not gated by this
+cap) until then.
 
 **Approver-facing WIP 2 — 3/2, over cap, not 2/2.** `ENG-013`
 (`inbox/2026-08-31-eng013-merge-request.md`) and `ENG-008`
@@ -64,7 +68,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ID | Title | Project | State | Priority | Owner | Size | Updated |
 |---|---|---|---|---|---|---|---|
 | ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
-| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-31 |
+| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | building | | eng-manager | S | 2026-09-02 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-31 |
@@ -164,78 +168,6 @@ why); nudged this pass, first nudge, 2.5 days overdue. `ENG-019` through
 `ENG-021` are G1-drafted and not yet raised, correctly left for a future
 pass — the WIP-2 cap is already over, so none of their G1s may be raised
 regardless of the (nonexistent) approval cap this board used to cite.
-
-## 2026-09-01 — scheduled sweep (20:30): two self-closed incidents get their own closing note; otherwise unchanged
-
-`scheduled` event pass, context `launchd` — the four-times-daily safety
-net. Mode check clean (`MODE=active`). Pre-pass `eng-gate-check.sh`,
-whole-board: exit 0, clean, no `WAIVED:` lines.
-
-**Business/technical intake:** `agents/product-manager/inbox/` and
-`agents/eng-manager/inbox/` hold only their `_handled`/`_processed`
-archives; `inbox/requests/` holds only its `.gitkeep`. Nothing new to
-shape or route.
-
-**Gate returns:** all nine loose `inbox/` items re-read directly. Every
-`decision:` field is still blank, and no file's mtime is newer than
-15:41 (the 15:30 pass's own writes) — nothing answered since the 15:46
-`watch` pass.
-
-**Merge detection:** checked via `gh pr view` on all four PRs rather than
-only local ancestry, since GitHub state is exactly what a local `watch`
-can't see between scheduled sweeps. `aiorders-api` #6 and
-`aiorders-admin-hub` #5 (`ENG-008`), `aiorders-api` #5 and
-`aiorders-admin-hub` #4 (`ENG-013`) — all four still `OPEN`, `mergedAt:
-null`. Both tickets unchanged at `blocked`/`blocked_on: approver`.
-
-**Two incident files verified individually and closed in place.**
-`inbox/2026-08-30-eng-loop-halted.md` and
-`inbox/2026-09-01-eng-gate-violation-watch.md` were each already
-correctly investigated and resolved — not a repeat of the false-group-
-summary failure from earlier today (that one, on
-`2026-08-31-eng-events-dropped.md`, involved a file that was *never*
-actually looked at; these two were, individually, by the 09:30 pass's own
-"same scheduled pass, continued" entry in `board/_index-archive.md`, and
-correctly excluded from that entry's own group claim). Neither had a
-closing note appended to the file itself, unlike their
-`eng-events-dropped` siblings, so a future pass sweeping `inbox/` fresh
-would have no signal short of re-reading the archive. Appended a short
-closing note to each, in the same style and pointing back to the archive
-record rather than re-deriving it — no new investigation, no decision
-required, no nudge (incident notices self-close; they aren't a gate the
-approver answers).
-
-**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1
-(`ENG-009`/`ENG-010` at `ready`, over cap); approver-facing WIP 3/2
-(`ENG-008`, `ENG-013`, `ENG-016` all still block it). No ticket sits in a
-state this pass could legally advance.
-
-**Notify sweep:** nothing qualifies. `ENG-008`/`ENG-013`'s merge requests
-and `ENG-016`'s G1 were each already nudged once (2026-09-01, per their
-own frontmatter) — exactly one nudge, ever. `ENG-007`'s continue-sequence
-question was already nudged this morning. `ENG-026`'s readback question
-is `notified: 2026-09-01T10:03:26`, ~10.5h old — under the 24h nudge
-threshold, correctly left alone.
-
-**Dead-end sweep:** nothing changed since the 15:46 `watch` pass (no new
-commits on `origin/main`, no inbox edits besides this pass's own two
-closing notes, no merges) — the chain-integrity conclusion it and the
-15:30 pass already reached stands unchanged: every `ready`/`designed`/
-`shaped` ticket's last `chained:` line reads `none` with a valid cap/hold
-reason, nothing broken. Not re-walked ticket by ticket, since re-deriving
-an unchanged conclusion from unchanged inputs is exactly the waste this
-instance's own proposals already flag.
-
-**0 ticket-state transitions.** 2 incident files closed in place; 1 board
-correction (rolled the ~10:25 entry to archive, keeping the cap of three).
-
-`chained: none` — nothing in this pass's scope sits in a state owned by
-an agent; every in-flight ticket is either approver-blocked (`ENG-008`,
-`ENG-013`, `ENG-016`, `ENG-026`) or WIP-capped (`ENG-009`, `ENG-010`,
-`ENG-014`, `ENG-015`, `ENG-017`, `ENG-018`–`ENG-021`, `ENG-022`,
-`ENG-023`, `ENG-024`, `ENG-025`), same as every pass today. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
-clean, no `WAIVED:` lines.
 
 ## 2026-09-01 — watch sweep (~20:39): third duplicate fire today, off the 20:30 scheduled pass's own closing-note writes, nothing new
 
@@ -353,4 +285,107 @@ an agent; every in-flight ticket is either approver-blocked or WIP-capped,
 same as every pass today. Post-pass
 `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
 clean, no `WAIVED:` lines.
+
+## 2026-09-02 — scheduled sweep (09:30): found and resumed ENG-009's broken chain, masked ~28h by a wrong board-index correction
+
+`scheduled` event pass, context `launchd` — the four-times-daily safety
+net. Mode check clean (`MODE=active`). Pre-pass `eng-gate-check.sh`,
+whole-board: exit 0, clean, no `WAIVED:` lines.
+
+**Business/technical intake:** `agents/product-manager/inbox/` and
+`agents/eng-manager/inbox/` hold only their `_handled`/`_processed`
+archives; `inbox/requests/` holds only its `.gitkeep`. Nothing new to
+shape or route.
+
+**Gate returns:** all nine loose `inbox/` items re-read directly, plus one
+timing check that changed a real decision (below). The four carrying a
+`decision:` field (`ENG-007`, `ENG-008`, `ENG-013`, `ENG-026`) are all
+still blank. `ENG-016`'s G1 still ends "Filled in by the approver." with
+nothing after — confirmed by reading the file, not by grepping
+`^decision:`, per the 02:00 pass's own drift note (it carries no
+`decision:` key at all).
+
+**`ENG-026` checked for its 24h nudge and correctly not nudged — the
+field is real, the naive comparison against it isn't.** Fresh
+`date`/`date -u` on this host: local is PDT, UTC = local + 7h. `ENG-026`'s
+`notified: 2026-09-01T10:03:26` is textually identical to
+`traces/eng-notify-2026-09-01.log`'s own local-clock entry for the same
+raise (`[10:03:26] sent: active ...`) — which it cannot honestly be if one
+is UTC and the other local. `ENG-016` and `ENG-007` (also
+`agent: product-manager`) show the identical pattern; both merge-requests
+(`agent: eng-manager`) show a genuine 7h gap, i.e. correct UTC. Corrected
+for the true raise time (local 10:03:26 PDT = 17:03:26 UTC, 2026-09-01),
+current UTC (`16:34:24`) puts this item at ~23h31m, not yet 24h — so it
+was **not** nudged this pass, contrary to what a face-value reading of the
+field would have done. Proposal filed (`proposals.md`) rather than fixed
+inline — this is a stamping bug in whichever code path the product-manager
+agent uses for `notified:`/`nudged:`, not this pass's file to edit blind.
+
+**Merge detection:** `gh pr view` on all four PRs. `aiorders-api` #6 and
+`aiorders-admin-hub` #5 (`ENG-008`), `aiorders-api` #5 and
+`aiorders-admin-hub` #4 (`ENG-013`) — all four still `OPEN`, `mergedAt:
+null`. Both tickets unchanged at `blocked`/`blocked_on: approver`.
+
+**Dispatch — the real finding this pass.** Machine WIP read `2/1` (over
+cap) on the strength of `ENG-009`/`ENG-010` both "sitting at `ready`," the
+same conclusion every pass has repeated since 2026-09-01 09:30. Checking
+`ENG-009`'s own board file directly instead of the index found `state:
+building`, not `ready` — and has read `building` continuously since
+commit `3881cc2` (2026-09-01 08:45), confirmed via `git show` at every
+intervening commit (`29af8f2`, `db8bf41`, `3881cc2`, `e281c71`, `HEAD`).
+The 09-01 09:30 pass misread this file, "corrected" the board index's
+In-flight row from `building` to `ready` on that false premise
+(`traces/eng-loop-2026-09-01.log:462-493`), and every pass since dispatched
+off the wrong table value instead of the ticket's own file — the identical
+root cause as `ENG-016`'s G1 going missing from this same table
+(`proposals.md`, 2026-09-01 row, now updated with this second occurrence).
+
+The ticket's own log shows a `chained: ENG-009` fire on 2026-08-30 that
+never actually landed a session — zero mentions of `ENG-009` anywhere in
+that day's `eng-loop` log, no `traces/.hops-*-ENG-009` file ever created on
+this host, `links.review`/`links.test_plan` still blank. Most likely fired
+from the Windows host (this ticket's build commit reads as a delayed local
+sync, and that host's `traces/` is `.gitignore`d and unreachable from
+here) — cannot root-cause further than that, same limit
+`2026-08-31-eng-events-dropped.md` already named for the identical
+cross-host blind spot. Verified safe to resume before touching anything:
+both branches (`aiorders-api@4eb4b1b`, `aiorders-admin-hub@328db29`) still
+resolve on `origin`, and `business-os` itself is ahead of, not behind,
+`origin/main` (`git fetch` + `git log HEAD..origin/main` empty) — no newer
+remote state this pass could be missing.
+
+**Board index corrected**: In-flight row and header narrative both now say
+`ENG-009` `building`. Machine WIP count itself is unchanged (2/1, over
+cap either way — `building` is inside the same counted range `ready` was)
+so nothing about the cap math moves; what changes is that this ticket was
+never actually waiting on the cap, it was waiting on a chain nobody had
+re-fired. `ENG-010` unaffected — its own hold (machine WIP, not
+sequencing) still holds for the same reason as before.
+
+**Full detail, evidence trail, and the fix itself: `ENG-009`'s own board
+file, 2026-09-02 log entry** — not re-derived here.
+
+**Notify sweep:** `ENG-026` — see above, not yet due. `ENG-007`/`ENG-008`/
+`ENG-013`/`ENG-016` already nudged once each (spent). Nothing else
+qualifies.
+
+**Dead-end sweep:** this pass's own finding is the dead-end sweep result —
+`ENG-009` was the broken chain. Nothing else changed: no new commits
+beyond this pass's own, no other inbox edits, no other merges.
+
+**1 ticket-state correction** (`ENG-009` board-index row: `ready` →
+`building`, matching its own frontmatter — no actual state transition,
+just removing a false one). **2 proposals filed.** Rolled the 20:30
+scheduled-sweep entry to archive, keeping the live board's cap of three.
+
+`chained: ENG-009` — sits at `building`, agent-owned (`eng-manager`), not
+the approver, not blocked, not terminal, not held by a cap (already
+inside the counted range regardless). Firing
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+before exiting. Every other in-flight ticket is unchanged from every pass
+today: approver-blocked (`ENG-008`, `ENG-013`, `ENG-016`, `ENG-026`) or
+WIP-capped (`ENG-010`, `ENG-014`, `ENG-015`, `ENG-017`, `ENG-018`–`ENG-021`,
+`ENG-022`–`ENG-025`), `chained: none` for all of them, same reasons as
+before. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+whole-board: exit 0, clean, no `WAIVED:` lines.
 
