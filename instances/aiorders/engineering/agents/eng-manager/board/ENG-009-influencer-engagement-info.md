@@ -750,8 +750,8 @@ Append-only. One line per state transition, newest last.
   that hunk; whoever does it needs to apply *both* changes by hand, not
   pick a side.
 
-  ## Automatic-failure scan (recorded here; no receipt on a fail —
-  `code-review-gate/SKILL.md` step 8)
+  **Automatic-failure scan** (recorded here; no receipt on a fail —
+  `code-review-gate/SKILL.md` step 8):
 
   | # | Check | Result |
   |---|---|---|
