@@ -12,6 +12,53 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-01 — watch sweep (~10:25): duplicate fire off the prior pass's own nudge write, nothing new
+
+`watch` event pass, context `launchd` — drained immediately behind the
+"watch sweep (~10:10)" pass above (`traces/eng-loop-2026-09-01.log`,
+`10:25:05`, 2s after that pass's own end). Narrow scope per this event's
+own contract: sweep the three watched inboxes only.
+
+Mode check clean (`MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (`ENG_ROOT`
+set explicitly to this instance): exit 0, clean, no `WAIVED:` lines.
+
+**Traced this fire to its source before treating it as a new arrival.**
+`.watch-seen`'s committed fingerprint is captured before a watch pass runs
+and written only after it succeeds (`eng-trigger.sh`, ENG-005), so an inbox
+edit a pass makes *during* its own run changes the live fingerprint out
+from under that stale baseline and can queue a fresh fire against itself.
+The pass above wrote exactly one thing to a watched inbox during its 886s
+run — the nudge stamp on `inbox/2026-08-29-eng016-g1-scope.md` (`nudged:
+2026-09-01T10:20:06`) — and every other file across all three inboxes is
+unchanged since before that pass started (checked mtimes directly, not
+inferred).
+
+**All three inboxes re-swept anyway, not trusted from the entry above.**
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` both hold
+only their `_handled`/`_processed` archives, nothing loose. `inbox/`'s nine
+items re-read directly: all nine `decision:` fields still blank or absent —
+nothing answered since the pass above. `inbox/requests/` empty.
+
+**Nothing re-done.** `ENG-016` already corrected and nudged (one nudge,
+ever — not repeated); its proposal already filed; the self-closed incident
+notices and the `ENG-007`-sequence question already investigated to
+conclusion and already nudged respectively, by the pass above or earlier
+ones. Re-verifying and re-acting on unchanged state is the exact waste the
+09:30 pass's own proposal (now archived above) was filed to stop.
+
+**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1 (over),
+approver-facing WIP 3/2 (over) — `ENG-008`, `ENG-013`, `ENG-016` all still
+block it. No ticket sits in a state this pass could legally advance.
+
+**0 transitions. No board correction needed this time.**
+
+`chained: none` — nothing in this pass's scope sits in a state owned by an
+agent; every in-flight ticket is either approver-blocked or capped, same as
+the pass immediately above. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
 ## 2026-09-01 — watch sweep (~10:10): the approver-facing WIP cap was actually 3/2, not 2/2
 
 `watch` event pass, context `launchd` — one of 7 duplicate `watch (launchd)`

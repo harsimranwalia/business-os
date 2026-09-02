@@ -20,3 +20,13 @@ over. If the day was legitimately busy, the budget is the thing to raise
 that fires on normal days teaches everyone to ignore it.
 
 Scheduled passes are unaffected, and every other ticket keeps moving.
+
+---
+
+**Investigated 2026-09-01** (the 09:30 `scheduled` pass's own continuation
+entry, `board/_index-archive.md`). This was a daily hop-ceiling halt for
+2026-08-30 specifically — self-clearing at midnight by design, and two days
+moot by the time it was checked: no ticket was found bouncing in
+`traces/eng-loop-2026-08-30.log`, and today's own counter
+(`traces/.hops-2026-09-01`) sits at 7/200, nowhere near the ceiling. No
+further action; not a gate the approver answers.
