@@ -6,7 +6,7 @@ type: feature
 size: S
 severity: P3
 priority:
-state: ready
+state: building
 owner: eng-manager
 lane: full
 blocked_on:
@@ -14,7 +14,7 @@ blocked_from:
 source: approver
 created: 2026-08-29
 updated: 2026-09-02
-branch:
+branch: feat/ENG-010-influencer-relationship-notes (aiorders-api@d79d963, aiorders-admin-hub@f7d8fd7)
 depends_on: []
 blocks: []
 parent:
@@ -433,3 +433,164 @@ Append-only. One line per state transition, newest last.
   before this pass exits. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
   clean, no `WAIVED:` lines.
+
+- `2026-09-02` `ready → building`: built per the design, both repos
+  (eng-manager, `continue` event pass, context `ENG-010`, this ticket's turn
+  at the front of `traces/.pending`). Narrow scope per the event's own
+  contract (resume this ticket from its current state; no board-wide sweep).
+  Mode check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+  whole-board: both exit 0, clean.
+
+  **Both `_eng` worktrees already sat on `ENG-009`'s own tip, clean** —
+  convenient rather than assumed: `git status` showed a clean tree on both
+  before touching anything, `git fetch origin` confirmed neither
+  `feat/ENG-009-influencer-engagement-info` branch had moved
+  (`aiorders-api@d37e0c9`, `aiorders-admin-hub@92bcacd`, both matching this
+  ticket's own prior-read evidence exactly). Branched
+  `feat/ENG-010-influencer-relationship-notes` off that tip in **both**
+  repos — this ticket's own `## Notes` already named it last of the three
+  influencer tickets, sequenced behind `ENG-009` as well as `ENG-008`, and
+  the frontend dependency is a hard one (`src/pages/Influencers.tsx` carries
+  every field `ENG-008`/`ENG-009` added; branching off a stale copy would
+  create exactly the merge conflict the sequencing hold existed to avoid).
+  Neither `ENG-008`'s nor `ENG-009`'s own branch refs were disturbed —
+  reconfirmed after branching (`57f8c4b`/`63be255` and `d37e0c9`/`92bcacd`
+  respectively, both unchanged).
+
+  **No Supabase MCP tool available this session** — checked via `ToolSearch`
+  before writing the migration, unlike `ENG-008`'s and `ENG-009`'s own build
+  hops, which both re-verified live schema state through it. Filed as an
+  observation (`observations.md`) rather than assumed to be a permanent
+  capability change — it may be this session's own tool configuration.
+  Relied on static evidence instead (migrations-directory listing, a
+  repo-wide grep for any colliding name, and the architect design's own
+  same-week live-schema reading of `influencers`/`profiles`) — full
+  reasoning and the resulting narrower gate verdict in
+  `agents/database/migrations/ENG-010-influencer-relationship-notes.md`,
+  which says plainly that its evidence is weaker than `ENG-008`'s/`ENG-009`'s
+  rather than presenting it as equivalent.
+
+  **Resolved the design's one open question with evidence, not a guess.**
+  The design's Interfaces section left "verify which is authoritative at
+  build time" between `profiles.name` and `first_name`/`last_name` for
+  author-name resolution. Checked `handle_new_user()`
+  (`20250729143357_initial_restaurant_rls.sql`): every signup branch
+  (influencer, restaurant, and the else-branch admin/staff accounts fall
+  into before a role is manually reassigned) inserts `name` from
+  `raw_user_meta_data`; none inserts `first_name`/`last_name` at all. Those
+  two columns are read elsewhere in this function family
+  (`activation.ts`, `foodswipe.ts`, `users.ts`) but nothing in this codebase
+  was found populating them for an admin/sub-admin account specifically.
+  Implemented `name` as primary, `first_name`/`last_name` as fallback,
+  matching the design's literal wording and the stronger evidence, in both
+  the new handler's `resolveAuthorNames` and consistently for the POST
+  response's own author.
+
+  **Built exactly what the design named, reusing rather than duplicating
+  the existing narrower check.** New table (`influencer_notes`, migration
+  `20260902120000_create_influencer_notes.sql` — doc above); new handler
+  `admin-portal/handlers/influencer-notes.ts` (`GET
+  ?influencer_id={id}` list, `POST` create) importing
+  `hasInfluencerAdminAccess` from `influencers.ts` rather than
+  reimplementing the admin/sub-admin-only check, so the two handlers can
+  never drift apart on who's allowed through; `author_id` always taken from
+  `auth.user.id`, never the request body (tested explicitly). Routed in
+  `index.ts` ahead of the existing `/influencers` branch — the two path
+  prefixes don't actually overlap (`"influencer-notes"` is not a substring
+  of `"influencers"`), but the ordering is defensive and cheap, matching
+  this router's own existing ordering discipline for the unrelated
+  `activity` sub-route. Frontend: `src/pages/Influencers.tsx` gains a Notes
+  block in the existing detail dialog (chronological list, author +
+  timestamp, add-note form), fetched per-influencer on dialog open
+  (`fetchNotes`, mirroring `ENG-009`'s own `fetchActivity` lazy-fetch
+  pattern) rather than preloaded for the whole list. No PATCH/DELETE
+  anywhere, matching the PRD's strictly-accumulate-only requirement.
+
+  **Found and fixed a real gap while touching this function, not a new
+  one this ticket introduced.** `aiorders-api/CLAUDE.md` requires updating
+  `supabase/functions/README.md`'s entry for a function "in the same
+  commit" whenever it changes. `admin-portal`'s own entry never documented
+  the `influencers`/`influencers/activity` routes `ENG-008`/`ENG-009` added
+  — confirmed absent, not misremembered. Since this ticket is already
+  changing `admin-portal` and already has full, current knowledge of what's
+  missing, brought the whole entry up to date in one edit (routes, DB
+  tables, and a Notes line on the narrower role check) rather than adding
+  only this ticket's own route and leaving the pre-existing gap for a
+  future pass to rediscover. Filed as an observation, not a proposal —
+  already fixed, nothing left to decide.
+
+  **Step 6b artifact-enumeration grep run before closing this hop.** Grepped
+  `influencer_notes`, `influencer-notes`, `handleInfluencerNotes`, and
+  `resolveAuthorNames` across `instances/`/`departments/`: every hit is this
+  ticket's own design doc, its G1, its board file, or the migration doc just
+  written this pass — no other department *instruction* or *map* file
+  assumes a different shape, so nothing else needed fixing.
+
+  **Self-tested, both repos.** `aiorders-api`: `deno check` on the new
+  handler and test file — clean. `deno test influencer-notes.test.ts` —
+  **16 passed, 0 failed**, including the explicit `role: 'influencer'`
+  negative-authorization case (AC4) and the author-id-from-session case.
+  `deno test influencers.test.ts` (unaffected sibling) — still **34 passed,
+  0 failed**. Whole-tree `deno check handlers/*.ts` — 17 errors, matching
+  the exact count every prior ticket on this board has recorded, all in
+  `auth.ts`/`partners.ts`/`users.ts`; confirmed zero in
+  `influencer-notes.ts` or `influencers.ts`. `aiorders-admin-hub`: `npm run
+  lint` — 150 pre-existing errors (unchanged count), 31 warnings; grepped
+  for `Influencers.tsx` specifically — the same one pre-existing
+  `react-hooks/exhaustive-deps` warning every prior pass on this file
+  recorded, zero new. `npm run build` — clean, same pre-existing chunk-size
+  notice as every other ticket on this board.
+
+  **Database migration doc written**
+  (`agents/database/migrations/ENG-010-influencer-relationship-notes.md`) —
+  static verification only (no MCP this pass, see above), gate verdict
+  **pass**, evidence narrower than precedent and said so explicitly rather
+  than dressed up as equivalent.
+
+  **Both branches committed and pushed**
+  (`aiorders-api@d79d963`, `aiorders-admin-hub@f7d8fd7`, both based on
+  `ENG-009`'s still-unmerged tip); no PR opened yet — devops's release step,
+  same as `ENG-008`/`ENG-009`. PR bodies drafted here:
+
+  *aiorders-api* — title: `Add staff relationship notes for influencers
+  (ENG-010)`. Body: new, isolated `influencer_notes` table (FK into
+  `influencers`/`profiles`, no edit/delete path); new `GET
+  admin-portal/influencer-notes?influencer_id={id}` (list, newest first,
+  resolved author name) and `POST admin-portal/influencer-notes` (create;
+  `author_id` always from the session), both admin/sub-admin gated via the
+  same `hasInfluencerAdminAccess` check `ENG-008`/`ENG-009` established.
+  Also brings `supabase/functions/README.md`'s `admin-portal` entry up to
+  date (previously missing the `influencers` routes entirely). Depends on
+  `ENG-009`'s branch (based off it, not `main`). Migration doc:
+  `agents/database/migrations/ENG-010-influencer-relationship-notes.md`.
+
+  *aiorders-admin-hub* — title: `Add staff notes section to influencer
+  detail dialog (ENG-010)`. Body: adds a Notes block to the existing
+  detail dialog — chronological list (author + timestamp) plus an add-note
+  form, sourced from the new `aiorders-api` endpoints above, fetched
+  per-influencer when the dialog opens. Depends on `ENG-009`'s branch
+  (based off it, not `main`).
+
+  **1 transition** (`ready → building`; the build itself happened inside
+  it), well under the cap of 4 — the next hop (review + quality, combined)
+  is a fresh session's work by design, same as every other ticket at this
+  state on this board. **Consequence:** machine WIP unaffected — `building`
+  is still inside the counted `ready`..`ready-to-ship` range, so the slot
+  `ENG-010` already held is unchanged (1/1). Approver-facing WIP and cap
+  both unaffected — no gate touched this hop.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  **Notify sweep:** nothing raised this pass (no gate item — a build hop
+  doesn't notify); nothing to nudge. **Observations filed**
+  (`observations.md`): the missing-MCP-tool finding and the
+  README-documentation-gap finding, both above.
+
+  `chained: ENG-010` — ticket sits at `building`, agent-owned (the build
+  itself is done; the next hop is code review + quality, combined, per this
+  loop's own design for why that isn't done in the same session) — not the
+  approver, not blocked, not terminal, not held by a cap. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-010`
+  before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-010`) and whole-board: see board index.

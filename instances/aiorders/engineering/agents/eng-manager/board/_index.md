@@ -33,6 +33,14 @@ occupant of the machine-WIP-1 slot, not one waiting behind it. Chained
 `continue ENG-010`. Count itself stays 1/1 until that hop actually opens
 a branch — see `ENG-010`'s own board file, 2026-09-02 entry.
 
+**16:02 update:** the chained `continue ENG-010` build hop landed —
+`ready → building`, both repos, branch `feat/ENG-010-influencer-
+relationship-notes` off `ENG-009`'s tip, committed and pushed
+(`aiorders-api@d79d963`, `aiorders-admin-hub@f7d8fd7`), no PR opened yet.
+Count stays 1/1 (`building` is still inside the counted
+`ready`..`ready-to-ship` range) — see `ENG-010`'s own board file for the
+full build entry.
+
 **Approver-facing WIP 2 — 4/2, over cap.** `ENG-013`
 (`inbox/2026-08-31-eng013-merge-request.md`) and `ENG-008`
 (`inbox/2026-08-31-eng008-merge-request.md`) each occupy a slot via their own
@@ -83,7 +91,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 |---|---|---|---|---|---|---|---|
 | ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
 | ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | blocked | | approver | S | 2026-09-02 |
-| ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-09-02 |
+| ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | building | | eng-manager | S | 2026-09-02 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-31 |
 | ENG-015 | Agency/reseller (partner) users — brand-scoped locations and a working add-location path | aiorders-admin-hub | designed | | architect | M | 2026-08-31 |
@@ -195,68 +203,6 @@ convenient," non-blocking). This 15:30 `scheduled` sweep found it past its
 true 24h mark under either timestamp reading (naive face-value **and**
 the corrected local-time interpretation both land past 24h as of this
 pass — see the ticket's own frontmatter) and sent its first, only nudge.
-
-## 2026-09-02 — watch sweep (~10:58): self-triggered by ENG-009's own merge-request write, nothing new
-
-`watch` event pass, context `launchd` — fired immediately behind the
-`continue ENG-009` pass's own commit (`d407096`, `10:57:26`). Narrow scope
-per this event's own contract: sweep the three watched inboxes only, act
-on what's new, ignore what's already processed.
-
-Mode check clean (`MODE=active`, repo-root `.env`). Pre-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
-clean, no `WAIVED:` lines.
-
-**Traced this fire to its source before treating it as new**, same
-discipline as the three duplicate watch fires on 2026-09-01
-(`board/_index-archive.md`). `git status` on `business-os` is fully clean
-and `HEAD` is `d407096` — exactly the commit the `continue ENG-009` pass
-ended on, per its own log entry directly above. A direct mtime sweep of
-`inbox/*.md` shows exactly one file newer than that pass's start:
-`inbox/2026-09-02-eng009-merge-request.md` (`10:52`), the L1 merge-request
-item that same pass wrote, notified (`traces/eng-notify-2026-09-02.log`,
-`10:51:07`), and already accounted for in its own log and in this board's
-"Waiting on the approver" section. Not new information — that pass's own
-bookkeeping tripping the fingerprint, identical in shape to every watch
-duplicate fire recorded yesterday.
-
-**All three inboxes swept anyway, not trusted from the paragraph above.**
-`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
-their `_handled`/`_processed` archives — nothing loose. `inbox/requests/`
-holds only its `.gitkeep`. `inbox/`'s ten loose items, each checked
-individually rather than as a batch:
-
-- Four `gate: incident` items (`2026-08-30-eng-loop-halted`,
-  `2026-08-30-eng-events-dropped`, `2026-08-31-eng-events-dropped`,
-  `2026-09-01-eng-gate-violation-watch`) each already carry an
-  "Investigated" addendum from an earlier pass concluding "no further
-  action; not a gate the approver answers" (or the 08-31 file's equivalent
-  closing note). Mtimes on all four predate today. Nothing to do.
-- Six `decision:`-bearing items (`ENG-007` continue-sequence question,
-  `ENG-008`/`ENG-013`/`ENG-009` merge requests, `ENG-016` G1, `ENG-026`
-  readback question) all still show `decision:` blank (or, for `ENG-016`,
-  no `decision:` key at all — the drift already logged in
-  `observations.md`). Each is already notified and, where 24h has passed,
-  already nudged its one permitted time (`ENG-007`, `ENG-008`, `ENG-013`,
-  `ENG-016`); `ENG-026` and `ENG-009` are both under the 24h threshold and
-  correctly not yet nudged. No hand-edit on any of them — only `ENG-009`'s
-  file has today's mtime, and that's its own raising pass, not a reply.
-
-**No dispatch, no chaining.** Nothing in this pass's scope was newly
-unblocked: the one ticket this fire traces back to (`ENG-009`) is already
-`blocked`/`blocked_on: approver` with its own `chained: none` correctly
-recorded by the pass that put it there. Machine WIP unchanged (`ENG-010`
-alone at `ready`, 1/1); approver-facing WIP unchanged (4/2, over cap,
-already named above).
-
-**0 ticket-state transitions.** No new observations, no new proposals —
-nothing surfaced that isn't already tracked. Rolled the 02:00
-scheduled-sweep entry to archive, keeping the live board's cap of three.
-
-`chained: none` — no ticket in this pass's scope was touched or unblocked;
-this pass only confirmed that what already looked settled is in fact
-settled. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
-whole-board: exit 0, clean, no `WAIVED:` lines.
 
 ## 2026-09-02 — scheduled sweep (15:30): found and resumed ENG-010's cleared hold; ENG-026 past its true 24h mark, nudged
 
@@ -428,4 +374,63 @@ entry to archive, keeping the live board's cap of three.
 this pass only confirmed that what already looked settled is in fact
 settled. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 whole-board: exit 0, clean, no `WAIVED:` lines.
+
+## 2026-09-02 — continue ENG-010 (16:02): built per the design, both repos — now `building`, handed to code review + quality
+
+`continue` event pass, context `ENG-010` — the build hop the 15:30
+`scheduled` sweep chained after finding both of this ticket's hold reasons
+cleared. Narrow scope per this event's own contract (resume this ticket
+from its current state; no board-wide sweep). Mode check clean
+(`MODE=active`, repo-root `.env`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+whole-board: both exit 0, clean.
+
+Both `_eng` worktrees already sat on `ENG-009`'s own tip, clean; `git fetch`
+confirmed no drift on either. Branched
+`feat/ENG-010-influencer-relationship-notes` off that tip in both repos —
+this ticket's own sequencing was keyed on `ENG-009` specifically, and
+`src/pages/Influencers.tsx` needs `ENG-009`'s own changes present to avoid
+branching from a stale copy. New, isolated `influencer_notes` table and a
+dedicated handler (`admin-portal/handlers/influencer-notes.ts`, reusing
+`hasInfluencerAdminAccess` from `influencers.ts` rather than duplicating the
+admin/sub-admin check), routed in `index.ts`; frontend Notes section added
+to the existing detail dialog in `src/pages/Influencers.tsx`. No Supabase
+MCP tool available this session (unlike `ENG-008`'s/`ENG-009`'s own build
+hops) — fell back to static evidence, named explicitly as narrower in the
+migration doc; filed as an observation, not assumed to be a lasting change.
+Resolved the design's own open question (name-field authority for the
+resolved author display name) from the signup trigger's evidence rather
+than guessing. Self-tested both repos: 16 new tests passed
+(`influencer-notes.test.ts`, including the explicit `role: 'influencer'`
+negative-authorization case), the existing 34-test sibling suite unaffected,
+whole-tree `deno check` still exactly 17 pre-existing errors none of them
+new, `npm run lint`/`build` both at the established pre-existing baseline
+with zero new issues. Also brought `supabase/functions/README.md`'s
+`admin-portal` entry up to date — found it never documented the
+`influencers` routes `ENG-008`/`ENG-009` added, fixed in the same commit
+per `aiorders-api/CLAUDE.md`'s own rule, filed as an observation rather than
+a proposal since it's already fixed. Both branches committed and pushed
+(`aiorders-api@d79d963`, `aiorders-admin-hub@f7d8fd7`); PR bodies drafted,
+not opened — devops's release step next. Full detail, evidence, and both
+observations: `ENG-010`'s own board file, 2026-09-02 16:02 entry.
+
+**1 transition** (`ready → building`), well under the cap of 4. **Consequence:**
+machine WIP unaffected — `building` is still inside the counted
+`ready`..`ready-to-ship` range, so the slot count stays 1/1. Approver-facing
+WIP and cap both unaffected — no gate touched this hop.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+**Notify sweep:** nothing raised (no gate item — a build hop doesn't
+notify); nothing to nudge. **2 observations filed** (`observations.md`): the
+missing-MCP-tool finding and the README-documentation-gap finding, both
+above.
+
+`chained: ENG-010` — ticket sits at `building`, agent-owned (the build
+itself is done; the next hop is code review + quality, combined, per this
+loop's own design) — not the approver, not blocked, not terminal, not held
+by a cap. Firing
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-010`
+before this pass exits. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
 
