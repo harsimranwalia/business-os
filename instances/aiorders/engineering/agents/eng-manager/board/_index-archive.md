@@ -12,6 +12,113 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-01 — scheduled sweep (15:30): a day-old Windows-outage incident file was never actually investigated, despite the board saying it was
+
+`scheduled` event pass, context `launchd` — the four-times-daily safety net,
+not a narrow `watch`/`continue`. Mode check clean (`MODE=active`). Pre-pass
+`eng-gate-check.sh`, whole-board: exit 0, clean. `git fetch origin main`:
+no new commits — nothing arrived from the Windows host since the last pass.
+
+**Business/technical intake:** `agents/product-manager/inbox/`,
+`inbox/requests/`, and `agents/eng-manager/inbox/` all hold only their
+processed archives — nothing new to shape or route.
+
+**Gate returns:** re-read all 9 loose `inbox/` items directly. None carries
+a `decision:` filled in, and file mtimes confirm nothing changed since the
+10:32 `watch` pass ended — nothing answered.
+
+**Merge detection:** `git fetch` + `git merge-base --is-ancestor` on both
+`aiorders-api` and `aiorders-admin-hub` worktrees, for both `ENG-008`'s and
+`ENG-013`'s branches against `origin/main`. Both worktrees clean, no
+uncommitted changes. Neither ticket's branches merged in either repo —
+`ENG-008`/`ENG-013` unchanged at `blocked`/`blocked_on: approver`.
+
+**One real finding: `inbox/2026-08-31-eng-events-dropped.md` was never
+actually investigated, despite two of today's own entries above claiming
+it was.** Both the 09:30 pass's "same scheduled pass, continued" entry and
+the ~10:10 `watch` pass repeated it grouped this file with
+`2026-08-30-eng-loop-halted.md` and its siblings as "already resolved or
+correctly inert." True for the `2026-08-30` sibling (investigated
+2026-08-30 itself, reconfirmed four times since — now the subject of its
+own escalated proposal about incident-closure process). False for this
+one: grepped it directly for `Investigated`/`decision:`/`notified:`/
+`nudged:` and got zero matches. Caught only because this pass read the
+file's own content rather than trusting the summary — the same lesson the
+`ENG-016` row learned earlier today, on a source file instead of a merge.
+
+All 48 of its drops are `watch schtasks`/`scheduled schtasks` — no
+`continue`/`intake`/`decision`/`finding` among them, confirmed by reading
+every header — so nothing here needed hand-recovery the way the `09-01`
+sibling's two concrete drops did; a sweep-type event carries no unique
+payload, and several later sweeps have already run. Read together with
+that sibling, the true outage ran continuously from `12:46:01` on 08-31
+(after an earlier, separately-resolved blip at `00:11`–`00:41`) through
+`07:45:58` on 09-01 — about 19 hours, not the ~7.5 hours the 09-01
+investigation measured from its own file alone. That investigation's
+recovery evidence (two successful pushes at `09:17`/`09:28` local, same
+host identity) still covers this longer window, same transient cause — the
+conclusion doesn't change, only the duration on record.
+
+Closed in place: appended a closing investigation note to the file itself,
+matching its 08-30 sibling's shape; corrected the WIP/waiting-on-approver
+sections' silence on this above (the two earlier same-day entries are left
+as written, historical record — a pointer note was added to the archived
+copy instead of rewriting them); filed an observation
+(`observations.md`) — second, non-merge instance of board prose
+overclaiming a source file's state. Not raised or nudged: an incident
+notice self-closes on investigation, it isn't a gate the approver answers,
+and the general "incident items have no closure step" gap already has its
+own open proposal.
+
+**Also found while re-reading `inbox/_handled/2026-09-01-eng-events-dropped.md`
+in full:** a hand-written line after its own `decision: approved` and this
+morning's investigation footer, in a distinctly different voice from the
+pass's own prose — "If the monhtly limit is hit, then do not retry tasks
+rather check that the limit is reset then only it makes sense to retry
+tasks instead of just retying tasks for no reason" (sic). Never journaled.
+Added to `decision-journal.md` verbatim: a standing instruction that
+`lib/eng-trigger.sh`'s retry/back-off path should confirm the vendor limit
+has actually reset before retrying, which it currently doesn't (it retries
+on elapsed time and attempt count alone). Filed as a proposal rather than
+coded on the spot — it touches the same core retry path three other open
+proposals already flag as needing sign-off before a hand-edit changes it.
+
+**Notify sweep:** `ENG-013`'s and `ENG-008`'s L1 merge requests were both
+`notified: 2026-08-31` (~28h old), no `nudged:`, no `decision:` — nudged
+both (`lib/eng-notify.sh nudge`, sent cleanly per
+`traces/eng-notify-2026-09-01.log`), stamped `nudged: 2026-09-01T22:41:10`
+on each, logged in each ticket's own log. First and only nudge for both.
+Nothing else qualified: `ENG-016`'s G1 already nudged this morning;
+`ENG-026`'s readback question and the `ENG-007` sequence question are
+either under 24h or already nudged; the incident-type items are notices,
+not G-gates, and don't nudge — `ENG-013`'s own log already states this
+explicitly for the `ENG-023` incident item.
+
+**Dead-end sweep:** chain integrity checked across every ticket at
+`ready`/`designed`/`shaped` (`ENG-009`, `010`, `014`, `015`, `017`, `018`,
+`019`, `020`, `021`, `022`, `023`, `024`, `025`) — each one's most recent
+`chained:` line reads `none` with a valid cap/hold reason; nothing broken.
+Ticket count reconciled: 26 board files (`ENG-001`–`ENG-026`), 17 in-flight
+plus 9 terminal, no orphans. `agents/qa/bugs/BUG-001` has an owner
+(`devops`) and `status: open` — not orphaned, nothing new to do.
+
+**Dispatch: nothing starts.** Machine WIP unchanged, 2/1 (`ENG-009`/
+`ENG-010` at `ready`, over cap, shrinking naturally). Approver-facing WIP
+unchanged, 3/2 (`ENG-008`, `ENG-013`, `ENG-016` all block it). Every
+`shaped`/`designed` ticket's next gate waits on the same cap; `ENG-026`
+waits on its own open question. Identical conclusion to both `watch`
+passes this morning — nothing here changes it.
+
+**0 ticket-state transitions.** 2 inbox items nudged (`ENG-008`, `ENG-013`
+merge requests); 1 incident file closed and corrected; 1 board-prose
+correction; 2 observations filed; 1 decision journaled; 1 proposal filed.
+
+`chained: none` — nothing in-flight sits in a state this pass could
+legally advance; every ticket is either approver-blocked or capped, same
+as both passes before it. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
 ## 2026-09-01 — watch sweep (~10:25): duplicate fire off the prior pass's own nudge write, nothing new
 
 `watch` event pass, context `launchd` — drained immediately behind the
