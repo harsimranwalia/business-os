@@ -5,8 +5,8 @@ project: aiorders-admin-hub
 type: feature
 size: S
 time_estimate: a few hours to half a day
-time_spent: ~2h build (single pass — live-schema re-check, both repos, 15 new/changed tests, migration doc)
-time_remaining: rebase onto ENG-008's current tip (aiorders-api@57f8c4b, aiorders-admin-hub@63be255) and correctly re-apply the two fixes this branch predates (round-1 review finding below), re-verify, then review + quality round 2, security, release-readiness, then opening the L1 PRs
+time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed)
+time_remaining: review + quality round 2, security, release-readiness, then opening the L1 PRs
 severity: P3
 priority:
 state: building
@@ -17,7 +17,7 @@ blocked_from:
 source: approver
 created: 2026-08-29
 updated: 2026-09-02
-branch: feat/ENG-009-influencer-engagement-info (aiorders-api@4eb4b1b, aiorders-admin-hub@328db29)
+branch: feat/ENG-009-influencer-engagement-info (aiorders-api@d37e0c9, aiorders-admin-hub@92bcacd)
 depends_on: []
 blocks: []
 parent:
@@ -821,6 +821,113 @@ Append-only. One line per state transition, newest last.
   `chained: ENG-009` — `building` is agent-owned (the rebase-and-refix
   above is the next hop's work), not the approver, not blocked, not
   terminal, not held by a cap. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+  before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-09-02` **rebase-and-refix hop — the work round 1 named, done** (the
+  fixing engineer, `continue` event pass, context `ENG-009` — the chain fired
+  by the round-1-FAIL pass above). Narrow scope per this event's own contract
+  (this ticket only; no board-wide sweep). Mode check clean (business-os
+  `.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-009`)
+  and whole-board: both exit 0, clean, no `WAIVED:` lines. Ticket hop count
+  (`traces/.hops-2026-09-02-ENG-009`) at 2 coming in, well inside the
+  `max_5x` tier's 20/ticket ceiling.
+
+  **Both worktrees fetched and re-confirmed against round 1's own findings
+  before touching anything**, rather than trusted from the log above:
+  `git merge-base --is-ancestor` repeated fresh on both repos, both still
+  **not an ancestor** (`aiorders-api`: branch point `dc6972a`, one commit
+  behind `origin/feat/ENG-008-influencer-admin-management`'s `57f8c4b`;
+  `aiorders-admin-hub`: branch point `f2ea36c`, one behind `63be255`) — the
+  gap round 1 found was still open, not something a later pass had already
+  closed.
+
+  **`aiorders-api`: `git rebase origin/feat/ENG-008-influencer-admin-management`.**
+  `influencers.ts` itself — the file carrying the actual bug round 1
+  named — auto-merged cleanly: ENG-009's diff only adds new `EDITABLE_FIELDS`
+  entries and a new const above `hasInfluencerAdminAccess`, never touches the
+  function body ENG-008's fix changed, so the optional-chaining fix
+  (`userProfile?.role`) carried through untouched. `influencers.test.ts` did
+  conflict — a real one, not spurious: both commits append an independent
+  `Deno.test`/helper block immediately after the same last pre-existing test
+  (`"...returns the updated row on success"`), and the two blocks share
+  near-identical mock-Supabase-client boilerplate (`adminSupabase: { from()
+  { return { update(patch) { ...select... Promise.resolve(...) } } } } as
+  unknown as AuthenticatedRequest`), which the line-based merge interleaved
+  as four nested conflict markers rather than two clean sequential
+  insertions. Resolved by reconstructing both blocks whole and in sequence
+  (ENG-008's "allowlist enforcement" test first, since it's the earlier
+  commit, then ENG-009's `adminAuthCapturing` helper and all five tests that
+  use it) rather than editing markers in place — checked against each
+  commit's own `git show` output directly to avoid transcribing either side
+  from memory. Observation filed (`observations.md`) — this conflict shape
+  (independent additions colliding on shared boilerplate, not on shared
+  logic) is worth naming since it's the opposite of what round 1's own
+  "not a clean auto-resolve" framing predicted for the *other* repo, and
+  code review's current checks wouldn't catch it either way.
+
+  **`aiorders-admin-hub`: same rebase command.** The hunk round 1 explicitly
+  flagged as needing hand-resolution (`handleSaveInfluencer`'s returned
+  `body` literal — ENG-008 deletes the `accepts_paid`/`accepts_barter`
+  literal entries in favor of conditional `if` assignments, ENG-009 inserts
+  `social_stats_platform` as a new literal entry in the same object) in fact
+  auto-merged with **zero conflicts** via git's default `ort` three-way
+  strategy. Not trusted on the strategy's silence alone: read the resulting
+  `handleSaveInfluencer` body, the `openInfluencer` prefill block, and both
+  the `Influencer`/`InfluencerEditForm` interfaces directly afterward, plus
+  grepped for the specific `?? false` checkbox guards and the `<Button>`
+  cosmetic revert round 1's own diff named — every one of ENG-008's fix
+  lines and every one of ENG-009's additions is present, correctly combined,
+  nothing silently dropped from either side. Second half of the same
+  observation above.
+
+  **Re-verified both repos after resolving, not assumed from the merge
+  succeeding.** `aiorders-api`: `deno` was not installed on this host at
+  all (not on `PATH`, no `~/.deno`) — installed via `brew install deno`
+  (2.9.6) before running anything, a local dev-tool install, not a change to
+  anything shared. `deno check` on the modified handler and test file —
+  clean. `deno test influencers.test.ts` — **34 passed, 0 failed** (the
+  prior 32 plus the 2 tests ENG-008's own fix commit added — missing-profile
+  rejection, allowlist-enforcement — both now present since the rebase
+  carried that commit in). Whole-tree `deno check handlers/*.ts` — still
+  exactly 17 errors, all in `auth.ts`/`partners.ts`/`users.ts`, zero
+  attributable to `influencers.ts`/`influencers.test.ts` (confirmed by
+  grepping the check output directly rather than trusting the count alone).
+  `aiorders-admin-hub`: `npm run lint` — 150 pre-existing errors (unchanged),
+  31 warnings, `Influencers.tsx` carrying only the same one pre-existing
+  `react-hooks/exhaustive-deps` warning every prior pass on this file
+  recorded. `npm run build` — clean, same pre-existing chunk-size notice as
+  every other ticket on this board.
+
+  **No new artifact or cross-file rule introduced this hop** — step 6b's
+  enumeration grep is for a change that writes or relies on a rule about an
+  artifact (a receipt path, a state name, a config key); this hop only
+  brought two already-shipped files back in sync with each other, so there
+  is nothing new to enumerate. The original build hop already ran 6b for
+  everything this ticket itself introduces.
+
+  **Both branches force-pushed** (`--force-with-lease`, since the rebase
+  rewrote each branch's history) — `aiorders-api@d37e0c9`,
+  `aiorders-admin-hub@92bcacd`, both still based on `ENG-008`'s (now current)
+  tip. No PR open yet on either repo — unchanged from before this hop, still
+  devops's release step. `time_spent`/`time_remaining` updated in
+  frontmatter in the same edit as this entry, per
+  `definition-of-done.md`'s time-tracking rule.
+
+  **0 net transitions** — `state`/`owner` unchanged (`building`/
+  `eng-manager`); the next transition (`building → in-review`) is the
+  review + quality hop's own write, not this one's. `machine_wip`
+  unaffected. No approver-facing or approval-cap change.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume — the rebase-and-refix round 1 asked for is this
+  pass's entire result. **Notify sweep:** nothing to raise (a build hop
+  doesn't notify); nothing to nudge.
+
+  `chained: ENG-009` — `building` is agent-owned (review + quality round 2
+  is the next hop's work), not the approver, not blocked, not terminal, not
+  held by a cap. Firing
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
   before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
   whole-board: both exit 0, clean, no `WAIVED:` lines.
