@@ -9,43 +9,43 @@ end (through `shipped`) before the next one starts, not several tickets each
 advanced by one shallow step per pass.** This was 12 (the `max_5x` tier value)
 earlier the same day; see that file for the full rationale.
 
-**Currently 2/1 — over the new cap, but shrinking.** `ENG-009` sits at
-`ready-to-ship` as of this pass (code review round 2, the quality gate, and
-now the security gate have all passed — one three-strike security proposal
-filed, not blocking:
-`agents/principal-engineer/notebook/2026-09-02-security-proposal-verbose-error-response.md`;
-devops's release-readiness hop, opening the PRs, is next) — earlier today
-this table wrongly said
-`ready` from 2026-09-01 09:30 onward, a stale correction the 09:30 pass
-that day made in error, itself corrected by this file's own 09:30
-dated entry below (full evidence trail there). `ENG-010`
-sits at `ready`, correctly, sequenced behind it. `ENG-008` and `ENG-013` both
-left this range on 2026-08-31 — each one's security gate passed, then its own
-devops release-readiness hop opened its PR(s) and moved it to
-`blocked`/`blocked_on: approver` — all four were already in flight when the
-cap changed and are **not** being reverted or paused; they drain naturally as
-each reaches `shipped`. **No new ticket enters `ready` until this count is
-back at or under 1** — `ENG-014` through `ENG-025` stay at
-`designed`/`shaped`/`awaiting-scope` (backlog grooming only, not gated by this
-cap) until then.
+**Currently 1/1 — at cap, not over.** `ENG-009` left this range this pass:
+code review round 2, the quality gate, and the security gate all passed
+(one three-strike security proposal filed, not blocking:
+`agents/principal-engineer/notebook/2026-09-02-security-proposal-verbose-error-response.md`),
+then its own devops release-readiness hop opened both PRs
+(`aiorders-api#7`, `aiorders-admin-hub#6`, stacked on `ENG-008`'s
+still-unmerged branch — see the ticket's own log for why) and moved it to
+`blocked`/`blocked_on: approver` — same shape `ENG-008` and `ENG-013` each
+already went through on 2026-08-31. `ENG-010` now sits alone at `ready`,
+exactly at the cap rather than over it, and holds the one slot until it
+itself reaches `shipped` — the cap's own rule, not shrinking-toward-target
+phrasing anymore now that the count is no longer over. **No new ticket
+enters `ready` until then** — `ENG-014` through `ENG-025` stay at
+`designed`/`shaped`/`awaiting-scope` (backlog grooming only, not gated by
+this cap) in the meantime.
 
-**Approver-facing WIP 2 — 3/2, over cap, not 2/2.** `ENG-013`
+**Approver-facing WIP 2 — 4/2, over cap.** `ENG-013`
 (`inbox/2026-08-31-eng013-merge-request.md`) and `ENG-008`
 (`inbox/2026-08-31-eng008-merge-request.md`) each occupy a slot via their own
 L1 merge request — a plain merge on GitHub, no reply needed, clears either.
-**`ENG-016` occupies the third slot**, missing from this table until this
-`watch` pass found it: its own board file and PRD both read `state`/`status:
-awaiting-scope`, `owner: approver`, G1 raised and notified
+`ENG-016` occupies a third slot: its own board file and PRD both read
+`state`/`status: awaiting-scope`, `owner: approver`, G1 raised and notified
 `2026-08-29T23:13:49` (`inbox/2026-08-29-eng016-g1-scope.md`) — the
 cross-host board-reconciliation merge (`e281c71`) kept a rival account that
 never raised this G1 and showed `shaped`/`product-manager` instead, and
-every pass since trusted this table over the ticket's own file. No
-`decision-journal.md` entry and no PRD reset exists for it — checked before
-concluding this was staleness rather than a legitimate re-open. Nudged this
-pass (first nudge; notified 2.5 days ago, never nudged before). Nothing new
-may start needing the approver until one of these three clears — already
-the practical outcome the last two passes reached, now for the reason that
-actually holds.
+every pass since trusted this table over the ticket's own file, until a
+2026-09-01 `watch` pass found it. No `decision-journal.md` entry and no PRD
+reset exists for it — checked before concluding this was staleness rather
+than a legitimate re-open. Nudged once (2026-08-29, first and only nudge).
+**`ENG-009` now occupies a fourth slot**, added this pass: its own devops
+release-readiness hop passed all four gates, opened both PRs, and raised
+its own L1 merge request
+(`inbox/2026-09-02-eng009-merge-request.md`) — same
+shape as `ENG-008`/`ENG-013`, not a new start (see the ticket's own log for
+why this isn't gated by the cap). Nothing new may start needing the
+approver until one of these four clears — already the practical outcome
+the last several passes reached, now for the reason that actually holds.
 
 **No separate approval cap exists.** `approval_cap` was removed 2026-08-29
 at the approver's own request (`config/config.yaml`; also stated in
@@ -74,7 +74,7 @@ not `severity`, which is the agent's read of how bad a problem is.
 | ID | Title | Project | State | Priority | Owner | Size | Updated |
 |---|---|---|---|---|---|---|---|
 | ENG-008 | Influencer board admin management — region/campaign-type preference, rating, collaboration count | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
-| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | ready-to-ship | | devops | S | 2026-09-02 |
+| ENG-009 | Influencer engagement info — internal activity signal plus a staff-editable social stat | aiorders-admin-hub | blocked | | approver | S | 2026-09-02 |
 | ENG-010 | Influencer relationship notes — staff log for personality, preferences, and off-platform conversations | aiorders-admin-hub | ready | | eng-manager | S | 2026-08-29 |
 | ENG-013 | Foodswipe funnel page — staff-settable pipeline stages | aiorders-admin-hub | blocked | | approver | M | 2026-08-31 |
 | ENG-014 | Brand portal self-service — restaurant QR codes and marketing media downloads | restaurant-portal | designed | | architect | M | 2026-08-31 |
@@ -156,75 +156,27 @@ In-flight table (terminal); see its own board file and
 
 ## Waiting on the approver
 
-**Approver WIP limit 2 (the only cap — see header above). Currently 3/2,
+**Approver WIP limit 2 (the only cap — see header above). Currently 4/2,
 over.** `ENG-013`'s L1 merge request
 (`inbox/2026-08-31-eng013-merge-request.md`) — both PRs open
 (`aiorders-api` #5, `aiorders-admin-hub` #4), all four gates passed, no
 reply required (merging either PR directly on GitHub is itself the
-decision, same as `ENG-005`/`ENG-007`/`ENG-011`); **nudged 2026-09-01T22:41:10
-UTC** (~15:30 `scheduled` pass), first and only nudge, 28h+ with no merge or
-reply. `ENG-008`'s L1 merge request
+decision, same as `ENG-005`/`ENG-007`/`ENG-011`); nudged 2026-09-01, first
+and only nudge, no merge or reply yet. `ENG-008`'s L1 merge request
 (`inbox/2026-08-31-eng008-merge-request.md`) — both PRs open
 (`aiorders-api` #6, `aiorders-admin-hub` #5), all four gates passed, same
-no-reply-needed shape; **nudged the same pass**, same timestamp, same
-first-and-only nudge. **`ENG-016`'s G1**
-(`inbox/2026-08-29-eng016-g1-scope.md`) — raised and notified 2026-08-29,
-missing from this section until this pass (see the header note above for
-why); nudged this pass, first nudge, 2.5 days overdue. `ENG-019` through
-`ENG-021` are G1-drafted and not yet raised, correctly left for a future
-pass — the WIP-2 cap is already over, so none of their G1s may be raised
-regardless of the (nonexistent) approval cap this board used to cite.
-
-## 2026-09-01 — watch sweep (~20:39): third duplicate fire today, off the 20:30 scheduled pass's own closing-note writes, nothing new
-
-`watch` event pass, context `launchd` — fired immediately behind the 20:30
-`scheduled` pass's commit (`f376e9c`, `20:38:19`). Narrow scope per this
-event's own contract: sweep the three watched inboxes only.
-
-Mode check clean (`MODE=active`). Pre-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
-clean, no `WAIVED:` lines.
-
-**Traced this fire to its source before treating it as new**, same check as
-both watch entries before it today. `git status` shows a fully clean
-working tree — nothing has changed anywhere in the repo since `f376e9c` —
-and a direct mtime sweep of all three watched inboxes turns up exactly two
-files newer than the prior watch fire: `inbox/2026-08-30-eng-loop-halted.md`
-(`20:36:11`) and `inbox/2026-09-01-eng-gate-violation-watch.md`
-(`20:36:16`). Both are the closing notes the 20:30 pass appended to two
-incident files it had already verified, individually, as correctly
-resolved (see the archived 20:30 entry) — not new information, just that
-same pass's own bookkeeping tripping the fingerprint, identical in shape to
-the ~10:25 and ~15:46 entries.
-
-**All three inboxes swept anyway, not trusted from the paragraph above.**
-`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
-their `_handled`/`_processed` archives. `inbox/requests/` holds only its
-`.gitkeep`. `inbox/`'s four still-open gate items (`ENG-007`'s
-continue-sequence question, `ENG-008`'s and `ENG-013`'s merge requests,
-`ENG-026`'s readback question) were re-grepped for `^decision:` directly —
-all four still blank. No hand-edit, no reply, no merge since the 20:30
-pass ended.
-
-**Nothing re-done.** Both incident files were already closed in place by
-the 20:30 pass; re-reading their tails confirms the closing notes match
-that pass's own entry, nothing appended since. `ENG-008`/`ENG-013`/
-`ENG-016` were each nudged earlier today (first and only nudge, already
-spent) — not renudged.
-
-**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1
-(`ENG-009`/`ENG-010` at `ready`, over cap, shrinking naturally);
-approver-facing WIP 3/2 (`ENG-008`, `ENG-013`, `ENG-016` all still block
-it). No ticket sits in a state this pass could legally advance.
-
-**0 ticket-state transitions.** Rolled the 15:30 scheduled entry to
-archive, keeping the live board's cap of three.
-
-`chained: none` — nothing in this pass's scope sits in a state owned by
-an agent; every in-flight ticket is either approver-blocked or WIP-capped,
-same as every pass today. Post-pass
-`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
-clean, no `WAIVED:` lines.
+no-reply-needed shape; nudged the same pass, same first-and-only nudge.
+`ENG-016`'s G1 (`inbox/2026-08-29-eng016-g1-scope.md`) — raised and
+notified 2026-08-29, nudged once, 2.5+ days overdue. **`ENG-009`'s L1
+merge request** (`inbox/2026-09-02-eng009-merge-request.md`) — new this
+pass: both PRs open (`aiorders-api` #7, `aiorders-admin-hub` #6, each
+stacked on `ENG-008`'s still-open branch rather than `main` — see the
+item's own Sequencing section), all four gates passed, same
+no-reply-needed shape; not yet due for a nudge (raised this pass). `ENG-019`
+through `ENG-021` are G1-drafted and not yet raised, correctly left for a
+future pass — the WIP-2 cap is already over, so none of their G1s may be
+raised regardless of the (nonexistent) approval cap this board used to
+cite.
 
 ## 2026-09-02 — scheduled sweep (02:00): fully quiet — no merges, no answers, one drift note filed
 
@@ -394,4 +346,85 @@ WIP-capped (`ENG-010`, `ENG-014`, `ENG-015`, `ENG-017`, `ENG-018`–`ENG-021`,
 `ENG-022`–`ENG-025`), `chained: none` for all of them, same reasons as
 before. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 whole-board: exit 0, clean, no `WAIVED:` lines.
+
+## 2026-09-02 — continue ENG-009: release-readiness done, both PRs opened stacked on ENG-008, now blocked on the approver
+
+`continue` event pass, context `ENG-009` — the chain fired by the 09:30
+`scheduled` pass's own resumption above. Narrow scope per this event's own
+contract: resume this ticket only, no board-wide sweep. Mode check clean
+(`MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
+whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+**All four upstream gates re-verified from the receipt files themselves**
+(migration, code review round 2, QA test plan, security — all **pass**),
+not trusted from the ticket's own log summary. Both worktrees were already
+clean on this ticket's own branch at its recorded commits; no existing PR
+found before creating one.
+
+**The one judgment call this hop made:** this ticket's branch is built on
+top of `ENG-008`'s branch, not `main` (confirmed by ancestry check,
+matching what the build hop's own PR-body draft already flagged), and
+`ENG-008` is still unmerged. Opening against `main` as usual would have
+pulled `ENG-008`'s three commits into this diff too, duplicating its own
+still-open PR. Opened both PRs with `--base
+feat/ENG-008-influencer-admin-management` instead — confirmed by diffing
+against that base first that this produces exactly ENG-009's own change
+(314 insertions/3 files on `aiorders-api`; 196+/10- on 1 file on
+`aiorders-admin-hub`) and nothing of `ENG-008`'s.
+
+**Opened both PRs**: `aiorders-api`
+https://github.com/harsimranwalia/aiorders-api/pull/7,
+`aiorders-admin-hub`
+https://github.com/harsimranwalia/aiorders-admin-hub/pull/6. Wrote the L1
+merge-request item (`inbox/2026-09-02-eng009-merge-request.md`), `pr_urls:`
+as a YAML list, an explicit Sequencing section explaining the stacked-base
+choice and both legal ways to resolve merge order. Notified cleanly
+(`traces/eng-notify-2026-09-02.log`).
+
+**Caught and corrected a wrong claim in an existing proposal while
+deciding how to stamp `notified:`.** The 09:30 pass's own proposal
+(`proposals.md`, 2026-09-02 row) asserted `ENG-008`'s/`ENG-013`'s
+merge-request timestamps were genuine UTC, unlike the PM-agent items under
+investigation. Checked directly rather than carried forward: both are
+textually identical to their own trace-log line, zero gap, same
+local-time-mislabeled-as-UTC pattern as every other gate item on this
+board. Corrected the proposal's three cells in place (see `ENG-009`'s own
+board-file log for the full diff) — the bug is board-wide, not
+PM-agent-specific, and there is no second, already-correct path to match
+against. Stamped this item's own `notified:` consistently with the actual,
+verified convention.
+
+**Cap check, not a hold.** Approver-facing WIP was already `3/2`, over
+cap, going in. This transition makes it `4/2`. Per the loop's own guard,
+the cap gates *new* work from starting that will need the approver, not a
+ticket already at `ready-to-ship` reaching its required, non-discretionary
+L1 conclusion — `ENG-008`/`ENG-013` already set this exact precedent. Not
+treated as a reason to hold.
+
+State → `blocked`, `blocked_on: approver`, `blocked_from: ready-to-ship`,
+owner `devops → approver`. `links.pr` set to both PR URLs. **1 transition**
+(`ready-to-ship → blocked`), well under the cap of 4. **Consequence:**
+machine WIP `2/1 → 1/1` (`ENG-009` leaves the counted `ready`..`ready-to-ship`
+range; `ENG-010` alone remains, exactly at cap). Approver-facing WIP
+`3/2 → 4/2`.
+
+**Dead-end sweep (scoped to this event):** this ticket's log now ends in a
+valid, accounted-for state with the chain record below. **Notify sweep:**
+this pass's own gate item raised and stamped; nothing else newly eligible.
+**1 proposal corrected**, no new observations.
+
+Full detail — receipts verified, the base-branch reasoning, the PR bodies,
+the proposal correction, the full log record: `ENG-009`'s own board file,
+2026-09-02 release-readiness entry.
+
+`chained: none` — `blocked`, `blocked_on: approver`. This is the human gate
+the whole hop was driving toward; firing `continue ENG-009` again would
+only queue against a ticket with nothing left for a machine to do until the
+approver merges one or both PRs or replies to the gate item. Every other
+in-flight ticket is unchanged from the 09:30 pass: approver-blocked
+(`ENG-008`, `ENG-013`, `ENG-016`, `ENG-026`) or WIP-capped (`ENG-010`,
+`ENG-014`, `ENG-015`, `ENG-017`, `ENG-018`–`ENG-021`, `ENG-022`–`ENG-025`),
+`chained: none` for all of them, same reasons as before. Post-pass
+`eng-gate-check.sh`, scoped (`ENG-009`) and whole-board: both exit 0,
+clean, no `WAIVED:` lines.
 

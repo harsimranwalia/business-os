@@ -5,15 +5,15 @@ project: aiorders-admin-hub
 type: feature
 size: S
 time_estimate: a few hours to half a day
-time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed) + ~30m review/quality round 2 + ~25m security gate (pass, one three-strike proposal filed)
-time_remaining: release-readiness, then opening the L1 PRs
+time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed) + ~30m review/quality round 2 + ~25m security gate (pass, one three-strike proposal filed) + ~15m release-readiness (two PRs opened, stacked on ENG-008's branch)
+time_remaining: 0 machine time — release-readiness done, both PRs open. What's left is the approver's own merge, on their own schedule (L1).
 severity: P3
 priority:
-state: ready-to-ship
-owner: devops
+state: blocked
+owner: approver
 lane: full
-blocked_on:
-blocked_from:
+blocked_on: approver
+blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
 updated: 2026-09-02
@@ -30,6 +30,10 @@ links:
   security_review: agents/security/reviews/ENG-009.md
   release:
   pr:
+    - repo: aiorders-api
+      url: https://github.com/harsimranwalia/aiorders-api/pull/7
+    - repo: aiorders-admin-hub
+      url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/6
 ---
 
 ## Input
@@ -1119,3 +1123,152 @@ Append-only. One line per state transition, newest last.
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
   before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
   whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-09-02` **release-readiness: both PRs opened, now `blocked` on the
+  approver** (devops, `continue` event pass, context `ENG-009` — the chain
+  fired by the security-gate-PASS pass above). Narrow scope per the event's
+  own contract (resume this ticket only; no board-wide sweep). Mode check
+  clean (business-os `.env` → `MODE=active`; instance `config/config.yaml`
+  → `mode:` empty, falls through). Pre-pass `eng-gate-check.sh`, scoped
+  (`ENG-009`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+  Ticket hop count (`traces/.hops-2026-09-02-ENG-009`) at 5 coming in, well
+  inside the `max_5x` tier's 20/ticket ceiling.
+
+  **Read `skills/release-runner/SKILL.md` fresh before acting, same
+  discipline `ENG-013`'s own equivalent hop used.** Step 1's window check
+  doesn't apply — both `aiorders-api` and `aiorders-admin-hub` are
+  registered **L1** (`config/projects.md`) — so went straight to step 4.
+
+  **Verified all four upstream gates fresh from the receipt files
+  themselves**, not from this ticket's own log summary: migration doc
+  (**pass**), `agents/principal-engineer/reviews/ENG-009.md` (**pass**,
+  round 2), `agents/qa/test-plans/ENG-009.md` (present, all 4 ACs
+  covered), `agents/security/reviews/ENG-009.md` (**pass**). All four
+  opened and read, not just grepped for a verdict line.
+
+  **Worktrees clean, on this ticket's own branch already** — unlike
+  `ENG-013`'s equivalent hop, neither worktree needed a checkout switch
+  coming in; both `~/Documents/projects/_eng/{aiorders-api,
+  aiorders-admin-hub}` were already sitting on
+  `feat/ENG-009-influencer-engagement-info` at the exact commits this
+  ticket's frontmatter records (`d37e0c9`, `92bcacd`), confirmed via
+  `git fetch` + `git status --short --branch` on both. Checked for an
+  already-opened PR before creating one, same caution `ENG-011`/`ENG-013`
+  used: `gh pr list --head feat/ENG-009-influencer-engagement-info
+  --state all` on both repos — empty on both. None existed.
+
+  **The real judgment call this hop made, not covered word-for-word by
+  the skill: which branch to open the PR against.** This ticket's own
+  branch is built on top of `ENG-008`'s branch, not `main` — `git
+  merge-base --is-ancestor` confirms `ENG-008`'s current tip
+  (`57f8c4b`/`63be255`) is an ancestor of this branch on both repos, and
+  the build-hop's own PR-body draft from 2026-08-30 already flagged this
+  explicitly ("Depends on ENG-008's branch (based off it, not main)").
+  `ENG-008` is still `blocked`/`blocked_on: approver`, its own two PRs
+  (`aiorders-api#6`, `aiorders-admin-hub#5`) still open and unmerged —
+  confirmed fresh via `gh pr view` on both before deciding anything, not
+  assumed from the board. Opening this ticket's PRs against `main` as
+  usual would have pulled `ENG-008`'s three still-unreviewed-by-GitHub
+  commits into this diff as well, duplicating a PR already open and
+  awaiting merge, and would let merging *this* PR alone silently carry
+  `ENG-008`'s changes into `main` too. Opened both PRs with
+  `--base feat/ENG-008-influencer-admin-management` instead — confirmed
+  by diffing this ticket's branch against that base directly before
+  creating anything (`aiorders-api`: 3 files, 314 insertions only;
+  `aiorders-admin-hub`: 1 file, 196 insertions/10 deletions only) that
+  this produces exactly ENG-009's own change and nothing of ENG-008's.
+
+  **Opened both PRs** (`gh pr create`): `aiorders-api`
+  https://github.com/harsimranwalia/aiorders-api/pull/7,
+  `aiorders-admin-hub`
+  https://github.com/harsimranwalia/aiorders-admin-hub/pull/6. Verified
+  both via `gh pr view` immediately after (`baseRefName`/`headRefName`/
+  `state`) rather than trusting the create command's own stdout. Each PR
+  body states what it does, the base-branch sequencing choice and both
+  ways to resolve it, all four gate verdicts by file reference, and the
+  named non-blocking gaps carried forward from review/security. Neither
+  worktree left dirty; both still sit cleanly on this ticket's own branch
+  (no other ticket had a claim on either worktree this pass, so no
+  restore-after step was needed, unlike `ENG-013`'s hop).
+
+  **Wrote the L1 merge-request item**
+  (`inbox/2026-09-02-eng009-merge-request.md`, `gate: merge`, `agent:
+  eng-manager`) carrying both PR links (`pr_urls:` as a YAML list of
+  `{repo, url}` pairs, per the skill's corrected instruction), all four
+  gate verdicts by file reference, the named non-blocking gaps, and an
+  explicit Sequencing section explaining the stacked-branch choice above
+  and both legal ways to resolve merge order. Ran
+  `departments/engineering/lib/eng-notify.sh raise`: sent cleanly
+  (`traces/eng-notify-2026-09-02.log`: `sent: active`).
+
+  **Stamped `notified:` from the trace log's own local-clock value
+  directly (`2026-09-02T10:51:07`), not a `date -u` conversion — and
+  caught a live error in an existing proposal while checking which
+  convention was actually correct.** The 09:30 `scheduled` pass's own
+  proposal (`proposals.md`, 2026-09-02 row) claims `ENG-008`'s and
+  `ENG-013`'s merge-request `notified:` stamps are genuine UTC, "exactly
+  7h ahead" of their trace-log line, unlike the PM-agent items it was
+  actually investigating. Checked directly rather than carried forward,
+  per this instance's own standing practice of not trusting a citation
+  about a file this pass could just open: `inbox/2026-08-31-eng013-merge-request.md`'s
+  `notified: 2026-08-31T11:05:16` against
+  `traces/eng-notify-2026-08-31.log`'s `[11:05:16] sent: ...` line for the
+  same raise — textually identical, zero gap. `ENG-008`'s pair
+  (`11:15:29`/`11:15:29`) match the same way. The proposal's specific claim
+  was wrong: there is no second, already-correct code path this board's
+  merge requests follow — every gate item, regardless of which agent
+  raises it, stamps local wall-clock time in a bare ISO string with no
+  offset. Corrected the proposal's three cells in place (`What`/`Why it
+  matters`/`Size`) rather than filing a disconnected duplicate, matching
+  this file's own `ENG-016` row's precedent of appending a correction into
+  an existing entry. Stamping this item consistently with the *actual*,
+  verified, board-wide convention (not the disproven claim) so it reads
+  the same way every other gate item on this board does.
+
+  **Cap check before this transition, read fresh from `inbox/`'s actual
+  top-level contents**: nine items present besides this pass's own new
+  one — none newly added since the 09:30 pass's own accounting, none
+  answered. Approver-facing WIP was already `3/2`, over cap
+  (`ENG-008`, `ENG-013`, `ENG-016`) going in. This transition adds a
+  fourth. Per `eng_build_loop.md`'s own guard, the cap gates **new** work
+  from starting that will need the approver — it does not hold a ticket
+  that has already earned `ready-to-ship` back from reaching its required,
+  non-discretionary L1 conclusion, and `ENG-008`/`ENG-013` both already
+  set this exact precedent (their own release-readiness hops proceeded
+  while the cap was over, because neither was a new start). Not treated
+  as a reason to hold this hop.
+
+  State → `blocked`, `blocked_on: approver`, `blocked_from:
+  ready-to-ship`, owner `devops → approver`. `links.pr` set to both PR
+  URLs (`pr:` as a YAML list of `{repo, url}` pairs, matching `ENG-008`'s
+  corrected convention, not `ENG-011`'s original delimited-string bug).
+  `time_spent`/`time_remaining` updated in the same edit as this entry.
+
+  **1 transition this pass** (`ready-to-ship → blocked`), well under the
+  cap of 4 — opening two PRs and writing the gate item is itself the real
+  work of this hop. **Consequence:** `machine_wip` 2/1 → 1/1 (`blocked`
+  sits outside the counted `ready`..`ready-to-ship` range; `ENG-010` at
+  `ready` is now the only ticket inside it, at cap exactly, not over).
+  Approver-facing WIP `3/2 → 4/2`; no separate approval cap exists to
+  update (removed 2026-08-29).
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in
+  a valid, accounted-for state with the chain record below. `ENG-008` (the
+  ticket this branch stacks on) untouched beyond the read-only `gh pr
+  view`/ancestry checks above.
+
+  **Notify sweep:** this pass's own gate item raised and stamped above.
+  Nothing else newly eligible to nudge — `ENG-008`/`ENG-013`/`ENG-016`
+  already spent their one nudge each; this new item is 0h old.
+
+  **1 proposal corrected** (`proposals.md`, 2026-09-02 row — see above; not
+  a new filing, a correction to an existing one that turned out to be
+  wrong on direct re-check). No new observations this pass.
+
+  `chained: none` — `blocked`, `blocked_on: approver`. This is the human
+  gate the whole hop was driving toward; firing `continue ENG-009` again
+  would only queue against a ticket with nothing left for a machine to do
+  until the approver merges one or both PRs (in either sequencing order,
+  per the item's own Sequencing section) or replies to the gate item.
+  Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and whole-board: both
+  exit 0, clean, no `WAIVED:` lines.

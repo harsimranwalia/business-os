@@ -12,6 +12,57 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-01 — watch sweep (~20:39): third duplicate fire today, off the 20:30 scheduled pass's own closing-note writes, nothing new
+
+`watch` event pass, context `launchd` — fired immediately behind the 20:30
+`scheduled` pass's commit (`f376e9c`, `20:38:19`). Narrow scope per this
+event's own contract: sweep the three watched inboxes only.
+
+Mode check clean (`MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
+**Traced this fire to its source before treating it as new**, same check as
+both watch entries before it today. `git status` shows a fully clean
+working tree — nothing has changed anywhere in the repo since `f376e9c` —
+and a direct mtime sweep of all three watched inboxes turns up exactly two
+files newer than the prior watch fire: `inbox/2026-08-30-eng-loop-halted.md`
+(`20:36:11`) and `inbox/2026-09-01-eng-gate-violation-watch.md`
+(`20:36:16`). Both are the closing notes the 20:30 pass appended to two
+incident files it had already verified, individually, as correctly
+resolved (see the archived 20:30 entry) — not new information, just that
+same pass's own bookkeeping tripping the fingerprint, identical in shape to
+the ~10:25 and ~15:46 entries.
+
+**All three inboxes swept anyway, not trusted from the paragraph above.**
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` hold only
+their `_handled`/`_processed` archives. `inbox/requests/` holds only its
+`.gitkeep`. `inbox/`'s four still-open gate items (`ENG-007`'s
+continue-sequence question, `ENG-008`'s and `ENG-013`'s merge requests,
+`ENG-026`'s readback question) were re-grepped for `^decision:` directly —
+all four still blank. No hand-edit, no reply, no merge since the 20:30
+pass ended.
+
+**Nothing re-done.** Both incident files were already closed in place by
+the 20:30 pass; re-reading their tails confirms the closing notes match
+that pass's own entry, nothing appended since. `ENG-008`/`ENG-013`/
+`ENG-016` were each nudged earlier today (first and only nudge, already
+spent) — not renudged.
+
+**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1
+(`ENG-009`/`ENG-010` at `ready`, over cap, shrinking naturally);
+approver-facing WIP 3/2 (`ENG-008`, `ENG-013`, `ENG-016` all still block
+it). No ticket sits in a state this pass could legally advance.
+
+**0 ticket-state transitions.** Rolled the 15:30 scheduled entry to
+archive, keeping the live board's cap of three.
+
+`chained: none` — nothing in this pass's scope sits in a state owned by
+an agent; every in-flight ticket is either approver-blocked or WIP-capped,
+same as every pass today. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
 ## 2026-09-01 — scheduled sweep (20:30): two self-closed incidents get their own closing note; otherwise unchanged
 
 `scheduled` event pass, context `launchd` — the four-times-daily safety
