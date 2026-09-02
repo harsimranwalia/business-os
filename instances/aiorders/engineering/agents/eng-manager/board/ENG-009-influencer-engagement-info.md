@@ -6,7 +6,7 @@ type: feature
 size: S
 time_estimate: a few hours to half a day
 time_spent: ~2h build (single pass — live-schema re-check, both repos, 15 new/changed tests, migration doc)
-time_remaining: review + quality (combined hop), security, release-readiness, then opening the L1 PRs — same remaining shape ENG-008 carried at this identical point
+time_remaining: rebase onto ENG-008's current tip (aiorders-api@57f8c4b, aiorders-admin-hub@63be255) and correctly re-apply the two fixes this branch predates (round-1 review finding below), re-verify, then review + quality round 2, security, release-readiness, then opening the L1 PRs
 severity: P3
 priority:
 state: building
@@ -660,3 +660,167 @@ Append-only. One line per state transition, newest last.
   `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
   before exiting, per this schedule's own macOS EPERM note. Post-pass
   `eng-gate-check.sh`, whole-board: see board index.
+
+- `2026-09-02` **code review round 1: FAIL — this branch still carries a bug
+  `ENG-008` already found and fixed on its own branch, because `ENG-009`
+  forked before the fix landed and was never rebased** (principal-engineer,
+  `continue` event pass, context `ENG-009` — the chain fired by the 09:30
+  `scheduled` sweep above). Narrow scope per the event's own contract
+  (resume this ticket only; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty, falls through). Pre-pass `eng-gate-check.sh`, scoped
+  (`ENG-009`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+  **Re-derived both diffs from disk.** Both worktrees fetched and checked
+  out onto this ticket's branch, confirmed clean, at the exact commits this
+  ticket's own frontmatter records (`aiorders-api@4eb4b1b`,
+  `aiorders-admin-hub@328db29`). Reviewed the isolated single-commit patch
+  on each branch (`git show {commit}`) rather than the two-dot diff against
+  `origin/main`, which is polluted by `ENG-008`'s own still-unmerged commits
+  underneath plus real main-drift (`ENG-007`/`ENG-011`) — same reasoning
+  `ENG-008`'s own round-1 review already used at this identical point.
+
+  **The finding that fails this round, found by checking this ticket's
+  branch point against its own acknowledged dependency, not just against
+  `main`.** Both designs and both tickets' logs are explicit that `ENG-009`
+  builds on top of `ENG-008`'s branch, not `main` — correct at build time
+  (2026-08-30 01:39), but `ENG-008` has moved twice since, fixing a real
+  bug on each repo (2026-08-31, see `ENG-008`'s own log), and `ENG-009`'s
+  branch was never updated to track it:
+
+  - `git merge-base --is-ancestor 57f8c4b feat/ENG-009-...` (`aiorders-api`)
+    → **not an ancestor.** `ENG-009`'s branch point is `dc6972a`, one commit
+    before `ENG-008`'s fix (`57f8c4b`). Confirmed directly in the working
+    tree: `hasInfluencerAdminAccess` (`influencers.ts:27-33`) still reads
+    unguarded `userProfile.role`/`userProfile.additional_roles`, not the
+    optional-chained `userProfile?.role` `ENG-008`'s round-2 review put
+    there — and the missing-profile test plus the field-allowlist test that
+    fix added are both absent from `ENG-009`'s copy of the test file.
+    Checked whether this is live risk, same as `ENG-008`'s own round-2
+    review already did for this exact line: `admin-portal/index.ts` 401s on
+    no user and 403s on no `profiles` row before any handler runs, so this
+    specific gap is defensive-only, not exploitable today — lower severity,
+    named below, not the reason this round fails.
+  - `git merge-base --is-ancestor 63be255 feat/ENG-009-...`
+    (`aiorders-admin-hub`) → **not an ancestor.** `ENG-009`'s branch point is
+    `f2ea36c`, `ENG-008`'s *original* build, one commit before its own
+    round-1 fix (`63be255`). Confirmed directly in the working tree,
+    `Influencers.tsx:139-140`:
+    ```
+    accepts_paid: influencer.accepts_paid ?? !influencer.barter_visit,
+    accepts_barter: influencer.accepts_barter ?? !!influencer.barter_visit,
+    ```
+    **This is the exact null-coalescing bug `ENG-008`'s own round-1 review
+    found and round-1-fix removed** — `!null === true` in JS, so opening
+    the edit dialog on any of the 51/306 influencers with a genuinely unset
+    preference computes `accepts_paid: true, accepts_barter: false` as if
+    known. `Influencers.tsx:194-195` still sends both fields unconditionally
+    on every save (`ENG-008`'s fix made this conditional, omitting either
+    while still `null`), so saving *any* unrelated field on one of those 51
+    rows still silently writes a fabricated preference. Every symptom
+    `ENG-008`'s round-1 review described reproduces verbatim on this
+    branch, because this branch is textually the pre-fix version of the
+    file `ENG-008` was reviewing that day.
+
+  **Why this wasn't caught at the 2026-08-30 build hop:** it couldn't have
+  been — `ENG-008`'s fix (`57f8c4b`/`63be255`) landed 2026-08-31, the day
+  *after* `ENG-009` branched and built. This is a staleness gap that opened
+  up after the build, sitting uncaught through every `scheduled`/`watch`
+  sweep since because none of them diff a ticket's branch against a
+  sibling it was cut from — they check `git fetch` + ancestry against
+  `origin/main` for merge detection, which this ticket doesn't reach yet,
+  and against nothing else. First time this specific check has been run on
+  this board. Proposal filed below.
+
+  **Why this blocks rather than just getting named as a carry-forward
+  gap**, unlike row 5's unbounded-query finding further down: that one is a
+  judgement call on a query this ticket wrote, accepted on real precedent.
+  This one is a *known, already-fixed, already-described* correctness bug
+  that would ship if this branch went out as-is — passing it and leaving
+  the rebase to whoever opens the PR is exactly "passing under time
+  pressure," the failure mode `code-review-gate/SKILL.md` names first.
+
+  **A real complication for whoever fixes this, named now rather than
+  discovered mid-fix:** `ENG-008`'s fix and `ENG-009`'s own diff both touch
+  the same object literal in `handleSaveInfluencer` — `ENG-008`'s fix
+  converts `accepts_paid`/`accepts_barter` from unconditional literal
+  entries to conditional (`if (... !== null) body.x = ...`) omissions;
+  `ENG-009` adds `social_stats_platform: ...` as a new literal entry in
+  that same block. Rebasing/merging this is not a clean auto-resolve on
+  that hunk; whoever does it needs to apply *both* changes by hand, not
+  pick a side.
+
+  ## Automatic-failure scan (recorded here; no receipt on a fail —
+  `code-review-gate/SKILL.md` step 8)
+
+  | # | Check | Result |
+  |---|---|---|
+  | 1 | Secret/credential/token/key | Clean |
+  | 2 | Silent exception swallow | Clean — new backend/frontend catches all log before returning/degrading |
+  | 3 | Missing test on a bug fix | N/a, feature ticket |
+  | 4 | Untyped public interface, undocumented | Clean, nothing new introduced |
+  | 5 | Unbounded query / missing pagination | **Real hit, reviewed and accepted, not the reason this round fails.** `getInfluencerActivity`'s `influencer_invitations` read carries no `.limit()`. Same class this board has already accepted three times (`ENG-006`'s `customers` lookup, `ENG-007`'s rate-history query, `ENG-011`'s `getAllBrands`): cardinality bounded by a real constraint (809 rows/138 influencers today, internal-only admin surface), and the architect's own design explicitly evaluated and rejected a scheduled/cached alternative at this volume. Flagged, not silently passed |
+  | 6 | New dependency | Clean |
+  | 7 | Unrelated refactor bundled in | Clean |
+  | 8 | Commented-out code / unowned `TODO` | Clean |
+  | 9 | Datastore write bypassing the data layer | N/a, same house style as every prior ticket |
+  | 10 | Auth/payment/deletion path changed, no failure-case test | Clean on `ENG-009`'s own new route (`GET /influencers/activity` has a dedicated 403 test) |
+
+  **Also found this round, secondary, would not have blocked alone:**
+  - The architect's design doc (`Interfaces` section) still says
+    `PUT`/body-`id`; the shipped code correctly uses `PATCH`/path-`id`,
+    matching `ENG-008`'s own resolution of the identical fork. Code is
+    right, design doc is stale, and neither ticket's log ever corrected the
+    doc itself — not this review's file to edit, named so it isn't read at
+    face value.
+  - Setting `social_stats_platform` alone (no `followers`/`engagement`)
+    persists successfully but never renders anywhere — the dialog's
+    platform/updated-date line is gated on `social_stats_updated_at`, which
+    only a numeric write sets. P3, has a workaround (enter a number too,
+    the intended flow), not in any AC.
+  - `getInfluencerActivity`'s `response_rate: invitations === 0 ? null : …`
+    branch is unreachable by construction (an entry only exists after its
+    first row already incremented `invitations`). Harmless, style-only.
+  - Two of the four new stamping tests assert `social_stats_updated_at` was
+    captured but not that `captured.followers`/`captured.engagement`
+    themselves carry the submitted value. Low severity.
+
+  Findings logged here in full (this board has no
+  `agents/principal-engineer/notebook/` entry pattern that would duplicate
+  this rather than summarize it — see that directory's 2026-09-02 entry for
+  the summary form).
+
+  **No receipt written** (`agents/principal-engineer/reviews/ENG-009.md`
+  stays absent) and **QA's hop not run this round** — discarded per the
+  combined-hop design, same as every prior round-1 fail on this board;
+  no `agents/qa/test-plans/ENG-009.md` written either.
+
+  **Proposal filed** (`proposals.md`): code review's own inputs/steps
+  (`skills/code-review-gate/SKILL.md`) check a ticket's diff against
+  `main` and against its design, but nothing asks whether a ticket's
+  branch is stale relative to a *sibling* ticket it was deliberately
+  sequenced/branched behind — the exact gap that let this sit unnoticed
+  for two days across four sweep passes. First occurrence on this board,
+  not (yet) a pattern; logged as a proposal rather than fixed inline, per
+  `eng_build_loop.md` step 3.
+
+  **0 net transitions** — `state`/`owner` unchanged (`building`/
+  `eng-manager`), same precedent `ENG-008`'s own round-1 fail set: a review
+  failure routes back to `building` without a persisted `in-review`
+  frontmatter state. `machine_wip` unaffected. No approver-facing or
+  approval-cap change — a review failure is not an approver-facing gate.
+  `time_remaining` updated in frontmatter to name the rebase-and-refix work
+  plus round 2, in the same edit as this entry, per
+  `definition-of-done.md`'s time-tracking rule.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume — this finding *is* this pass's dead-end-sweep
+  result. **Notify sweep:** nothing to raise (a review failure isn't a
+  gate item to the approver).
+
+  `chained: ENG-009` — `building` is agent-owned (the rebase-and-refix
+  above is the next hop's work), not the approver, not blocked, not
+  terminal, not held by a cap. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+  before exiting. Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
