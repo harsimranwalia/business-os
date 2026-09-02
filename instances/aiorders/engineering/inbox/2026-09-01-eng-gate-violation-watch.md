@@ -37,6 +37,16 @@ Raised by the receipt check wired into `lib/eng-trigger.sh` (ENG-008). The
 check reads the filesystem, never the frontmatter — a ticket cannot satisfy it
 by writing `test_plan: done`.
 
+---
+
+**Investigated 2026-09-01** (the 09:30 `scheduled` pass's own continuation
+entry, `board/_index-archive.md`). Root cause: a Windows-host frontmatter
+encoding issue (BOM) on the 8 named ticket files, already fixed by the
+cross-host merge commit `e281c71`'s own BOM strip. Corroborated repeatedly
+since by `lib/eng-gate-check.sh`, whole-board — clean (exit 0, no `WAIVED:`
+lines) on every pass today including this one. No further action; not a
+gate the approver answers.
+
 ## Decision
 
 **rejected** — 2026-09-01T16:38:16.887004+00:00

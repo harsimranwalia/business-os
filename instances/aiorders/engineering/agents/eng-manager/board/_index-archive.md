@@ -12,6 +12,209 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-01 — watch sweep (~10:25): duplicate fire off the prior pass's own nudge write, nothing new
+
+`watch` event pass, context `launchd` — drained immediately behind the
+"watch sweep (~10:10)" pass above (`traces/eng-loop-2026-09-01.log`,
+`10:25:05`, 2s after that pass's own end). Narrow scope per this event's
+own contract: sweep the three watched inboxes only.
+
+Mode check clean (`MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board (`ENG_ROOT`
+set explicitly to this instance): exit 0, clean, no `WAIVED:` lines.
+
+**Traced this fire to its source before treating it as a new arrival.**
+`.watch-seen`'s committed fingerprint is captured before a watch pass runs
+and written only after it succeeds (`eng-trigger.sh`, ENG-005), so an inbox
+edit a pass makes *during* its own run changes the live fingerprint out
+from under that stale baseline and can queue a fresh fire against itself.
+The pass above wrote exactly one thing to a watched inbox during its 886s
+run — the nudge stamp on `inbox/2026-08-29-eng016-g1-scope.md` (`nudged:
+2026-09-01T10:20:06`) — and every other file across all three inboxes is
+unchanged since before that pass started (checked mtimes directly, not
+inferred).
+
+**All three inboxes re-swept anyway, not trusted from the entry above.**
+`agents/product-manager/inbox/` and `agents/eng-manager/inbox/` both hold
+only their `_handled`/`_processed` archives, nothing loose. `inbox/`'s nine
+items re-read directly: all nine `decision:` fields still blank or absent —
+nothing answered since the pass above. `inbox/requests/` empty.
+
+**Nothing re-done.** `ENG-016` already corrected and nudged (one nudge,
+ever — not repeated); its proposal already filed; the self-closed incident
+notices and the `ENG-007`-sequence question already investigated to
+conclusion and already nudged respectively, by the pass above or earlier
+ones. Re-verifying and re-acting on unchanged state is the exact waste the
+09:30 pass's own proposal (now archived above) was filed to stop.
+
+**Dispatch: nothing starts.** Same caps, unchanged: machine WIP 2/1 (over),
+approver-facing WIP 3/2 (over) — `ENG-008`, `ENG-013`, `ENG-016` all still
+block it. No ticket sits in a state this pass could legally advance.
+
+**0 transitions. No board correction needed this time.**
+
+`chained: none` — nothing in this pass's scope sits in a state owned by an
+agent; every in-flight ticket is either approver-blocked or capped, same as
+the pass immediately above. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
+## 2026-09-01 — watch sweep (~10:10): the approver-facing WIP cap was actually 3/2, not 2/2
+
+`watch` event pass, context `launchd` — one of 7 duplicate `watch (launchd)`
+fires queued while the 09:30 `scheduled` pass above was still running
+(2,409s); the queue collapsed all 7 to the oldest copy before draining it
+(`traces/eng-loop-2026-09-01.log`, `10:10:16`). Narrow scope per this
+event's own contract: sweep the three watched inboxes, act on what's new,
+ignore what's already processed — no whole-board dead-end sweep.
+
+Mode check clean (`MODE=active`).
+
+**All three inboxes swept fresh.** `agents/product-manager/inbox/` and
+`agents/eng-manager/inbox/` both empty (archives only). `inbox/`'s nine
+items all re-read directly rather than trusted from the pass above: two
+open G1s (`ENG-016`, see below; `ENG-026`'s standing readback question),
+two open merge requests (`ENG-008`, `ENG-013`), and three self-closed
+incident notices plus one already-nudged question the pass above had
+already investigated to conclusion the same morning
+(`2026-08-30-eng-loop-halted.md`, `2026-08-30`/`2026-08-31-eng-events-dropped.md`,
+`2026-09-01-eng-gate-violation-watch.md`, `2026-08-30-eng007-continue-sequence-question.md`)
+— none carries a `decision:` filled in or content postdating that pass's own
+read; not re-investigated, since doing so would repeat the exact waste that
+pass's own proposal was filed to stop.
+
+**Merge detection re-run anyway**, since `ENG-008`/`ENG-013`'s merge-request
+files are literally the inbox items being swept: `git fetch origin main`
+plus the `ENG-013` branch on both `_eng` worktrees (both clean, no
+uncommitted changes), then `git merge-base --is-ancestor` for all four PR
+branch heads against `origin/main` — same four commits the pass above
+verified (`aiorders-api@57f8c4b`/`aiorders-admin-hub@63be255` for `ENG-008`,
+`aiorders-api@c95b25b`/`aiorders-admin-hub@a1c3bdf` for `ENG-013`) — **none
+merged.** Both tickets remain `blocked`/`blocked_on: approver`, unchanged.
+
+**One real finding: `ENG-016`'s own board file and PRD disagreed with this
+index.** Both read `awaiting-scope`/`owner: approver`, G1 raised and
+notified `2026-08-29T23:13:49` — this index's In-flight table and "Waiting
+on the approver" section instead read `shaped`/`product-manager`, "G1
+drafted, ready to raise," carried forward unquestioned since the 09:30
+pass's cross-host merge (`e281c71`) kept a rival host's account of this row
+specifically. Checked `decision-journal.md` (no `ENG-016` row) and the
+PRD's own `status:` before treating this as staleness rather than a
+legitimate reset — neither shows one. **Consequence, not cosmetic:**
+approver-facing WIP was actually 3/2 (`ENG-008`, `ENG-013`, `ENG-016` all
+have a path running through the approver), not the 2/2 this index claimed —
+and the G1 itself sat un-nudged for 2.5 days because every intervening pass
+trusted this table over the ticket's own file. Corrected in place (header
+WIP accounting, In-flight row, "Waiting on the approver" section) and in
+`ENG-016`'s own log; nudged the G1 (`nudged: 2026-09-01T10:20:06`, first
+nudge). Filed a proposal (`proposals.md`) so the next cross-host merge
+re-derives this table from each ticket's own frontmatter rather than
+keeping one side's account wholesale.
+
+**Dispatch: nothing starts.** No ticket sits in a state this pass could
+legally advance: `ENG-008`/`ENG-013`/`ENG-016` all wait on the approver
+(WIP 3/2, over); `ENG-009`/`ENG-010` wait on the machine-WIP cap (2/1,
+unchanged); every `shaped`/`designed` ticket's own next gate waits on the
+same approver-WIP cap; `ENG-026` waits on its own open question. The
+`ENG-016` correction doesn't change any dispatch outcome — the last two
+passes already declined to raise a new G1 this cycle, just for a reason
+that wasn't quite right.
+
+**0 transitions.** No ticket changed state. **1 board correction** (the
+`ENG-016` row above).
+
+`chained: none` — every in-flight ticket is either approver-blocked or
+capped; nothing sits in a state owned by an agent. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0,
+clean, no `WAIVED:` lines.
+
+## 2026-09-01 — same scheduled pass, continued: a git pull mid-pass surfaced two days of the other host's backlog
+
+Still the 09:30 `scheduled` pass above — recorded as a second dated entry
+rather than folded into the first because what follows was discovered
+*after* that entry was written and pushed, from a `git pull` this pass
+triggered itself (a `git fetch`/ancestor re-check before allocating a new
+ticket id) that fast-forwarded local `main` through merge commit `e281c71`
+("reconcile 26 diverged engineering-board files") and a follow-up commit
+from this instance's Windows host. Confirmed via `git reflog` before acting
+on any of it, not assumed from file contents alone.
+
+**Root cause of why this was still sitting unseen**:
+`inbox/2026-09-01-eng-events-dropped.md` (itself newly arrived, already
+answered `decision: approved` by the time it appeared) documents ~7.5 hours
+of continuous `watch schtasks` failures (exit 1, `00:05`–`07:45` today) on
+that host, including the two fires that would have processed a new
+PM-inbox request and `ENG-017`'s answered G1. Recovery confirmed via git
+history (two successful pushes at `09:17`/`09:28` local from the same host
+identity) — investigated and moved to `_handled/`, full detail in that
+file's own footer and `observations.md`.
+
+**Both concrete drops recovered by hand, in this pass:**
+
+- **`ENG-017`'s G1** (`decision: approved`, with a UI rider) — journaled,
+  design written (`agents/architect/designs/
+  ENG-017-presignup-lead-nurture-autopilot.md`, dispatched a read-only
+  investigation of both live repos first rather than trusting the PRD's own
+  evidence unverified — found one correction: `ENG-013` is not on `main`,
+  still unmerged). `awaiting-scope → designed`. **Does not advance to
+  `ready`** — machine WIP is 2/1 (`ENG-009`/`ENG-010`), already over cap;
+  starting a third ticket into that band would compound the violation
+  rather than let it shrink. No one-way door; the one real risk (CASL
+  consent exposure on unsolicited nurture sends) is named prominently in
+  the design with both the consent column and the feature's own on/off
+  toggle defaulted **off**, rather than the design silently deciding a
+  legal question the approver hasn't weighed in on.
+- **A new PM-inbox request** (brand-portal/FoodSwipe: multi-channel filters,
+  operational status, promo badges) — filed `ENG-026`. Full request-readback
+  run (PM reading + blind architect subagent reading, no repo access, not
+  shown the PM's reading): **one material divergence found** — the
+  request's own title asks for an independent per-channel visibility
+  toggle, but none of its three body tasks build one, and both readers
+  independently noticed the gap unprompted. Asked one question, framed as a
+  two-reading choice; held at `intake`. This is a standing, non-blocking
+  question (same shape as `ENG-007`'s), so it costs neither the
+  approver-facing WIP cap nor the approval cap — unlike a G1, nothing here
+  is confirmed enough yet to raise one.
+
+**Other new-to-this-host items, all already resolved or correctly
+inert — no further action taken:**
+`inbox/2026-09-01-eng-gate-violation-watch.md` (a Windows-host frontmatter
+PARSE failure on 8 ticket files, already fixed by `e281c71`'s own BOM strip
+— this pass's fresh `eng-gate-check.sh` runs confirm clean, corroborating
+rather than re-fixing); `inbox/2026-08-30-eng-loop-halted.md` (a daily
+hop-ceiling halt, two days moot, clears at midnight by design);
+`inbox/2026-08-30-eng007-continue-sequence-question.md` (a real, still-open,
+non-blocking question, now 3+ days old — **nudged** this pass, stamped
+`nudged:`); `agents/eng-manager/inbox/_processed/
+2026-08-29-restaurant-detail-write-partner-exposure.md` (an EM-finding
+already fully routed to `proposals.md` by the other host — found it
+substantially overlaps the 2026-08-31 `updateBrandOwner()` row already on
+this board; flagged in `observations.md` rather than merged/deleted
+unilaterally).
+
+**2 transitions this entry** (`ENG-017`: `awaiting-scope → designed`;
+`ENG-026`: `(new) → intake`), on top of the 0 from the entry above — both
+well under each ticket's own cap of 4. **Consequence:** no cap numbers
+change — neither `designed` nor a standing intake-question is counted
+anywhere.
+
+`chained: none` — `ENG-017` held by the machine-WIP cap; `ENG-026` held by
+its own open question, owned by the approver. Post-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board: exit 0, clean,
+no `WAIVED:` lines. Re-verified `ENG-008`/`ENG-013` merge status fresh one
+more time before finishing (fetch + ancestor check, both repos): still not
+merged.
+
+**CORRECTION, filed 2026-09-01T15:30 by the `scheduled` pass that follows
+this one in `_index.md`:** this entry's own "already resolved or correctly
+inert" line above is wrong about `inbox/2026-08-31-eng-events-dropped.md`
+specifically (it lumped that file in with `2026-08-30-eng-loop-halted.md`
+and its siblings without actually reading it) — that file had never been
+investigated, notified, or nudged, unlike the others named here. See the
+15:30 entry in `_index.md` and the file's own closing note for the
+correction; not rewritten here, since this section is historical record of
+what this pass believed at the time, not a live claim.
+
 ## 2026-09-01 — scheduled sweep (09:30): no merges yet, inbox-filing-rule gap escalated to a proposal
 
 `scheduled` event pass, context `launchd` — the 09:30 safety-net sweep.
