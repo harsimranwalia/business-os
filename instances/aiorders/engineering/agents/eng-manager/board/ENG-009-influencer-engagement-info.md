@@ -1272,3 +1272,41 @@ Append-only. One line per state transition, newest last.
   per the item's own Sequencing section) or replies to the gate item.
   Post-pass `eng-gate-check.sh`, scoped (`ENG-009`) and whole-board: both
   exit 0, clean, no `WAIVED:` lines.
+
+- **2026-09-02, informational cross-reference only — no state change, this
+  ticket not touched.** Found by `ENG-008`'s own round-3 code review
+  (`continue ENG-008` event pass): this ticket's branch is stale against
+  `ENG-008` again. `git merge-base --is-ancestor` on `ENG-008`'s latest fix
+  commits (`aiorders-api@7c6e4b8`, `aiorders-admin-hub@141f2eb` — dropping
+  the redundant `accepts_barter` column per the approver's merge-request
+  reply) against this ticket's tip (`aiorders-api@d37e0c9`,
+  `aiorders-admin-hub@92bcacd`) returns **false** on both repos. This is the
+  *second* time this exact staleness has happened between these two tickets
+  today — see this ticket's own round-1 review above (the null-coalescing
+  bug reappearing because this branch forked before `ENG-008`'s round-2 fix)
+  and the rebase hop that fixed it. That rebase synced against `ENG-008`'s
+  round-2 tip; `ENG-008` has since moved again (round 3), so the sync is
+  stale a second time.
+
+  **Not acted on here** — out of scope for the event that found it
+  (`continue ENG-008`, resume that ticket only); this ticket's own ready
+  state (`blocked`/`blocked_on: approver`, merge request open and
+  unanswered) is untouched, no code or branch on this ticket was read or
+  written. Full detail: `agents/principal-engineer/reviews/ENG-008.md`
+  (round 3, "A cross-ticket finding" section) and
+  `agents/principal-engineer/notebook/2026-09-02-review-log.md`. A proposal
+  for the general gap (check a ticket's branch against the sibling it
+  forked from, not just `main`) is already filed
+  (`agents/eng-manager/proposals.md`, 2026-09-02, `principal-engineer`) off
+  this same pair's first occurrence — not re-filed. Practical consequence
+  for whoever next picks up this ticket or answers its merge request:
+  merging either of this ticket's two PRs as they stand today would ship
+  code stacked on `ENG-008`'s pre-round-3 commits, which still reference the
+  `accepts_barter` column the approver already rejected — this ticket needs
+  a rebase onto `ENG-008`'s current tip and a fresh review/quality/security
+  cycle before its own merge request should be treated as safe to action,
+  the same way its own round-1→round-2 rebase worked earlier today.
+
+  `chained: none` — no state on this ticket changed; this entry exists so
+  the fact is on record before either PR is merged, not to restart this
+  ticket's own machine-owned pipeline.

@@ -92,3 +92,15 @@ Filled in by the approver.
 **changed** — 2026-09-01T16:44:07.981185+00:00
 
 aiorders-api accepts_barter (nullable booleans), backfilled additively from barter_visit (null stays null, not guessed). barter_visit itself is untouched. There is no need for a new column when we already have a column to signify the same intent of whether the influencer accepts barter or not
+
+---
+
+**Processed 2026-09-02**, `watch` event pass (context `launchd`) — recorded
+on a different host/checkout, only reached this Mac via tonight's `1b72b26`
+merge. Read as: drop the new `accepts_barter` column, redirect every
+read/write that targets it to the existing `barter_visit` column instead;
+`accepts_paid` stays (no pre-existing equivalent). Not merged. Ticket sent
+back `blocked → building` for this fix; full instruction and reasoning on
+`ENG-008`'s own board file. Journaled in
+`agents/eng-manager/config/decision-journal.md`. A fresh merge request will
+be raised once this fix cycle reaches `ready-to-ship` again.

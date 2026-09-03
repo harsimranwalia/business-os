@@ -6,11 +6,14 @@ type: feature
 size: M
 time_estimate: half a day to a couple of days
 time_spent: ~1 day machine time — build, two code-review rounds (round 1
-  fail, round 2 pass), the QA quality gate, plus the security gate; all
-  machine time, see log
-time_remaining: 0 machine time — release-readiness done, both PRs open. What's
-  left is the approver's own merge, on their own schedule (L1). No approver
-  time_impact beyond that merge.
+  fail, round 2 pass), the QA quality gate, the security gate, the
+  merge-request fix hop (drop accepts_barter, reuse barter_visit), the
+  round-3 code-review+quality hop, the round-3 security hop, plus this
+  release-readiness hop (refreshed both PR bodies, raised a fresh L1 merge
+  request); all machine time, see log
+time_remaining: 0 machine time owed right now — a fresh merge request is
+  raised and both PRs are open, updated in place. Approver time_impact:
+  review and merge two PRs (aiorders-api #6, aiorders-admin-hub #5).
 severity: P3
 priority:
 state: blocked
@@ -20,8 +23,8 @@ blocked_on: approver
 blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
-updated: 2026-08-31
-branch: feat/ENG-008-influencer-admin-management (aiorders-api@57f8c4b, aiorders-admin-hub@63be255)
+updated: 2026-09-02
+branch: feat/ENG-008-influencer-admin-management (aiorders-api@7c6e4b8, aiorders-admin-hub@141f2eb)
 depends_on: []
 blocks: []
 parent:
@@ -1206,3 +1209,536 @@ Append-only. One line per state transition, newest last.
   by hand. First and only nudge — none further after this regardless of how
   long it stays open. `chained: none` — still `blocked` on the approver;
   merging either PR on GitHub is the only thing that advances this ticket.
+
+- `2026-09-02` **merge request answered `changed` — `blocked → building`**
+  (eng-manager, `watch` event pass, context `launchd`). This decision was
+  recorded `2026-09-01T16:44:07Z` on a different host/checkout and only
+  reached this Mac's copy via tonight's `1b72b26` merge — no local pass had
+  read it before now, so treated as freshly discovered rather than
+  re-derived.
+
+  **The approver's own words, read plainly:** "There is no need for a new
+  column when we already have a column to signify the same intent of
+  whether the influencer accepts barter or not." Cross-checked against the
+  merge request's own "What this does" text rather than assumed: the build
+  added a new `accepts_barter` column alongside a new `accepts_paid`
+  column, splitting the old single `barter_visit` boolean so "both" could
+  be represented, while leaving `barter_visit` itself untouched. The
+  approver is objecting specifically to `accepts_barter` — `barter_visit`
+  already carries that exact signal, so a second column for the same fact
+  is real, avoidable redundancy. Nothing in the reply objects to
+  `accepts_paid`, which has no pre-existing equivalent.
+
+  **Narrow, mechanical fix — not a redesign, so routed straight to
+  `building` rather than back to `designed`:**
+  1. Drop the new `accepts_barter` column from the migration; every read/
+     write that currently targets it should target `barter_visit` instead.
+  2. Keep `accepts_paid` as-is (new, no existing equivalent).
+  3. Keep the additive backfill discipline the original migration already
+     used (null stays null, never guessed) — just apply it to whichever
+     column is actually new (`accepts_paid` alone) rather than both.
+  4. Update the handler's read/write allowlist, the frontend edit form, and
+     every test that currently references `accepts_barter` to reference
+     `barter_visit`.
+
+  **Not done in this pass** — this is real code-level rework (migration,
+  handler, frontend, tests) and this loop's own design gives that its own
+  session with fresh context, same as any other `building` hop; this
+  `watch` sweep only routes and instructs. The existing PRs
+  (`aiorders-api`#6, `aiorders-admin-hub`#5) stay open but must not be
+  merged as-is — superseded by whatever this fix hop pushes to the same
+  branch. Prior review/quality/security receipts
+  (`agents/principal-engineer/reviews/ENG-008.md`,
+  `agents/qa/test-plans/ENG-008.md`,
+  `agents/security/reviews/ENG-008.md`) are left in place as an accurate
+  record of what *that* diff reviewed — they do not carry over to the
+  revised diff; a fresh review/quality/security cycle is owed before this
+  can reach `ready-to-ship` again.
+
+  **1 transition** (`blocked → building`). **Consequence:** machine WIP
+  `0/1 → 1/1`. Approver-facing WIP unaffected by this transition itself —
+  the item moving off the approver's plate here is netted against the
+  broader recount this same pass already did across all six answered items
+  (see `_index.md`).
+
+  Journaled in `agents/eng-manager/config/decision-journal.md`. Moved
+  `inbox/2026-08-31-eng008-merge-request.md` → `inbox/_handled/` with a
+  processed footer — this gate item's own question ("merge this PR?") is
+  fully answered (no), same as a rejected G1 closes even though it triggers
+  more work; a fresh merge request is a new file, raised once this fix
+  cycle reaches `ready-to-ship` again, not a reopening of this one.
+
+  `chained: ENG-008` — `building` is agent-owned, not the approver, not
+  blocked, not terminal, not held by a cap (machine WIP was 0/1 before this
+  transition). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: see board index.
+
+- `2026-09-02` **merge-request fix applied: `accepts_barter` dropped,
+  `barter_visit` reused directly — still `building`** (eng-manager, `continue`
+  event pass, context `ENG-008`, this fire's own turn at the front of
+  `traces/.pending`, drained immediately behind the `watch` sweep that routed
+  this ticket back to `building`). Narrow scope per the event's own contract
+  (resume this ticket only; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Both worktrees fetched and switched onto this ticket's own branch** —
+  both were sitting clean on `ENG-010`'s branch (a later ticket's own build,
+  which stacks on top of `ENG-008`/`ENG-009`'s commits), not mid-work;
+  `feat/ENG-008-influencer-admin-management` checked out fresh on each,
+  landing exactly on the commits this ticket's own frontmatter already
+  recorded (`aiorders-api@57f8c4b`, `aiorders-admin-hub@63be255`) — matches,
+  nothing to reconcile.
+
+  **Applied the four-point fix the routing entry above specified, read
+  fresh from the diff rather than assumed from the entry's own summary.**
+  Grepped `accepts_barter` across both repos first to get the complete
+  reference list rather than trusting the routing entry's own account of
+  where it appears — three files in `aiorders-api` (the migration, the
+  handler, its test), one in `aiorders-admin-hub` (`Influencers.tsx`, six
+  distinct sites: two interface fields, the read in `openInfluencer`, the
+  conditional send in `handleSaveInfluencer`, the table's Payment Type
+  badge, and the edit-dialog checkbox) — matches the routing entry's own
+  four-point list exactly, nothing missed and nothing extra.
+
+  - **Migration** (`20260829220000_add_influencer_admin_fields.sql`): the
+    production database was independently reconfirmed still not to have run
+    this migration (`agents/database/migrations/ENG-008-...md`'s own
+    `list_migrations` check, from the original build hop — not re-run live
+    this pass, since nothing about the migration's applied status could have
+    changed while it sat unmerged) — so amended in place rather than adding
+    a corrective migration on top, same discipline every prior fix hop on
+    this ticket already used. Dropped `ADD COLUMN accepts_barter boolean`
+    and its half of the backfill; `accepts_paid`'s own backfill
+    (`accepts_paid = NOT barter_visit`) is untouched — Postgres's `NOT NULL
+    → NULL` already correctly preserves "unknown" for the 51/306 rows with a
+    null `barter_visit`, so nothing needed changing there. `barter_visit`
+    itself was never written by this migration and stays that way.
+  - **Handler** (`admin-portal/handlers/influencers.ts`): `EDITABLE_FIELDS`
+    and the PATCH validation block now name `barter_visit`, not
+    `accepts_barter` — same boolean-typed, optional-field shape, so the
+    validation logic itself is an identifier rename, not a behavior change.
+  - **Test** (`influencers.test.ts`): the one test targeting the dropped
+    field's rejection path renamed test name, request body key, and expected
+    error string together, so the test still asserts a real branch of the
+    handler rather than silently testing nothing.
+  - **Frontend** (`Influencers.tsx`): `Influencer.barter_visit` widened
+    `boolean → boolean | null` — it was already nullable in the live schema
+    and in this repo's own Supabase-generated types
+    (`src/integrations/supabase/types.ts`), just understated in this
+    hand-written interface; left non-nullable while the code started
+    writing it null-sensitively would either not typecheck or force an
+    unsafe cast. `accepts_barter` removed from both interfaces;
+    `InfluencerEditForm.barter_visit: boolean | null` takes its place.
+    `openInfluencer`, `handleSaveInfluencer`'s conditional-send block, the
+    table's Payment Type badge, and the edit-dialog checkbox (including its
+    `id`/`htmlFor`, `edit-accepts-barter → edit-barter-visit`, since leaving
+    a DOM id named after a field the form no longer has would be its own
+    small trap for the next reader) all now read/write `barter_visit`
+    directly. Comments touching the old field renamed to match; no comment
+    reworded beyond what the rename itself required.
+
+  **Confirmed by construction, not just by inspection, that this preserves
+  the null-safety round-1/round-2 already fixed on this exact field
+  shape**: `barter_visit` now goes through the identical pattern
+  `accepts_paid` already used post-round-1 — read straight from the row with
+  no coalescing fallback, checkbox renders `?? false` (visually unchecked
+  for null without mutating stored state), and the PATCH body omits the key
+  entirely while the form value is still `null`. The bug round 1 caught
+  (`?? !barter_visit` fabricating a value for a null preference) has no
+  surviving call site to regress, since the fallback expression itself is
+  gone, not just redirected.
+
+  **Self-tested for real this pass, unlike every prior hop on this
+  ticket** — this Mac host has `deno` on `PATH` (`2.9.6`), the first time
+  any pass on this ticket has had it. `deno check` on the modified handler:
+  clean. `deno test` on `influencers.test.ts`: **19/19 pass**, including the
+  renamed `barter_visit` rejection test — hand-tracing is no longer the only
+  evidence for this file. A whole-tree `deno check` still errors on an
+  unrelated file (`_shared/apiKeys.ts`, a missing `npm:` package in
+  `node_modules` — an environment gap, not a code error, and not on any file
+  this ticket touches), same shape as the "N pre-existing errors" this
+  ticket's own earlier hops recorded on other hosts; the isolated file check
+  is the meaningful signal, per that same precedent. `aiorders-admin-hub`:
+  `npm run build` clean (3340 modules, same pre-existing chunk-size notice
+  only); `npm run lint` — **150 errors / 31 warnings, identical to this
+  ticket's own recorded baseline, zero new**; `Influencers.tsx` carries only
+  the one pre-existing `fetchData` missing-dependency warning, reconfirmed
+  fresh rather than assumed unchanged.
+
+  **Migration doc updated in place**
+  (`agents/database/migrations/ENG-008-influencer-profile-admin-management.md`)
+  — every section that described `accepts_barter` (numbers, alternatives
+  considered, constraint choice, expand/contract sequence, runtime/locks,
+  backfill, rollback, verification, gate verdict) now describes the
+  corrected shape, with one new paragraph at the top naming the approver's
+  correction and pointing at this log entry rather than silently rewriting
+  history.
+
+  **Both branches committed and pushed on top of the existing PR branch,
+  not a new one** — `aiorders-api@7c6e4b8` ("Drop redundant accepts_barter
+  column, reuse barter_visit (ENG-008)"), `aiorders-admin-hub@141f2eb`
+  ("Drop redundant accepts_barter, edit barter_visit directly (ENG-008)").
+  Confirmed via `gh pr view` on both that PR #6 (`aiorders-api`) and PR #5
+  (`aiorders-admin-hub`) are still `OPEN` and their `headRefOid` now match
+  these new commits — the existing PRs picked up the fix automatically,
+  nothing to reopen or re-target. PR bodies themselves left untouched this
+  pass: updating them to describe the revised diff is release-readiness's
+  job (the same lane split this ticket's own original release-readiness
+  entry already drew), and a fresh release-readiness hop is owed regardless
+  once review/quality/security pass again.
+
+  **Frontmatter updated**: `branch:` now names both new commits;
+  `time_spent`/`time_remaining` rewritten — the old `time_remaining` (\"0
+  machine time — release-readiness done\") was accurate before the
+  approver's `changed` reply and stale afterward, corrected here rather than
+  left contradicting the ticket's own current state.
+
+  **0 net state transition** (`building → building`) — same convention this
+  ticket's own round-1-fix entry already established: fixing findings (here,
+  the approver's own finding) is build work, and the next machine-owned
+  checkpoint (`in-review`) is only reached by a fresh review session
+  actually passing it. `machine_wip` unaffected — `ENG-008` was already the
+  sole occupant of the counted `ready..ready-to-ship`-equivalent range
+  (`1/1`) before this hop and stays there. No approver-facing or
+  approval-cap change — this hop touches no gate.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing raised this pass (no gate
+  item written; a build-fix hop isn't a gate). **Observations/proposals
+  filed:** none new — every gap this hop touched was already named in the
+  routing entry above or in this ticket's own prior rounds.
+
+  `chained: ENG-008` — `building` is agent-owned (the next hop is code
+  review + quality, combined, round 3 for review), not the approver, not
+  blocked, not terminal, not held by a cap (machine WIP `1/1`, `ENG-008`
+  already the occupant — this hop doesn't start a new ticket, it continues
+  the one already in the slot). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: see below.
+
+- `2026-09-02` **code review round 3: PASS, plus the quality gate — now
+  in-qa** (principal-engineer then qa, `continue` event pass, context
+  `ENG-008`, this fire's own turn at the front of `traces/.pending`, drained
+  behind the fix hop immediately above). Narrow scope per the event's own
+  contract (resume this ticket only; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Both worktrees confirmed clean, on branch, at the recorded commits**
+  (`aiorders-api@7c6e4b8`, `aiorders-admin-hub@141f2eb`) — not touched
+  since the fix hop, nothing to reconcile. `git fetch origin main` plus
+  `git merge-base` on each repo: 4 files/404 insertions on `aiorders-api`,
+  1 file/202 insertions/15 deletions on `aiorders-admin-hub` against each
+  repo's own merge-base (`40d7c36`/`edf6947`, unchanged since round 2 — no
+  other ticket has merged to `main` in the meantime).
+
+  **Automatic-failure scan: 0/10.** Re-run against the whole cumulative
+  diff, not just this round's delta. Grepped `accepts_barter` across both
+  repos' full tracked trees (not only the diff): zero remaining code
+  references — the fix hop's rename is complete. The `any`-typed
+  `AuthenticatedRequest` and the `min_visit_payment` stale-value finding are
+  both unchanged since round 2 and already tracked; not re-litigated.
+
+  **Verified for real this round, not hand-traced**: this host has `deno`
+  on `PATH` (`2.9.6`). `deno check` clean; `deno test` executed —
+  **19 passed, 0 failed** (12ms), including the renamed
+  `rejects a non-boolean barter_visit` case. **Mutation-tested the renamed
+  validation**: reverted the `typeof body.barter_visit !== 'boolean'` guard
+  by hand, re-ran — exactly that one test went red (18/19), nothing else,
+  confirming it guards a real branch rather than passing vacuously after
+  the rename; reverted cleanly (`git status` confirmed clean before
+  proceeding). `npm run lint`/`build` (`aiorders-admin-hub`) reproduced
+  fresh: 150 errors/31 warnings (identical to every prior round's
+  baseline), `Influencers.tsx` carrying exactly its one pre-existing
+  `fetchData` warning, zero new; build clean, 3340 modules, same
+  pre-existing chunk-size notice.
+
+  **Quality gate (QA):** test plan updated in place,
+  `agents/qa/test-plans/ENG-008.md` — AC3/AC4's coverage rows and the
+  failure-path table's `accepts_barter` row renamed to `barter_visit`; all
+  8 acceptance criteria still covered. No open P0/P1 bug anywhere on this
+  board.
+
+  **Two new findings, both non-blocking to this ticket, neither fixed in
+  this hop:**
+  1. **The architect's design doc is stale.**
+     `agents/architect/designs/ENG-008-influencer-profile-admin-management.md`
+     (lines 99–101, 128–131) still specifies `accepts_barter` as a real
+     column and valid PATCH field. The running code is correct — this is
+     prose drift, not a defect — but left unfixed here: `agents/architect/designs/`
+     is the architect's owned artifact, this role only flags drift on it.
+     Flagged in the review receipt and `observations.md`.
+  2. **`ENG-009`'s branch is stale against this fix — the second occurrence
+     of this exact gap today, on this exact ticket pair.** Checked directly:
+     `git merge-base --is-ancestor` on both of this fix's commits
+     (`7c6e4b8`/`141f2eb`) against `ENG-009`'s tip
+     (`aiorders-api@d37e0c9`, `aiorders-admin-hub@92bcacd`) returns false on
+     both repos. `ENG-009`'s own round-1 review (earlier today, same
+     notebook) already found and fixed this same pattern once — that ticket
+     was rebased onto this ticket's round-2 tip and passed its own round 2
+     — but this ticket has since moved again (this round's fix), so the
+     sync is stale a second time. `ENG-009` is currently `blocked`/
+     `blocked_on: approver` with an open, unanswered merge request, and
+     `origin/main` is still clean of `accepts_barter` on both repos — a
+     live, catchable window, not yet a shipped problem. **Not fixed here** —
+     rebasing `ENG-009` is new implementation work on a different ticket
+     already sitting at its own human gate, out of this event's own
+     contract (`continue ENG-008`, resume this ticket only). Not a P0
+     (nothing in production, nothing exploited, both PRs still open) so not
+     escalated to the approver directly. Cross-referenced into `ENG-009`'s
+     own ticket log (informational only, no state change there) and into
+     `observations.md` against the proposal `ENG-009`'s own round-1 review
+     already filed for the general gap (`proposals.md`, 2026-09-02,
+     `principal-engineer`) — not re-filed as a second proposal, since the
+     existing one already covers this shape.
+
+  **Receipts:** `agents/principal-engineer/reviews/ENG-008.md` (verdict
+  `pass`, round 3 — overwrites round 2's content per this file's own
+  established convention; round 2's substance preserved in that receipt's
+  own "Prior pass (superseded)" section), `agents/qa/test-plans/ENG-008.md`
+  (updated in place, same convention). `links.review`/`links.test_plan`
+  already pointed at these paths from round 2 — unchanged, content
+  refreshed. `time_estimate`/`time_spent`/`time_remaining` updated.
+
+  **2 transitions** (`building → in-review → in-qa`), well under the cap of
+  4 — stopped deliberately, not by the cap: security is a separate hop by
+  design (needs this round's own just-written test plan), same reasoning
+  round 2 already established. `machine_wip` unaffected (`ENG-008` stays
+  inside the counted `ready`..`ready-to-ship` range, still the sole
+  occupant at `1/1`). No approver-facing or approval-cap change — this hop
+  touches no gate of its own (the `ENG-009` finding above is informational,
+  not a gate item).
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume — the `ENG-009` cross-reference above is the one
+  exception, informational only, no chain implication for that ticket.
+  **Notify sweep:** nothing raised this pass (no gate item written; a
+  review/quality pass isn't a gate item). **Observations filed**
+  (`observations.md`): the `ENG-009` stale-branch recurrence, against the
+  existing proposal rather than as a new one.
+
+  `chained: ENG-008` — `in-qa` is agent-owned (security next, fresh
+  session), not the approver, not blocked, not terminal, not held by a cap.
+  Firing `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: see below.
+
+- `2026-09-02` **security gate, round 3: PASS — now `ready-to-ship`**
+  (security, `continue` event pass, context `ENG-008`, this fire's own turn
+  at the front of `traces/.pending`, chained immediately behind the round-3
+  review+quality pass above). Narrow scope per the event's own contract
+  (resume this ticket only; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty, falls through). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: both exit 0, clean.
+
+  **Re-derived the round-3 delta from disk rather than trusting the review's
+  own account.** Both worktrees confirmed clean, on branch, at the recorded
+  commits (`aiorders-api@7c6e4b8`, `aiorders-admin-hub@141f2eb`); `git fetch
+  origin main` plus `git merge-base` on each repo matched round 3's own
+  figures exactly. Read the rename-only diff directly on both repos
+  (`57f8c4b..HEAD` / `63be255..HEAD`, 20 and 33 lines respectively) rather
+  than the full cumulative diff, since round 2 already covered everything
+  outside this delta.
+
+  **The rename is security-neutral, confirmed rather than assumed.** No
+  auth-check function has any diff this round (`hasInfluencerAdminAccess`,
+  `authenticate()`, `index.ts` all untouched since round 2); only
+  `EDITABLE_FIELDS`, one validation block, one test name, and the frontend's
+  field identifiers changed. `barter_visit` gains a write path for the first
+  time but sits behind the identical shared gate every other field on this
+  allowlist already uses — a field added inside an already-reviewed
+  boundary, not a new boundary. Grepped `barter_visit` across both repos'
+  full trees: no consumer outside this ticket's own two files, so the reuse
+  creates no seam with code elsewhere (the `ENG-009` staleness code review
+  already flagged is a different, cross-ticket risk — cross-referenced
+  below, not re-litigated).
+
+  **Negative-auth cases re-run for real, not re-read from round 2's
+  table.** Independent `deno test` execution this pass (`deno` 2.9.6, this
+  host): **19/19 pass**, including
+  `hasInfluencerAdminAccess rejects a missing profile` and
+  `handleInfluencers rejects a non-admin/sub-admin caller with 403,
+  regardless of method` — both auth-critical, both green, matching QA's own
+  independent run. Privilege-escalation, method-not-allowed, and IDOR-shape
+  cases are all outside this round's diff (`updateInfluencer`'s per-field
+  construction and URL-path-only row selection untouched) — round 2's
+  verdicts on these stand, re-confirmed by their absence from the diff
+  rather than re-tested from scratch.
+
+  **Secrets**: both new commits (`7c6e4b8`, `141f2eb`) scanned independently
+  for key/token/password/PEM/service-role patterns — no matches, the rename
+  touches only identifiers and column names.
+
+  **OWASP**: walked again against this round's diff specifically (not just
+  re-read). Only A01 and A05 had anything worth re-checking; both unchanged
+  in verdict (A01: same single shared gate, `barter_visit` inside an
+  already-accepted boundary; A05: raw-`error.message` finding untouched,
+  count stays at 2nd tracked occurrence, catch blocks outside this round's
+  diff). A02–A04, A06–A10: no code in scope for any of these categories
+  changed this round.
+
+  **Receipt written**: `agents/security/reviews/ENG-008.md` (verdict
+  `pass`, round 3 — overwrites round 2's content per this ticket's own
+  established convention; round 2's substance preserved in that receipt's
+  own "Prior pass (superseded)" section). `links.security_review` already
+  pointed at this path from round 2 — unchanged, content refreshed.
+  `time_spent`/`time_remaining` updated.
+
+  **1 transition** (`in-qa → ready-to-ship`), well under the cap of 4 —
+  same accounting this ticket's own round-2 security entry already used
+  (the lane table's `in-security` is the in-flight label for this hop, not
+  a separately persisted frontmatter state). **Consequence:** `machine_wip`
+  unaffected — `ENG-008` stays inside the counted `ready`..`ready-to-ship`
+  range, still the sole occupant at `1/1`. No approver-facing or
+  approval-cap change — a security-gate pass isn't a gate item to the
+  approver; `owner` moving to `devops` is an agent-to-agent handoff.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing to raise (a security pass
+  isn't a gate item). **Observations/proposals filed:** none new — the
+  design-doc drift and the `ENG-009` staleness (both round 3's own findings)
+  are already tracked in `observations.md` and the existing proposal; the
+  raw-error-message and `min_visit_payment` items are both unchanged
+  carry-forwards, already tracked.
+
+  `chained: ENG-008` — `ready-to-ship` is agent-owned (devops's
+  release-readiness hop next: update the existing PRs, raise a fresh merge
+  request), not the approver, not blocked, not terminal, not held by a cap
+  (still the same counted machine-WIP slot this ticket already occupied).
+  Firing `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-008`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: see board index.
+
+- `2026-09-02` **release-readiness: both PR bodies refreshed, fresh L1
+  merge request raised — now `blocked` on the approver** (devops, `continue`
+  event pass, context `ENG-008`, this fire's own turn at the front of
+  `traces/.pending`, chained immediately behind the round-3 security pass
+  above). Narrow scope per the event's own contract (resume this ticket
+  only; no board-wide sweep). Mode check clean (business-os `.env` →
+  `MODE=active`; instance `config/config.yaml` → `mode:` empty, falls
+  through). Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-008`) and whole-board: both exit 0, clean.
+
+  **Verified all four upstream gates fresh from the receipt files
+  themselves**, not assumed from the frontmatter or the prior log entry:
+  `agents/database/migrations/ENG-008-influencer-profile-admin-management.md`
+  (`## Gate verdict` → pass, no `accepts_barter` reference anywhere in the
+  file — grepped directly), `agents/principal-engineer/reviews/ENG-008.md`
+  (`verdict: pass`, round 3), `agents/qa/test-plans/ENG-008.md` (round-3
+  update section, verdict pass, all 8 acceptance criteria),
+  `agents/security/reviews/ENG-008.md` (`verdict: pass`, round 3). All four
+  on the revised (post-approver-correction) diff.
+
+  **Both worktrees confirmed clean, on branch, at the recorded commits**
+  (`aiorders-api@7c6e4b8`, `aiorders-admin-hub@141f2eb`) — no drift since
+  the round-3 security pass. `gh pr view` on both: PR #6 (`aiorders-api`)
+  and PR #5 (`aiorders-admin-hub`) still `OPEN`, `headRefOid` on each
+  matching these exact commits — the existing PRs already carry the fix,
+  nothing to reopen or re-target.
+
+  **Both projects registered L1** — step 1's window check does not apply,
+  went straight to step 4. **Step 3 readiness checks**, same interpretation
+  this ticket's own original release-readiness entry already used: rollback
+  (SQL reasoned through in the migration doc, not live-tested — the named,
+  carried-forward gap every migration on this instance shares), observability
+  (both new failure branches log via `console.error`, unchanged since the
+  original hop), cost (**$0/month delta**, no new vendor or dependency on
+  either repo — reconfirmed against the security review's own Dependencies
+  section), window (n/a, L1).
+
+  **The PR bodies were stale and needed a real edit, not just a reopen.**
+  `aiorders-api` PR #6's body still described the pre-revision shape —
+  a new `accepts_barter` column, "splits the single `barter_visit` boolean
+  into independent `accepts_paid`/`accepts_barter` flags" — which stopped
+  being true the moment the merge-request fix hop dropped that column two
+  hops ago. Read both bodies fresh via `gh pr view --json body` rather than
+  assumed unchanged since the original release-readiness hop. Rewrote both
+  (`gh pr edit --body-file`): `aiorders-api` PR #6 now states the current
+  shape (`staff_rating`/`collaboration_count`/`accepts_paid` only,
+  `barter_visit` reused directly), adds a "Revision — accepts_barter
+  dropped" section quoting the approver's own correction, and updates the
+  gate section to round 3 (also correcting the quality line — `deno test`
+  was hand-traced in the original body's text but was actually *executed*,
+  19/19, from the merge-request fix hop onward; left uncorrected until now).
+  `aiorders-admin-hub` PR #5 never named `accepts_barter` explicitly in its
+  prose, but still needed the same "Revision" section and the round-2 →
+  round-3 gate references updated for accuracy, so rewrote it too rather
+  than leaving one PR current and its companion silently behind.
+
+  **Wrote a fresh L1 merge-request item**
+  (`inbox/2026-09-02-eng008-merge-request.md`) rather than reopening the
+  answered one — the prior item's own question ("merge this PR?") was
+  already fully answered (`changed`) and closed to `inbox/_handled/`, same
+  convention this ticket's own `blocked → building` entry already
+  established for why that file isn't reused. Same `pr_urls:` YAML-list
+  shape (`skills/release-runner/SKILL.md` step 4), same two PR links (PR
+  numbers unchanged — the existing PRs picked up every fix in place). Body
+  opens with a "What changed since your last reply" section speaking
+  directly to the approver's own correction, rather than reading like a
+  brand-new request. Deliberately **did not** mention the `ENG-009`
+  stale-branch cross-ticket risk the round-3 review/security passes both
+  flagged — that finding was explicitly reasoned as "not escalated to the
+  approver directly" in this ticket's own round-3 review entry above,
+  and repeating it here would quietly reverse that call through a side
+  door. Ran `departments/engineering/lib/eng-notify.sh raise` — sent
+  cleanly (`traces/eng-notify-2026-09-02.log`: `sent: active
+  2026-09-02-eng008-merge-request.md`, `23:24:37`), stamped `notified:
+  2026-09-02T23:24:37` on the item by hand.
+
+  State `ready-to-ship → blocked`, `blocked_on: approver`,
+  `blocked_from: ready-to-ship`, owner `devops → approver`. No release
+  record yet — same split `release-runner`'s own step 7/step 4 draws; that's
+  written only once merge-detection confirms both PRs merged.
+
+  **1 transition** (`ready-to-ship → blocked`). **Consequence:** `machine_wip`
+  `1/1 → 0/1` (`ENG-008` leaves the counted `ready`..`ready-to-ship` range —
+  now empty, a slot free for the next To-do-column start). Approver-facing
+  WIP `4/2 → 5/2` (`ENG-009`, `ENG-010`, `ENG-013`'s new question, `ENG-026`
+  already counted; `ENG-008` rejoins). Approval cap has no separate limit
+  (removed 2026-08-29) — not tracked.
+
+  **Not a new start, so not blocked by the over-cap approver-facing WIP.**
+  The Guards section's "nothing new starts" language governs the To-do-column
+  dispatch step (a fresh ticket entering `ready`), not an already-in-flight
+  ticket's own machine-owned pipeline continuing to its next gate — same
+  reading this exact cap-state already permitted for `ENG-009`'s and
+  `ENG-010`'s own release-readiness hops earlier tonight (both raised their
+  merge requests and were counted, without being held for the cap). `ENG-008`
+  was already the sole occupant of machine WIP before this hop; this hop
+  does not start a second ticket, it finishes moving the one already in the
+  slot to its next state.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** this pass's own item raised and
+  stamped above; nothing else to nudge. **Observations/proposals filed:**
+  none new — every named gap above (raw error message, no frontend test
+  harness, `min_visit_payment`, design-doc drift) is already tracked
+  elsewhere; the PR-body-goes-stale-after-a-merge-request-fix pattern is a
+  one-off consequence of this ticket's own specific correction, not yet a
+  repeated shape worth a standing note.
+
+  `chained: none` — `blocked`, `blocked_on: approver`. This is the human
+  gate the whole hop was driving toward; firing `continue ENG-008` again
+  would only queue against a ticket with nothing left for a machine to do,
+  same reasoning this ticket's own original release-readiness entry already
+  recorded at this identical state. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: see below.
+
+  business-os itself left uncommitted — same standing default this whole
+  chain of passes tonight has used; the underlying commit-convention
+  question remains open, not re-decided here.
