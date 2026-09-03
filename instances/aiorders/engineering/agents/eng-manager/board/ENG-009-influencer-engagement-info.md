@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-30
+updated: 2026-09-02
 branch: feat/ENG-009-influencer-engagement-info (aiorders-api@4eb4b1b, aiorders-admin-hub@328db29)
 depends_on: []
 blocks: []
@@ -577,6 +577,86 @@ Append-only. One line per state transition, newest last.
   `/bin/sh departments/engineering/lib/eng-trigger.sh continue ENG-009`
   before exiting. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
   scoped (`ENG-009`) and whole-board: see board index.
-<!-- merge note: remote said ENG-009 was still at ready on 2026-08-31, held by the machine-WIP cap, with the sequencing hold reason merely corrected. This contradicts the frontmatter both branches agree on (state: building, branch commits aiorders-api@4eb4b1b / aiorders-admin-hub@328db29) and local own detailed 2026-08-30 building entry above. Kept local account (the build genuinely happened) and dropped remote stale ready/held entry as superseded. -->
-eady on 2026-08-31, held by the machine-WIP cap, with the sequencing hold reason merely corrected. This contradicts the frontmatter both branches agree on (state: building, branch commits aiorders-api@4eb4b1b / aiorders-admin-hub@328db29) and local's own detailed 2026-08-30 building entry below. Kept local's account (the build genuinely happened) and dropped remote's stale 
-eady/held entry as superseded. -->
+<!-- merge note: remote said ENG-009 was still at ready on 2026-08-31, held by the machine-WIP cap, with the sequencing hold reason merely corrected. This contradicts the frontmatter both branches agree on (state: building, branch commits aiorders-api@4eb4b1b / aiorders-admin-hub@328db29) and local's own detailed 2026-08-30 building entry above. Kept local's account (the build genuinely happened) and dropped remote's stale ready/held entry as superseded. -->
+
+- `2026-09-02` **broken chain found and resumed — the 2026-08-30 `chained:
+  ENG-009` fire never actually landed a session, and a later pass's
+  mistaken "fix" masked it for ~28 hours** (eng-manager, `scheduled` event
+  pass, context `launchd` — whole-board sweep). Mode check clean
+  (`MODE=active`). Pre-pass `eng-gate-check.sh`, whole-board: exit 0, clean.
+
+  **What was found.** This ticket's own frontmatter has read `state:
+  building` continuously since commit `3881cc2` (2026-09-01 08:45:35 -0700,
+  "sync local sweep/board state before pulling remote history") and was
+  explicitly kept over a rival `ready` account by the cross-host merge
+  `e281c71` the same morning (see this file's own merge note directly
+  above) — `git log -p` on this file and `git show <rev>:<path>` at each of
+  `29af8f2`, `db8bf41`, `3881cc2`, `e281c71`, and `HEAD` confirm `state:
+  building` and this ticket's full 2026-08-30 build log entry arrived
+  together in `3881cc2` and have been unchanged since. Despite that, the
+  09-01 09:30 `scheduled` pass's own session log
+  (`traces/eng-loop-2026-09-01.log:462-493`) recorded reading this ticket's
+  file as `state: ready` and "corrected" the board index's In-flight row
+  from `building` to `ready` on that basis — the row this pass just found
+  and reverted. That 09:30 pass's premise was wrong: nothing in this
+  ticket's git history ever set `state: ready` after `29af8f2`
+  (2026-08-29). The misread, not the ticket file, was stale. Every pass
+  since (five, by commit count) then read the *board index* rather than
+  this file and concluded "`ENG-009`/`ENG-010` both sit at `ready`,
+  WIP-capped, nothing to dispatch" — technically true of the cap math
+  (both tickets are inside the counted range regardless of which exact
+  state) but wrong about what was actually being held: this ticket was not
+  waiting on the WIP cap, it was waiting on a chain nobody re-fired,
+  because nobody re-fired.
+
+  **Why the chain never landed — investigated, not fully resolved.**
+  `traces/eng-loop-2026-08-30.log` contains zero mentions of `ENG-009` —
+  no `pass start`, no queue line — despite the ticket's own log recording
+  `chained: ENG-009` and a literal `eng-trigger.sh continue ENG-009`
+  invocation that same day. `traces/.pending` is empty now and no
+  `traces/.hops-*-ENG-009` file exists on this host, meaning this host has
+  never charged this ticket a hop. The build log's own commit
+  (`3881cc2`, "sync local... before pulling remote history") reads as
+  locally-committed work later synced in, consistent with the fire having
+  happened on the other host (Windows — this instance's `traces/` is
+  host-local and `.gitignore`d there, per
+  `inbox/2026-08-31-eng-events-dropped.md`'s own same finding). Cannot
+  root-cause further from this host, same limitation that incident already
+  named. What's checked and certain, not inferred: `links.review` and
+  `links.test_plan` are both still blank in this ticket's own frontmatter,
+  and `state` is still `building` — wherever the fire went, the review +
+  quality hop it should have triggered never ran, on either host.
+
+  **Verified safe to resume before doing so.** `git fetch origin` on both
+  worktrees: `aiorders-api@4eb4b1b` and `aiorders-admin-hub@328db29` both
+  still resolve on `origin` — neither branch was deleted or rewritten.
+  `business-os` itself: `git fetch origin` then `git log HEAD..origin/main`
+  — empty; this host is ahead of, not behind, `origin/main`, so there is no
+  newer remote board state this pass is missing.
+
+  **Board index corrected** (`board/_index.md`): In-flight row `ready` →
+  `building`, updated date bumped to today; header narrative corrected to
+  stop citing the wrong state as fact, with a pointer to this entry rather
+  than a re-derivation.
+
+  **0 transitions on this ticket's own state** — this pass restores the
+  record, it does not itself perform the review + quality hop (that stays
+  a fresh session's work, same as every other ticket at this state on this
+  board). `ENG-010` is unaffected: its own hold reason (machine WIP 2/1,
+  over cap) is unchanged by this correction, since `ENG-009` was already
+  inside the counted `ready`..`ready-to-ship` range either way.
+
+  **Proposal filed** (`proposals.md`): nothing in `eng-gate-check.sh` or
+  any board-update step cross-checks `board/_index.md`'s In-flight `state`
+  column against each ticket's own frontmatter `state:` — this is the
+  second time that specific gap has produced a real miss (after `ENG-016`'s
+  G1 missing from the same table), and this one cost the ticket roughly a
+  day and a half of wall-clock time sitting on a dead chain no pass
+  thought to check.
+
+  `chained: ENG-009` — sits at `building`, agent-owned (`eng-manager`), not
+  the approver, not blocked, not terminal, not held by a cap (already
+  inside the counted range). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-009`
+  before exiting, per this schedule's own macOS EPERM note. Post-pass
+  `eng-gate-check.sh`, whole-board: see board index.
