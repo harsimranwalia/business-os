@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-02
+updated: 2026-09-03
 branch:
 depends_on: []
 blocks: []
@@ -42,12 +42,17 @@ ever updated by a staff member dragging a card by hand.
 
 ## Outcome
 
-A restaurant owner can opt in to an automated quote flow: a customer who
-submits the catering enquiry form gets a link (SMS/email) to a
-self-service quote-builder page where they pick menu items and see a
-computed price, or skip straight to today's generic message. Either way,
-the matching request's stage on restaurant-portal's catering board updates
-on its own. Owners who don't opt in see no change from today.
+**Rescoped 2026-09-03 after the approver's `changed` G1 answer — see PRD
+for the full rewrite and the resulting split.** This ticket now covers
+Piece 1 only: a customer on a restaurant's public catering page picks a
+fulfillment option and guest count, selects menu items by category with
+quantities and a note each (no price shown), and either submits or asks
+for a callback instead. Either way the matching request lands on
+restaurant-portal's catering board in the right stage automatically. A
+restaurant with no structured menu data sees no change from today.
+Displayed pricing (a package/price-book model) and owner-side quote
+editing/resend are named as Piece 2 and Piece 3 in the PRD, not filed as
+tickets yet.
 
 ## Notes
 
@@ -177,3 +182,72 @@ ready to raise the moment a WIP slot frees.
   of keeping one side's board-index prose wholesale.
   `chained: none` — still `awaiting-scope`, owned by the approver; unchanged
   by this correction.
+
+- `2026-09-03` **no state change — G1 answered `changed`, PRD rewritten,
+  fresh G1 raised** (`scheduled` event pass, context `manual`; this is the
+  gate-return step of a whole-board sweep, not a `continue` on this ticket
+  specifically). Mode check clean (`MODE=active`). Pre-pass
+  `lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+  The G1 raised 2026-08-29 came back `decision: changed` (decided
+  2026-09-03T00:53:17Z) with a complete replacement engineering spec, not
+  an edit — reproduced in full in `inbox/2026-08-29-eng016-g1-scope.md`.
+  Delegated the actual PM judgment (sizing, the filter, the PRD rewrite) to
+  an `opus` subagent per `prd-writer/SKILL.md`'s own model designation,
+  after gathering fresh codebase evidence via a separate `sonnet` research
+  subagent — kept the two apart deliberately: fact-finding doesn't need
+  opus, the sizing/split call does.
+
+  **Verdict: the rewrite is `XL`, not `L`.** It reintroduces the
+  catering-specific tiered pricing model the original PRD named as a
+  non-goal, plus the owner-side quote editing it deferred, plus a new
+  view-tracking mechanism this codebase has no equivalent of today (SMS
+  delivery has no open-tracking at all; email's is partial and unrelated
+  to catering). Per `prd-writer/SKILL.md` step 7 ("XL goes back to the EM
+  to be split"), split into three pieces, build order 1→2→3: **Piece 1
+  (this ticket, rescoped, `L`)** — structured order capture, itemized
+  owner view, two automatic stages, no pricing shown; proceeds now. **Piece
+  2** (package/price-book + tiered pricing, `L`, depends on Piece 1) and
+  **Piece 3** (owner edit/resend + view tracking, `M`–`L`, depends on
+  Pieces 1–2) are named in the PRD's Recommendation section but
+  deliberately **not filed** — they're the approver's to confirm via this
+  G1 before either gets a ticket id, and Piece 2 specifically waits on a
+  named answer for who maintains each restaurant's price book. Not filing
+  them now isn't scope-timidity: `next_id` stays `ENG-027`, unclaimed,
+  until the approver has actually seen the split.
+
+  Also resolved, as a rider rather than a blocking question: the rewrite's
+  own stage matrix names three target stages but its enum-update
+  instruction names only two — evidence-resolvable, not a 50/50 pick, since
+  the rewrite also deletes the tokenized link the third stage
+  (`Quote Viewed`) depends on. Building the two the rewrite's own enum
+  instruction names; `Quote Viewed` moves to Piece 3, named plainly as a
+  rider on the fresh G1 rather than silently dropped or silently guessed —
+  did not meet this board's bar for a blocking question (`ENG-013`'s
+  precedent) since the evidence, not a coin flip, decides it.
+
+  PRD rewritten in place (`agents/product-manager/specs/ENG-016-catering-
+  quote-generator.md`) — original Readback/Evidence kept as history, a new
+  "Approver's `changed` response" section added with the four load-bearing
+  code corrections the rewrite's own assumptions don't hold up against, and
+  Problem-through-Decision replaced with Piece 1's scope. Fresh G1 raised:
+  `inbox/2026-09-02-eng016-g1-rescope.md`. **No dissent section** —
+  `agents/critic/agent.md` still doesn't exist at department or instance
+  level, same gap `ENG-017`'s G1 already logged; not re-filed as a second
+  proposal, the open one (`proposals.md`, 2026-08-25) already covers it.
+  Notified and stamped (see `traces/eng-notify-2026-09-02.log`).
+  Decision-journal entry written for the `changed` verdict.
+
+  **0 transitions** — `awaiting-scope → awaiting-scope`, still owned by the
+  approver throughout; this pass answered the gate return, it didn't move
+  the ticket. `machine_wip` unaffected. Approver-facing WIP: this ticket's
+  G1 rejoins the count (it was flagged "answered, not counted" while
+  unactioned; now unanswered again) — same precedent tonight's
+  `ENG-008`/`ENG-009`/`ENG-010` merge-request re-raises already set: a
+  ticket's own gate cycle continuing is not a fresh To-do-column start, so
+  it isn't blocked by the WIP-2 cap being over, but it does count once
+  raised.
+
+  `chained: none` — `awaiting-scope`, owned by the approver; the chaining
+  guard doesn't fire on a ticket waiting on a human. Post-pass
+  `lib/eng-gate-check.sh`, whole-board: see below.
