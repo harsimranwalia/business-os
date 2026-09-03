@@ -7,7 +7,8 @@ ticket: ENG-026
 recommendation: Answer to unblock shaping. Does not block anything currently in flight — answer when convenient.
 raised: 2026-09-01
 notified: 2026-09-01T10:03:26
-decision:
+decision: approved
+decided: 2026-09-03T00:58:19.957907+00:00
 ---
 
 # One thing before ENG-026 gets shaped further — is a channel-visibility toggle part of this?
@@ -48,3 +49,36 @@ could turn off "dine-in" on FoodSwipe entirely while keeping "order food" on.
 ## Decision
 
 Filled in by the approver.
+
+## Decision
+
+**approved** — 2026-09-03T00:58:19.957907+00:00
+
+ENG-026 Scope Clarification: Channel Visibility, Toggles, and Open Now Filters
+
+Team,
+
+We have resolved the ambiguity regarding channel visibility across the Brand Portal, Admin, and consumer apps. The scope for ENG-026 is confirmed as follows:
+
+1. MASTER CAPABILITY TOGGLES (SCHEMA, ADMIN & BRAND PORTAL)
+Visibility must be driven by what services a restaurant actually offers, not operating hours alone.
+
+* Add per-merchant boolean fields: has_order_food (default: true), has_dine_in (default: false), and has_catering (default: false).
+* In the Brand Portal and Admin, channel-specific settings (operating hours, cutoffs, advance-notice rules) should only be visible/editable when that channel's master toggle is set to true.
+
+2. CONSUMER DISCOVERY (CAPABILITY-BASED BY DEFAULT)
+
+* Channel tabs or filters (Order Food, Dine-In, Catering) must display all merchants where the corresponding toggle is true.
+* Do NOT automatically hide closed restaurants. Discovery stays wide by default so consumers can view menus or plan pre-orders.
+* Merchants that are currently closed or past their order cutoff should still appear, marked with their current status (for example: Closed - Pre-order for tomorrow, or Opens at 5 PM).
+
+3. "OPEN NOW" USER FILTER (OPT-IN ONLY)
+
+* "Open Now" must be an explicit, optional filter chip selected manually by the user (default: off).
+* Only filter out closed restaurants when the user explicitly checks or enables "Open Now".
+
+4. API QUERY LOGIC
+
+* Base filter: WHERE has_[channel] = true
+* If open_now = true: evaluate operating hours and cutoffs for that channel against the current timestamp and exclude closed locations.
+* If open_now = false (default): return all merchants where has_[channel] = true regardless of current open/closed status.

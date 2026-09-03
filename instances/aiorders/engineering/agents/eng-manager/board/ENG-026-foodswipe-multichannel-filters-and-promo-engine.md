@@ -8,7 +8,7 @@ time_estimate:
 time_spent:
 time_remaining:
 severity: P3
-priority:
+priority: now
 state: intake
 owner: approver
 lane: full
@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-09-01
-updated: 2026-09-01
+updated: 2026-09-02
 branch:
 depends_on: []
 blocks: []
