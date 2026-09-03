@@ -1,11 +1,11 @@
 ---
 ticket: ENG-019
 project: restaurant-portal
-status: draft
+status: approved
 size: L
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-09-03T15:52:30.648626+00:00
 ---
 
 # Restaurant marketing broadcasts — mass send and drip sequences for the brand portal
@@ -224,11 +224,17 @@ path that reuses the same underlying email/SMS delivery.
 
 ## Decision
 
-Not yet raised. **Held at `shaped`, not advanced to `awaiting-scope` this
-pass** — the approver-facing WIP cap (2) is currently full (`ENG-014`,
-`ENG-015`, both re-verified open in `inbox/` immediately before this
-decision). Will raise G1 once a slot frees.
-
-- **The approver's answer:** —
-- **Date:** —
-- **Notes:** —
+- **The approver's answer:** approved
+- **Date:** 2026-09-03T15:52:30.648626+00:00
+- **Notes:** Bare approval, no comment — read as accepting every item in the
+  Readback's "Assumed, correctable here" list as proposed (the "Broadcasts"
+  working name, all/inactive-N-days audience only, email/SMS only, the
+  coupon-code ROI mechanic, owner-authored content, owner/manager-only
+  access), same convention this journal already applies to an unremarked-on
+  rider or assumption (`ENG-013`'s stage-count assumption, `ENG-016`'s
+  unremarked riders, `ENG-026`'s requirement 6). The Risks this PRD flagged
+  as the architect's to resolve — durable scheduling/drip infrastructure,
+  whether the existing send services need changes for a chosen-audience
+  fan-out, and the CASL consent posture (better footing than `ENG-017`'s
+  cold leads, but still worth a real check) — are not resolved by this
+  approval and stay open, inherited at `designed`.
