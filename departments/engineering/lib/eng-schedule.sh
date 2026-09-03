@@ -5,7 +5,7 @@
 #   ./eng-schedule.sh --apply    write the plists and (re)load them
 #   ./eng-schedule.sh --remove   unload and delete both jobs
 #
-# THREE jobs for ALL businesses, not three per business. install.sh calls this
+# FOUR jobs for ALL businesses, not four per business. install.sh calls this
 # on every onboard, so adding a business never means installing host wiring by
 # hand.
 #
@@ -17,6 +17,20 @@
 #                              Not an eng-trigger.sh event; a dedicated runner,
 #                              lib/eng-report.sh, discovers instances the same
 #                              way the other two do. See that file's header.
+#   com.businessos.eng-drain   every 5 min — retries a pass that fired and
+#                              FAILED (not never-started; see
+#                              handle_failed_pass in eng-trigger.sh), which
+#                              neither of the two above promptly catches:
+#                              eng-loop's gaps run up to ~6h, and eng-watch's
+#                              own fingerprint short-circuit (eng-trigger.sh
+#                              ~line 488) can skip a stuck backlog that isn't
+#                              tied to a fresh inbox write. lib/eng-drain-poll.sh
+#                              checks traces/.pending per instance — a bare
+#                              `test -s`, no claude session — and only fires
+#                              eng-trigger.sh for one that actually has
+#                              something stuck. Added 2026-09-02 after an
+#                              OAuth failure left 2 events queued for ~4h with
+#                              nothing due to fire again until 02:00.
 #
 # Why the watch job is regenerated and the loop job is not: launchd's WatchPaths
 # is a STATIC array. It cannot glob, and it is not recursive — watching
@@ -73,13 +87,16 @@ esac
 LOOP_LABEL="com.businessos.eng-loop"
 WATCH_LABEL="com.businessos.eng-watch"
 REPORT_LABEL="com.businessos.eng-report"
+DRAIN_LABEL="com.businessos.eng-drain"
 LOOP_PLIST="$AGENTS/$LOOP_LABEL.plist"
 WATCH_PLIST="$AGENTS/$WATCH_LABEL.plist"
 REPORT_PLIST="$AGENTS/$REPORT_LABEL.plist"
+DRAIN_PLIST="$AGENTS/$DRAIN_LABEL.plist"
 REPORT_RUNNER="$DEPT/lib/eng-report.sh"
+DRAIN_RUNNER="$DEPT/lib/eng-drain-poll.sh"
 
 if [ "$REMOVE" -eq 1 ]; then
-  for l in "$LOOP_LABEL" "$WATCH_LABEL" "$REPORT_LABEL"; do
+  for l in "$LOOP_LABEL" "$WATCH_LABEL" "$REPORT_LABEL" "$DRAIN_LABEL"; do
     launchctl bootout "gui/$(id -u)/$l" 2>/dev/null || true
     rm -f "$AGENTS/$l.plist"
     echo "  removed $l"
@@ -225,6 +242,38 @@ report_plist() {
 PLIST
 }
 
+# ── The drain-poll job ──────────────────────────────────────────────────────
+# No event/context args, unlike loop and watch: eng-drain-poll.sh discovers
+# instances and decides per-instance whether there's anything to fire, the
+# same way eng-report.sh does. StartInterval, not StartCalendarInterval —
+# this wants a fixed cadence starting from whenever the job loads, not
+# specific clock times.
+drain_plist() {
+  cat <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$DRAIN_LABEL</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>$DRAIN_RUNNER</string>
+	</array>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>StandardOutPath</key>
+	<string>/tmp/businessos-eng-drain.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/businessos-eng-drain.log</string>
+	<key>StartInterval</key>
+	<integer>300</integer>
+</dict>
+</plist>
+PLIST
+}
+
 install_one() { # install_one <label> <plist-path> <generator>
   _label="$1"; _path="$2"; _gen="$3"
   _new="$("$_gen" 2>/dev/null || $_gen)"
@@ -249,6 +298,7 @@ echo
 install_one "$LOOP_LABEL"   "$LOOP_PLIST"   loop_plist
 install_one "$WATCH_LABEL"  "$WATCH_PLIST"  watch_plist
 install_one "$REPORT_LABEL" "$REPORT_PLIST" report_plist
+install_one "$DRAIN_LABEL"  "$DRAIN_PLIST"  drain_plist
 
 if [ "$APPLY" -eq 0 ]; then
   echo

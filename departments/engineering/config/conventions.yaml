@@ -48,6 +48,7 @@ instance_layout:
   agents:
     eng-manager:
       board:  agents/eng-manager/board/          # tickets, _index.md, _index-archive.md
+      log_archive: agents/eng-manager/board/_log-archive/  # {TICKET}.md — rolled-off log entries, see ticket_log.archive
       config: agents/eng-manager/config/         # projects.md, gate-waivers.md, exceptions.md, decision-journal.md
       inbox:  agents/eng-manager/inbox/
       notebook: agents/eng-manager/notebook/
@@ -187,3 +188,83 @@ naming:
   design:         "{TICKET}-{slug}.md"
   release_record: "{YYYY-MM-DD}-{project}-{TICKET}.md"
   trace:          "eng-loop-{YYYY-MM-DD}.log"
+
+# ---------------------------------------------------------------------------
+# Ticket log — size discipline.
+#
+# The log is this department's audit trail and it stays COMPLETE. Nothing here
+# permits dropping a fact. What it caps is prose, and where the prose lives.
+#
+# Measured 2026-09-02 across 132 passes (instance traces/costs-*.jsonl).
+# ENG-010's ticket file reached 105,964 bytes by its eighth hop of the day, up
+# from 23,440 that morning. Of its 1,708 lines, 114 were the ticket and 1,594
+# — 93% — were this log. A single state transition was running to ~60 lines,
+# and one reached 188. Every hop re-read all of it, and because a pass averages
+# ~46 turns, each token read at the start was paid for about forty-six times
+# over inside that one pass. The log had become the most expensive artifact in
+# the department while carrying, per hop, roughly ten lines anyone later needed.
+#
+# The split below is the fix: the FACTS stay on the ticket, where the audit
+# trail and every later sweep expect them; the REASONING moves to the writing
+# agent's own notebook, which nothing re-reads on every hop. Both are durable,
+# both are committed, and the entry carries the pointer between them — so this
+# is a change of address for the analysis, never a deletion of it.
+# ---------------------------------------------------------------------------
+ticket_log:
+  entry:
+    cap_lines: 20
+    over_cap_allowed_when: [gate_fail, incident, approver_answer_verbatim]
+    must_record:
+      - date, and the state transition as from -> to
+      - the agent that made it, and the event that drove the hop
+      - gate outcome when a gate ran — pass/fail plus the finding in one line
+      - receipt files written, by path
+      - WIP / approval cap consequences, when any changed
+      - "chained: {TICKET-ID} or chained: none — {reason}, always, per lib/eng-trigger.sh"
+      - the notebook path holding this hop's reasoning, when there was any
+    reasoning_goes_to: agents/{agent}/notebook/{YYYY-MM-DD}-{topic}.md
+    rule: >
+      An entry records what changed and what the next hop must know. It is not
+      where a hop narrates how it got there. Investigation, alternatives
+      weighed, evidence read, and rationale go to the writing agent's own
+      notebook under the instance, and the entry carries the path to it in one
+      line. The cap is on the entry, never on the notebook — write as much
+      there as the work deserves. The three over-cap cases are the ones where
+      the finding IS the audit trail: a gate FAIL states what failed and why in
+      full, an incident states what happened, and an approver's answer is
+      preserved verbatim per skills/request-readback/SKILL.md. Even then the
+      analysis behind it goes to the notebook; only the finding stays here.
+  reading:
+    rule: >
+      Read the log by RANGE, not by opening the file. lib/eng-trigger.sh hands
+      a continue hop the frontmatter and the newest entry in its prompt, plus
+      the line number that entry starts at, precisely so the common case needs
+      no read at all. When a hop genuinely needs earlier history — a chain that
+      broke, a decision being revisited, a receipt being traced — it reads the
+      range it needs with sed -n and says in its own entry which range and why.
+      Opening a long ticket file whole is a defect, not thoroughness: on the
+      tickets measured above it costs ~25k tokens to surface about ten relevant
+      lines, and every one of those tokens is then re-read on every later turn
+      of the same pass.
+  archive:
+    file: agents/eng-manager/board/_log-archive/{TICKET}.md
+    trigger_bytes: 40000
+    rule: >
+      When a ticket file passes trigger_bytes, the EM moves log entries older
+      than the ticket's current state into the archive file above — oldest
+      first, newest last, unchanged, never summarised and never edited on the
+      way. Always leave at least the three newest entries in place, and never
+      move the entry for the state the ticket currently sits in. The ticket's
+      Log section then opens with one line naming the archive file and the
+      entries it holds, so the trail is followed, not guessed at. This mirrors
+      _index.md -> _index-archive.md, which the board index has used since
+      2026-08; the difference is only that a per-ticket archive is keyed by
+      ticket id.
+    location_is_load_bearing: >
+      The archive lives in a SUBDIRECTORY of board/ and is named {TICKET}.md,
+      not {TICKET}-{slug}.md beside the ticket. lib/eng-gate-check.sh enumerates
+      the board with find -maxdepth 1 -name 'ENG-*.md', and lib/eng-trigger.sh
+      resolves a ticket with the same non-recursive shape. An archive sitting
+      beside its ticket would be read as a second, malformed ticket with no
+      frontmatter — which is a fail-closed exit 2 across the whole board, not a
+      quiet mis-parse. Keep it one level down.

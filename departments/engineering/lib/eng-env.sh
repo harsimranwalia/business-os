@@ -81,6 +81,15 @@ fi
 # under `set -e` would take as a failed source.
 if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then export SLACK_WEBHOOK_URL; fi
 
+# Same reasoning as SLACK_WEBHOOK_URL above, for a different failure mode:
+# lib/run-claude.sh execs the `claude` binary as a CHILD process, so this must
+# be exported to reach it — a bare shell var here is invisible to that exec.
+# When set, the CLI's own credential precedence picks this over the plain
+# `/login` session (see .env's own comment on this var), which is the point:
+# it pins every automated build-loop pass to one account independent of
+# whatever is logged into `claude` interactively elsewhere on this host.
+if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then export CLAUDE_CODE_OAUTH_TOKEN; fi
+
 # The pause switch is PER-INSTANCE, falling back to the business-os-wide MODE.
 # It was global only: one `sabbath` in business-os/.env silenced every business
 # at once, which is wrong the moment there is more than one — pausing AIOrders

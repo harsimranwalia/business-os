@@ -80,16 +80,38 @@ is set, an entry made while the ticket is at `building` (or back in it after a
 review round) also carries elapsed time and a revised remaining estimate — see
 `definition-of-done.md`, "Time tracking and scope changes".
 
+One line is the norm, and the entries below are the good case. An entry that
+must also carry a gate outcome, receipt paths, a cap change and its `chained:`
+record may run longer, up to the ceiling `config/conventions.yaml` →
+`ticket_log.entry` sets; that section — not this file — is the single
+authority for the ceiling, for what an entry must always record, and for the
+notebook path where a hop's reasoning goes instead. The ceiling is a limit,
+not a target: an entry records what changed and what the next hop must know,
+and the investigation behind it goes to the notebook with its path here.
+
 - `YYYY-MM-DD` `intake → shaped` (eng-manager) — sized M, project <project>
 - `YYYY-MM-DD` `shaped → awaiting-scope` (product-manager) — PRD written, G1 raised
 - `YYYY-MM-DD` `ready → building` (backend) — time_estimate half a day, 0h spent, ~half a day remaining
 - `YYYY-MM-DD` `building` (backend) — ~3h spent since last entry, ~2h remaining
+- `YYYY-MM-DD` `building → in-review` (backend) — ~2h spent, done; reasoning agents/backend/notebook/YYYY-MM-DD-eng-000-build.md; chained: ENG-000
 ```
 
 ## Rules
 
 - **The log is append-only.** Never rewrite history; a wrong entry gets a
-  correcting entry.
+  correcting entry. **Archiving is not rewriting.** Once a ticket file grows
+  past the threshold `config/conventions.yaml` → `ticket_log.archive` sets,
+  the EM moves the older entries into the archive file that section names,
+  and that section — not this file — owns the threshold, the path, and which
+  entries stay. Two things keep the move honest, and both are absolute: the
+  entries move **verbatim** — never edited, never summarised, never condensed
+  on the way, so the archive rule is not licence to shorten the log — and the
+  Log then opens with one line naming the archive file, so the trail is
+  followed, not guessed at. Read the other way, "append-only" is not a bar on
+  moving entries unchanged to where they still exist. The archive file lives
+  one level below `board/`, never beside the ticket: `lib/eng-gate-check.sh`
+  enumerates `board/` non-recursively and would read a sibling file as a
+  second, malformed ticket and fail the whole board closed.
 - **`owner` is always exactly one name** — an agent, or `approver` while the
   ticket sits at a gate (`awaiting-scope`, `awaiting-decision`,
   `awaiting-release`, or `blocked` with `blocked_on: approver`). A ticket

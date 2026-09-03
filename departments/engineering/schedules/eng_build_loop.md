@@ -4,6 +4,8 @@
 
 **Description:** The engineering department's engine. Runs every in-flight ticket forward until it hits a human or new implementation work.
 
+**Rationale:** the evidence behind these rules — incident reconstructions, measurements, and the enforced-vs-instructed breakdown — lives in the sibling file `eng_build_loop-rationale.md`. A pass does not need it to run; every rule below that has history points at the section holding it.
+
 **Agents:** `agents/product-manager/agent.md` (intake) → `agents/eng-manager/agent.md` (delivery)
 
 **Trigger:** **event-driven.** `lib/eng-trigger.sh` fires on five events:
@@ -29,6 +31,36 @@ it dispatches on `$ENG_HOST`.
 
 **Suppressed on sabbath/retreat/quiet:** yes
 
+**Reading map — what each event must read.** Keyed to step numbers and `##`
+titles, never line numbers.
+
+- **Every event, not negotiable:** step 1 (Mode check), step 7 (Notify sweep
+  — any pass that writes a gate item raises it there), step 8b (Observations
+  and exceptions), step 9 (Chain), step 10 (Board update), and the sections
+  *Enforced vs instructed*, *The four lanes*, *Guards*.
+- `intake` → step 2.
+- `finding` → step 3; step 6 only if the P0 carve-out starts a ticket.
+- `decision` → steps 4 and 8c; step 5 when the item is an L1 merge request;
+  step 6 when the answer advances the ticket into a machine-owned state;
+  step 8's `blocked_from` paragraphs when the ticket leaves `blocked`; *The
+  chain* when the item is an incident about the queue.
+- `continue` → steps 6 and 6b; step 2 when the ticket is mid-PRD (the
+  checkpoint note there).
+- `watch` → steps 2, 3 and 4 — it sweeps all three inboxes — and step 5 if
+  the changed file is a merge-request item.
+- `scheduled` → the whole document. It is the safety-net sweep; narrowing it
+  is what the sweep exists to prevent, so it is never narrowed.
+- *The chain*, *Cadence*, *Notes* → reference. Read when hunting a lost event
+  or a stalled queue, not on a normal pass.
+
+**The map is a floor, not a ceiling.** It names the least a pass must read,
+not the most. A pass that finds itself somewhere the map did not send it — a
+gate item that turns out to be an incident, a ticket whose state does not
+match its event, a rule it half-remembers from a section it skipped — reads
+the section it actually needs, then acts. It does not force the work to fit
+the sections already read, and it never guesses at a rule it did not read:
+that guess is the one failure this map must not cause.
+
 ---
 
 ## What it does
@@ -45,22 +77,18 @@ Each pass, in order:
    enter there, not at the EM.
 
    **PRD-writing is not required to finish in the pass that started it.**
-   Observed 2026-09-02: a single sequence-continuation filing (`ENG-007`'s
-   ticket 3, `skills/acceptance-check/SKILL.md` step 6b) ran the full
-   `skills/prd-writer/SKILL.md` process end to end as one atomic unit of work,
-   hit the 3600s ceiling in `lib/eng-trigger.sh` twice in a row with nothing
-   durable written either time, and camped on the single-flight lock for over
-   five hours across eight launches — starving two other answered decisions
-   and every routine `watch`/`scheduled` sweep behind it. Once the ticket
-   exists on the board (as soon as step 1b of `prd-writer` runs), it is a
-   normal machine-owned ticket like any other and chains exactly like one
-   (step 6/9, `continue {TICKET-ID}`): finish the current numbered
-   `prd-writer` step, write what that step produced to disk, and if the PRD
-   process isn't complete, log which step it stopped after and fire
+   Once the ticket exists on the board (as soon as step 1b of `prd-writer`
+   runs), it is a normal machine-owned ticket like any other and chains
+   exactly like one (step 6/9, `continue {TICKET-ID}`): finish the current
+   numbered `prd-writer` step, write what that step produced to disk, and if
+   the PRD process isn't complete, log which step it stopped after and fire
    `continue {TICKET-ID}` rather than pushing on toward a kill with nothing to
    show for it. The next hop resumes from that checkpoint. This applies the
    same way whether the ticket came from this step's fresh intake or from
-   step 3's sequence continuation below.
+   step 3's sequence continuation below. (The 2026-09-02 `ENG-007` episode
+   that produced this rule — eight launches, over five hours camped on the
+   lock, nothing durable written: `eng_build_loop-rationale.md` §"PRD
+   checkpointing".)
 
    **Full-lane requests run the readback first** (`skills/request-readback/SKILL.md`):
    the PM's reading of the raw input, the architect's *blind* reading of the same
@@ -86,22 +114,14 @@ Each pass, in order:
    G1** in the weekly report; the approver approves any subset, and only an
    approved proposal becomes a ticket.
 
-   **Why this rule exists, stated plainly so it is not quietly relaxed.** This
-   step used to shape agent findings straight onto the board on the grounds that
-   they were "delivery work, not business needs." That reasoning was sound for a
-   department building someone else's product and wrong for one that can file
-   tickets about itself. By 2026-08-13 it had produced a board where **eleven of
-   fifteen tickets were the department's own machinery**, two real product
-   tickets were explicitly held behind that machinery, and the two tickets
-   diagnosing the department's own token burn had been deprioritised behind its
-   gate tooling. One pass reliably produced more than one pass of work. The
-   approver's words: *"I run some tasks and it spits out 2 more so it's
-   never ending."*
-
-   The fan-out was structural, not a failure of judgement in any single pass —
+   **Why this rule exists, stated plainly so it is not quietly relaxed.** The
+   fan-out was structural, not a failure of judgement in any single pass —
    every individual ticket was defensible, and that is exactly why a per-ticket
    fix would not have worked. What is capped here is the department's ability to
-   create its own work at all.
+   create its own work at all. (The board state that produced it — eleven of
+   fifteen tickets the department's own machinery, 2026-08-13 — and the
+   approver's own words: `eng_build_loop-rationale.md` §"Self-generated
+   tickets".)
 
    **What's capped is the department inventing work about its own machinery —
    finishing a product feature the approver already scoped as a sequence
@@ -188,50 +208,33 @@ Each pass, in order:
      if it does, confirm nothing's changed and archive. **And once you've
      confirmed it's stale, close it — don't let unrelated uncommitted state
      you notice along the way pull you off this item;** that's its own
-     backlog item to raise, not a reason to widen this one. Observed
-     2026-09-02: `2026-08-30-eng-loop-halted.md` was investigated and
-     answered (`decision: rejected`) on 2026-09-01, and a same-day scheduled
-     sweep (`f376e9c`) even re-confirmed it stale and wrote that finding back
-     into the file — but committed it under `inbox/`, not `inbox/_handled/`,
-     so the file never stopped looking like an open item. It re-surfaced as
-     a fresh `decision` event and burned two full 3600s timeouts today
-     before a third pass finally re-derived the same "already stale"
-     conclusion in minutes — then spent the rest of its hour investigating
-     unrelated uncommitted board state it noticed along the way, timed out a
-     third time, and the event was dropped for good with the archive step
-     still undone.
+     backlog item to raise, not a reason to widen this one. (Observed
+     2026-09-02 on `2026-08-30-eng-loop-halted.md`: two full 3600s timeouts
+     re-deriving a conclusion already written on the file, a third lost to
+     unrelated state, the archive step still undone —
+     `eng_build_loop-rationale.md` §"Incident items re-derived".)
 
    **When more than one item is answered, resolve and commit one at a time —
    oldest first — rather than reading every item's full history before
-   acting on any of them.** Observed 2026-09-01: an overnight vendor rate
-   limit (see the back-off note below) let a six-item backlog build up. The
-   pass that ran once the limit cleared spent its time gathering context
-   across the whole backlog — "the gate-check tooling, the caps/config, the
-   ticket templates, and the relevant skills" for every item at once — before
-   committing anything, hit the 3600s ceiling in `lib/eng-trigger.sh`
-   (`PASS_TIMEOUT_BASE_SECONDS`), and was killed with zero commits. The next
-   fire re-read the same backlog from scratch to work out what, if anything,
-   had actually happened, and repeated the same pattern twice more —
-   three consecutive hour-long timeouts, no forward progress. Committing
-   after each item bounds the loss: a kill mid-backlog then costs at most the
-   one item in flight, and the next pass's `git log` on the instance repo
-   tells it exactly where the previous one stopped, instead of it having to
-   re-derive that from uncommitted, partially-edited files.
+   acting on any of them.** Committing after each item bounds the loss: a
+   kill mid-backlog then costs at most the one item in flight, and the next
+   pass's `git log` on the instance repo tells it exactly where the previous
+   one stopped, instead of it having to re-derive that from uncommitted,
+   partially-edited files. (Observed
+   2026-09-01: three consecutive hour-long timeouts on a six-item backlog,
+   zero commits — `eng_build_loop-rationale.md` §"Backlog resolved one item
+   at a time".)
 
    **Read only what the item in front of you needs — not the rest of the
-   backlog "for context."** The 11:15 retry of the same 2026-09-01 incident
-   (above) obeyed "one at a time" at the planning level but then, before
-   resolving the first item, queued a combined read of four large files at
-   once — `ENG-007` (63KB), `ENG-008` (72KB), `ENG-013` (74KB), and the
-   decision-journal (39KB), reasoning that the tickets were "entangled." That
-   single ~250KB combined read, plus everything already in context from the
-   sweep, is what the pass was still silently chewing on 34 minutes later
-   with no commit made. Two tickets sharing history is not a license to load
+   backlog "for context."** Two tickets sharing history is not a license to load
    both in full before acting on either: open only the ticket the item you
    are resolving right now belongs to. If resolving it genuinely requires a
    fact from another ticket, `grep` for that fact rather than reading the
    file whole — the same rule step 6b already applies to artifact mentions.
    Move to the next item's ticket only after the current one is committed.
+   (The 11:15 retry of the same 2026-09-01 incident, and the ~250KB combined
+   read that stalled it: `eng_build_loop-rationale.md` §"Reading only what
+   the item needs".)
 
    Never infer approval from silence. An unanswered item is not a rejection — it
    stays open and appears in the weekly report's "Waiting on you" section,
@@ -313,10 +316,9 @@ Each pass, in order:
    **Code review and the quality gate are one combined hop** — they read the same
    diff and don't depend on each other, so a single pass does both before
    handing on. If review fails, QA's result from that hop is discarded, because
-   the code is about to change. (Written as "concurrent" originally and sold as
-   parallel wall-clock savings — that was wrong: the single-flight lock means two
-   passes never run at once by design. The saving is one session and one hop
-   instead of two, which is real but smaller.)
+   the code is about to change. (Why this is one session and one hop, not
+   wall-clock parallelism: `eng_build_loop-rationale.md` §"Combined review and
+   quality hop".)
 
    **Security stays strictly after quality.** It checks whether the negative
    authz cases are actually tested, so it needs QA's finished test plan. Running
@@ -342,15 +344,9 @@ Each pass, in order:
 
    **Why this is a build-hop step and not a review one.** A review that runs the
    grep can only report what it finds; a build hop that runs it fixes everything
-   it finds in the round it is already paying for. ENG-007 cost two full review
-   rounds in one day on the same class of miss — round 1 found
-   `agents/eng-manager/config.yaml`
-   claiming a rule three producers did not honour, round 2 found the *required*
-   standard behind the producer still contradicting the fix — and one grep over
-   the receipt paths would have surfaced both. The third round ran the
-   enumeration first, closed all remaining conflicts, and additionally ruled two
-   files *out* as false alarms that would otherwise have read as round-4
-   findings.
+   it finds in the round it is already paying for. (ENG-007's two review rounds
+   in one day on this class of miss, and the third round that ran the grep
+   first: `eng_build_loop-rationale.md` §"Enumerating artifact mentions".)
 
    The failure this prevents is specific: **an instruction fixed in the file
    someone thought of, while the file that outranks it still says the opposite.**
@@ -372,12 +368,9 @@ Each pass, in order:
    sitting in an agent-owned state whose last log line shows no chain record —
    or `chained: none` with no reason that justifies stopping — means a pass
    forgot to fire the next hop, and the ticket has been waiting on nothing.
-   Resume it here.
-
-   This check exists because chaining is an instruction to a model, not a
-   guarantee: a session that gets truncated or simply doesn't reach the
-   instruction breaks the chain silently, and without a record there is no way
-   to tell "waiting normally" from "the chain broke".
+   Resume it here. (Why a record is needed at all — chaining is an instruction
+   to a model, not a guarantee: `eng_build_loop-rationale.md` §"Broken and
+   dropped chains".)
 
    **A chain that was fired is not the same as a chain that ran.** The check
    above catches a pass that forgot to write `chained:` at all — it does not
@@ -386,16 +379,14 @@ Each pass, in order:
    `MAX_EVENT_ATTEMPTS`, logged to the day's `*-eng-events-dropped.md`). To
    the ticket the two look identical — it sits in an agent-owned state with
    nothing coming — but the log line reads `chained: {ticket-id}`, so the
-   check above passes it as healthy. Observed 2026-08-30/09-02: `ENG-009`
-   correctly chained its own `continue ENG-009` on reaching `building`; that
-   event was queued, failed twice during a bad stretch of pass timeouts, and
-   was dropped — and the ticket then sat at `building` for three days because
-   nothing re-fired it. Cross-check every ticket's last `chained: {id}`
-   against that day's `*-eng-events-dropped.md` files for a `continue {id}`
-   (or `decision`/`finding`/`intake` naming that ticket) with no later
-   `chained:` line on the ticket since — same remediation as a chain that was
-   never fired: re-fire `lib/eng-trigger.sh continue {ticket-id}` in this
-   pass.
+   check above passes it as healthy. Cross-check every ticket's last
+   `chained: {id}` against that day's `*-eng-events-dropped.md` files for a
+   `continue {id}` (or `decision`/`finding`/`intake` naming that ticket) with
+   no later `chained:` line on the ticket since — same remediation as a chain
+   that was never fired: re-fire `lib/eng-trigger.sh continue {ticket-id}` in
+   this pass. (Observed 2026-08-30/09-02: `ENG-009` sat at `building` for
+   three days exactly this way — `eng_build_loop-rationale.md` §"Broken and
+   dropped chains".)
 
    **Leaving `blocked` returns to `blocked_from`** — the state the ticket left
    to enter `blocked`, written on entry and cleared on the way out. Without it
@@ -469,10 +460,10 @@ Each pass, in order:
     older is history, and history belongs in a file nothing reads on a pass.
 
     This is not tidiness. Every pass reads this file in full, so an append-only
-    log is a tax on every future pass — measured 2026-08-12 at 1,007 lines /
-    ~16K tokens of resident context, on a file whose live part is a six-row
-    table. Rolling it here costs one edit by the pass that created the entry.
-    `lib/eng-gate-check.sh` globs `ENG-*.md` and never reads either file.
+    log is a tax on every future pass. Rolling it here costs one edit by the
+    pass that created the entry. `lib/eng-gate-check.sh` globs `ENG-*.md` and
+    never reads either file. (What the unrolled file measured on 2026-08-12:
+    `eng_build_loop-rationale.md` §"Board index rolling".)
 
     **Ticket logs are not rolled** — a ticket's own log is what the next hop
     reads to avoid re-deriving the last one, and on this board the rounds that
@@ -481,44 +472,15 @@ Each pass, in order:
 
 ## Enforced vs instructed — which half of this document is which
 
-Every rule here is one of two kinds, and confusing them is the bug this loop's
-own parent ticket exists to close. ENG-001 reached `main` recorded as shipped
-while owing all three gates, and every check the loop ran stayed green: they all
-asked whether the ticket *moved*, never whether it arrived by a legal route.
+Every rule here is one of two kinds. **Enforced** — a script computes it, a
+non-zero exit follows, and a pass cannot talk its way past it: that is
+`lib/eng-gate-check.sh` and its pre-pass and post-pass runs. **Instructed** —
+prose a session is asked to follow, with nothing mechanical behind it. The
+full list of what is enforced, why the distinction exists (ENG-001), what the
+post-pass check actually buys and the one residual hole:
+`eng_build_loop-rationale.md` §"Enforced vs instructed".
 
-**Enforced** — a script computes it, a non-zero exit follows, and a pass cannot
-talk its way past it:
-
-- `lib/eng-gate-check.sh` itself — the receipt table, read from the filesystem.
-- The **pre-pass** run: whatever the check reports is injected into this pass's
-  prompt — violations on exit 1, and on exit 2 the fail-closed diagnosis instead,
-  which arrives on stderr with nothing on stdout.
-- The **post-pass** run: a pass that *creates* a violation, or corrupts a ticket
-  badly enough that the check fails closed, raises an inbox item and a
-  notification (`lib/eng-notify.sh`) within seconds of doing it.
-- `lane: fast` requires `size: XS` and a `bug`/`chore` type.
-- **`blocked` carrying a `blocked_from` at all** — presence only, counted as a
-  violation. Enforced since ENG-009; it was a warning until then, because the
-  ticket template did not yet carry the field.
-- **A parent ticket's sub-tickets are all settled** before the parent may sit at
-  `shipped`/`verified` (ADR-003). A parent owes no receipts of its own — its
-  evidence is its children's — but the exemption applies only when every child
-  is `shipped`, `verified` or `dropped` and at least one actually shipped. A
-  planted child *blocks* its parent rather than exempting it.
-- **The board is non-empty.** A board directory that exists and holds no tickets
-  is exit 2, not a clean sweep. "Checked nothing" must never read as "clean".
-
-<!-- eng-host-reach: both -->
-
-**Enforced on which host: both, since ENG-009.** `lib/eng-gate-check.sh` is
-POSIX `sh` and `gate_interpreter` resolves the host's own shell, so the Mac and
-the VPS container both run it and both get a real verdict. This was not true
-until 2026-08-12: the check was zsh, the container ships no zsh, and every pass
-that fired there ran with the receipt rule unenforced. If you are reading an
-older note that says "enforced on the Mac only", it is stale.
-
-**Instructed** — prose a session is asked to follow, with nothing mechanical
-behind it:
+**Instructed** — held by this document alone, so hold them:
 
 - Merge detection refusing `shipped` from a state that owes gates (step 5).
 - **Where a ticket goes when it leaves `blocked`** (step 8). The field's
@@ -526,32 +488,21 @@ behind it:
   where the ticket was rather than where it should go.
 - The release step calling the check before writing `shipped`.
 
-**What this actually buys, stated exactly.** Nothing intercepts a model writing
-`state: shipped` into a markdown file. True prevention of the bad write is not
-available on this architecture, and any sentence here claiming otherwise is
-wrong — see ADR-002. What is bought is that **a bad write cannot survive one
-pass unnoticed.** ENG-001's failure mode was silence; this turns silence into a
-notification and an inbox item inside the same pass that caused it, on either
-host.
+**Enforced, and stated at no step above:**
+
+- **A parent ticket's sub-tickets are all settled** before the parent may sit at
+  `shipped`/`verified` (ADR-003). A parent owes no receipts of its own — its
+  evidence is its children's — but the exemption applies only when every child
+  is `shipped`, `verified` or `dropped` and at least one actually shipped. A
+  planted child *blocks* its parent rather than exempting it.
+
+<!-- eng-host-reach: both -->
+
+**Enforced on which host: both, since ENG-009.** If you are reading an older
+note that says "enforced on the Mac only", it is stale.
 
 Do not describe any of this as "structurally impossible", "blocking", or
 "non-overridable". Those words are the reason the parent ticket was filed.
-
-**One residual hole, named rather than hidden.** The loop logs it, raises one
-notice, and **continues** — halting the whole department because a check cannot
-run is a worse failure than the one being fixed. While it is true, the receipt
-rule is instructed rather than enforced, and the pass is told so in its own
-prompt.
-
-- **The check is missing or unreadable** — the file is gone or its permissions
-  changed. Rare, and it is now the only route to the unavailable path: the
-  second hole, *no interpreter on this host*, closed with ENG-009 and the
-  resolver now falls through to the host's own shell.
-
-**A note on 127.** It is the trigger's sentinel for "could not run at all", and
-it is also what a shell returns for "command not found" — so the sentinel is a
-flag set before the invocation, never the number alone. A check that exits 127
-from *inside* is an ordinary not-clean verdict and raises the ordinary alarm.
 
 ## The four lanes
 
@@ -566,11 +517,11 @@ A ticket can drop **out** of the fast lane into the full pipeline at any point.
 It can never enter the fast lane late.
 
 **The internal lane exists because this department was spending most of itself on
-itself** (the approver, 2026-08-13 — eleven of fifteen tickets on the board
-were its own machinery). Every machine gate here assumes software that ships
-to someone; a project registered internal has no deploy target, no second
-committer and no user data, and its release is a commit to `main`. Code
-review still runs and its receipt is still
+itself** (the approver, 2026-08-13 — the board state is in
+`eng_build_loop-rationale.md` §"Self-generated tickets"). Every machine gate
+here assumes software that ships to someone; a project registered internal
+has no deploy target, no second committer and no user data, and its release
+is a commit to `main`. Code review still runs and its receipt is still
 enforced — `lib/*.sh` runs unattended on two hosts. The guard is `project:`, in
 `lib/eng-gate-check.sh`, so a product ticket cannot relabel its way in.
 
@@ -580,19 +531,15 @@ step 3.
 
 ## The chain — why this isn't a cron job
 
-A real team doesn't check a board twice a day. Someone pushes, the reviewer is
-notified. A bug is filed, it lands in a queue. A PR merges, the next thing
-starts. This loop works the same way, and `continue` is the event that makes it
-so.
+`continue` is the event that makes this loop behave like a team rather than a
+board checked twice a day. (The analogy, and the clock-driven chaining it
+replaced: `eng_build_loop-rationale.md` §"Why the chain is event-driven".)
 
 **A pass stops after `building` on purpose.** One Claude session that designs,
 builds, reviews, tests *and* security-reviews runs out of context and does all
-of it badly. So each heavy step gets its own session with fresh context. What
-was wrong before was not the split — it was chaining those sessions with a
-*clock*: an engineer finishing at 10:00 left the work done, correct, and
-untouched until 15:30.
+of it badly. So each heavy step gets its own session with fresh context.
 
-Now the pass fires the next hop itself before it exits:
+The pass fires the next hop itself before it exits:
 
 ```
 lib/eng-trigger.sh continue {TICKET-ID}
@@ -611,14 +558,15 @@ runs: an older outstanding event goes first. Duplicate lines (the whole
 oldest copy — two `scheduled` sweeps are one sweep, and the older copy is the one
 carrying the attempt count.
 
-**Three fires never reach the lock, and "every fire" was the wrong word here
-until 2026-08-13** (ENG-005 round 3 found the code and this sentence disagreeing
-on all three): a `watch` whose fingerprint is unchanged exits above the lock
-by design — that is the 2026-07-28 de-noising, and it skips before spending a hop;
-a ticket already over its hop budget has its arriving event **dropped, and
-announced**; and the department over its daily ceiling **queues** the arriving
-event without draining it. None of the three appends-and-drains. Only the first
-leaves nothing behind, because subfolder churn is nothing to leave.
+**Three fires never reach the lock:** a `watch` whose fingerprint is unchanged
+exits above the lock by design — that is the 2026-07-28 de-noising, and it
+skips before spending a hop; a ticket already over its hop budget has its
+arriving event **dropped, and announced**; and the department over its daily
+ceiling **queues** the arriving event without draining it. None of the three
+appends-and-drains. Only the first leaves nothing behind, because subfolder
+churn is nothing to leave. ("Every fire" was the wording here until
+2026-08-13, and how ENG-005 caught it: `eng_build_loop-rationale.md` §"Queue
+wording corrections".)
 
 **A fourth suppression happens BELOW the lock, and the difference is not
 pedantry.** A fire arriving inside an armed **back-off window** (ENG-016) takes
@@ -626,13 +574,10 @@ the lock like any other — queueing behind a live pass if there is one — appe
 its own event, drains the oldest, finds the window armed, re-queues that event at
 the **same** attempt and exits without launching. So it does append, it does
 drain, and it does write the queue's ordinary `collapsed` / `draining queued
-event` lines. What it does not do is start a session. Counting it with the three
-above would put it in the part of this document a pass reads when it is hunting a
-lost event during an outage, and send that pass looking above the lock where
-there is nothing to find. Said as one sentence: **the first three skip the queue,
-the fourth skips only the launch.** Corrected 2026-08-17 (ENG-016 code review
-round 2) after the fix for a comment-vs-code contradiction reproduced the same
-contradiction here.
+event` lines. What it does not do is start a session. Said as one sentence:
+**the first three skip the queue, the fourth skips only the launch.** (Why it
+is listed apart from the three above, and the 2026-08-17 correction that put
+it here: `eng_build_loop-rationale.md` §"Queue wording corrections".)
 
 The back-off window is armed by a pass that never started (below). It writes **no
 line of its own** per fire: the line that arms it names the exact minute it ends,
@@ -647,20 +592,20 @@ never-started path escalates — no hop is charged, so the daily ceiling never
 trips; no attempt is spent, so the two-attempt drop never fires. That is right
 for a vendor limit, which clears on its own. It is wrong for a host condition
 that does not: `claude not on PATH` is in the same signature list and never
-clears, and before this bound six consecutive fires produced one log line and
-then indefinite silence with the queue frozen. So when the back-off reaches its
-one-hour ceiling — the point at which it has stopped growing and the loop has
-stopped treating the stall as transient — **one** stall notice goes to
-`inbox/` and out via `lib/eng-notify.sh`, latched so it is one per stall
-rather than one per fire. Nothing is charged and nothing is dropped; the only thing added is that
-someone is told. Removing this bound re-creates the failure ENG-005 exists to
-end: a broken environment indistinguishable from a quiet night.
+clears. So when the back-off reaches its one-hour ceiling — the point at which
+it has stopped growing and the loop has stopped treating the stall as
+transient — **one** stall notice goes to `inbox/` and out via
+`lib/eng-notify.sh`, latched so it is one per stall rather than one per fire.
+Nothing is charged and nothing is dropped; the only thing added is that someone
+is told. Removing this bound re-creates the failure ENG-005 exists to
+end: a broken environment indistinguishable from a quiet night. (What the
+unbounded version did — six fires, one log line, a frozen queue:
+`eng_build_loop-rationale.md` §"Queue wording corrections".)
 
-**"Never dropped" was the wording here until ENG-005, and it was never true.**
-The queue was popped *before* the pass ran and the exit status was never
-inspected, so a pass that died had already consumed its event: nineteen were lost
-that way in eight days, each needing the twice-daily safety net to notice. It now
-reads correctly, which means saying plainly that events *can* be dropped:
+**Events *can* be dropped, and the rules below say exactly when.** ("Never
+dropped" was the wording here until ENG-005, and what it cost — nineteen
+events in eight days: `eng_build_loop-rationale.md` §"Queue wording
+corrections".)
 
 - A failed pass puts its event **back at the front** of the queue, one attempt
   older, and **ends that drain** — the retry waits for a later fire rather than
@@ -672,24 +617,22 @@ reads correctly, which means saying plainly that events *can* be dropped:
   so there is no evidence about the event — only about the account. It refunds
   both hop counters, re-queues at the **same** attempt, spends no life, and arms
   the back-off. It is still bounded by the same two-attempt cap; it just does not
-  consume one. This is not a technicality: it is exactly how ENG-016's own build
-  event was dropped on 2026-08-13, after two launches that between them did
-  nothing at all.
+  consume one. (This is not a technicality — ENG-016's own build event was
+  dropped this way on 2026-08-13: `eng_build_loop-rationale.md` §"Queue
+  wording corrections".)
 
   **Classification needs three things at once** — the vendor's limit signature in
   the output, short output, and a short run (≤60s). Anything else, and any
   ambiguity, is treated as a real pass and charged. The duration condition is not
   redundant with the length one: a session killed at the ceiling *mid-flight*
-  prints nothing regardless of how much work it did, and on 2026-08-15 a
-  793-second pass wrote three files and then emitted two lines. Output length
+  prints nothing regardless of how much work it did. Output length
   separates the prose case; only duration separates did-work from never-ran.
+  (The 2026-08-15 pass that proved it: `eng_build_loop-rationale.md` §"Queue
+  wording corrections".)
 - **The next fire of any kind runs that retry**, because it drains the oldest
-  event before its own. This is the part the first fix got wrong: it left the
-  retry reachable only *below* the failure break, so on a day when nothing
-  succeeded no retry ever ran, no event ever reached the attempt cap, and the
-  loud drop below never fired at all. A broken environment was again
-  indistinguishable from a quiet night — this section's own bug, one layer up.
-  **The alarm must not depend on a later pass succeeding.**
+  event before its own. **The alarm must not depend on a later pass succeeding.**
+  (The first fix left the retry reachable only *below* the failure break, and
+  what that hid: `eng_build_loop-rationale.md` §"Queue wording corrections".)
 - Retry is bounded at **two attempts**. The second failure drops the event.
 - A queue line that does not parse into a legal event name is dropped, and so is
   a queued event whose ticket has spent its daily hop budget.
@@ -720,29 +663,18 @@ The two scheduled passes are a **safety net**, not the engine. They exist for
 what no local event can see: a PR merged on github.com, a machine that was
 asleep, an event pass that died mid-run.
 
-Measured against a full-lane ticket, the time goes, in order:
-
-1. **Waiting on the approver** — unbounded, and usually the majority of
-   elapsed time. No loop change touches this. The fixes are: answer through
-   `lib/eng-notify.sh` (which now fires a pass immediately), raise a project's
-   autonomy so a gate stops existing, or use the fast lane where the gate never
-   applies.
-2. **Pass boundaries** — this was up to ~6 hours, or overnight, or a weekend.
-   The event chain removes it for everything that happens locally; what's left
-   is only what a scheduled pass exists to catch.
-3. **Rework rounds** — each failed gate costs a full cycle. The cheapest speed
-   available is not failing: engineers get the standards and the security
-   baseline *before* writing, and first-pass rate is tracked
-   (`agents/eng-manager/config.yaml` → `speed`). Below 70%, the brief is the problem, not the
-   engineers.
-4. **Serial gates** — now partly parallel (review ∥ quality).
-
-**More scheduled passes is still the weakest lever** — not because sessions are
-expensive, but because polling for work that isn't there is waste at any tier.
-Events beat polling on merit. Add events before adding passes.
+The cheapest speed
+available is not failing: engineers get the standards and the security
+baseline *before* writing, and first-pass rate is tracked
+(`agents/eng-manager/config.yaml` → `speed`). Below 70%, the brief is the problem, not the
+engineers.
 
 What stays deliberately slow, and shouldn't change: every human stop is a real
 stop, and the approver-facing WIP limit is 2.
+
+(Where the time measurably goes on a full-lane ticket, and why more scheduled
+passes is the weakest lever: `eng_build_loop-rationale.md` §"Cadence — where
+the time actually goes".)
 
 ## Guards
 
@@ -757,15 +689,11 @@ stop, and the approver-facing WIP limit is 2.
   approver's request; this WIP limit is the one lever on their side now.
 - **Machine WIP limit (1)** — tickets moving purely between agents, counting
   states `ready` through `ready-to-ship`. **The approver's correction,
-  2026-08-29.** This used to scale with the plan tier (up to 12), reasoned as
-  "these cost the approver nothing, so throttling them bought only latency."
-  True about cost, wrong about the outcome: at 6–12 in flight, a pass advanced
-  every ticket by one shallow step and moved to the next, so the board carried
-  many tickets simultaneously mid-pipeline and none of them ever reached
-  `shipped` — a department that looked busy and shipped nothing. At the
+  2026-08-29.** At the
   limit, nothing new enters `ready` until the one ticket in flight reaches
   `shipped`. One ticket, completed end to end, then the next — not several,
-  each a little bit done.
+  each a little bit done. (It used to scale with the plan tier, up to 12, and
+  what that produced: `eng_build_loop-rationale.md` §"Machine WIP limit".)
 - **Release window** — **L2/L3 only.** No production release Friday after
   15:00, weekends, during `sabbath`/`retreat`, or while `ENG_RELEASE_FREEZE`
   is set. The Friday 15:30 pass therefore never releases an L2/L3 ticket; it
@@ -782,7 +710,8 @@ stop, and the approver-facing WIP limit is 2.
 
 ## Notes
 
-Built 2026-07-27 with the engineering department.
+Built 2026-07-27 with the engineering department, and revised the same day
+(`eng_build_loop-rationale.md` §"Origins").
 
 **Wiring: `./lib/eng-setup.sh --apply`.** It installs and loads the scheduled
 jobs, creates the department's git worktrees, and checks `inbox/requests/`
@@ -795,7 +724,3 @@ the single-flight lock (able to collide with a live event pass and race the
 board index) and **outside** the hop budget (neither counted toward the runaway
 guard nor stoppable by it). One script owns the lock and the counters. Caught in
 review, 2026-07-27.
-
-Revised the same day after a Sonnet review found two structural faults: `blocked`
-sat outside both caps, and L0 tickets had no terminating path and would have been
-dispatched to engineers forbidden to write on that repo. Both fixed above.
