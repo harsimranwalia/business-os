@@ -164,6 +164,9 @@
     .mini-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
     .mini-tags:empty { display: none; }
     .tag.stage { background: transparent; border: 1px solid var(--border-light); }
+    .tag.live { background: #0f766e; color: #fff; border-color: transparent; }
+    .mini.mini-active { border: 1px solid rgba(52,211,153,.55); background: rgba(52,211,153,.07);
+      box-shadow: 0 0 0 1px rgba(52,211,153,.12); }
     .tag.prio-now  { background: #b45309; color: #fff; border-color: transparent; }
     .tag.prio-next { background: #1d4ed8; color: #fff; border-color: transparent; }
     .tag.prio-hold { background: #52525b; color: #fff; border-color: transparent; }
@@ -507,11 +510,15 @@ const EVENT_VERBS = {
   continue: 'Building', decision: 'Applying decision', intake: 'Shaping request',
   scheduled: 'Running sweep', watch: 'Checking inbox', finding: 'Handling finding',
 };
-function eventLabel(a) {
+function eventVerb(a) {
   const raw = a.current_event || '';
   const head = raw.split(/\s/)[0];
-  const verb = EVENT_VERBS[head] || 'Working';
+  return EVENT_VERBS[head] || 'Working';
+}
+function eventLabel(a) {
+  const verb = eventVerb(a);
   if (a.current_ticket) return `${verb} ${a.current_ticket}`;
+  const raw = a.current_event || '';
   const ctxMatch = raw.match(/\(([^)]+)\)/);
   if (ctxMatch) return `${verb} — ${shortCtx(ctxMatch[1])}`;
   return raw ? verb : 'Working — a pass';
@@ -533,7 +540,7 @@ function renderActivity(a) {
     h += `<div class="now-line">${esc(a.current_activity)}</div>`;
   }
 
-  if (a.mode) {
+  if (a.mode_halting) {
     h += `<div class="meta warn">MODE=${esc(a.mode)} — this instance goes silent; nothing here will notify or post until it's cleared.</div>`;
   }
   if (a.backoff_active) {
@@ -593,6 +600,17 @@ function reflowHardWraps(text) {
 }
 function renderDecisionBody(text) { return renderMarkdown(reflowHardWraps(text)); }
 
+// One or more PR links for a merge-gate decision card. Single-repo tickets
+// get a plain "Open the PR →"; multi-repo tickets get one link per repo so
+// each can be opened and merged on GitHub directly from here.
+function renderPrLinks(links) {
+  if (!links || !links.length) return '';
+  const items = links.map(l =>
+    `<a href="${esc(l.url)}" target="_blank" rel="noopener" style="color:#60a5fa">` +
+    `${l.repo ? esc(l.repo) + ' PR' : 'Open the PR'} →</a>`);
+  return `<div class="meta">${items.join(' &nbsp;·&nbsp; ')}</div>`;
+}
+
 function updateDate() {
   document.getElementById('date-display').textContent =
     new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -612,6 +630,7 @@ function switchTab(tab) {
   if (tab === 'eng') loadEng();
   if (tab === 'cost') loadCost();
   if (tab === 'logs') loadLogList();
+  if (tab === 'eng') startEngPoll(); else stopEngPoll();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1376,7 +1395,10 @@ let engData = null;
 let engInstance = localStorage.getItem('eng-instance') || '';
 let engView = 'decide';
 let engShowDropped = localStorage.getItem('engShowDropped') === '1';
+let engWaitingFilter = localStorage.getItem('engWaitingFilter') || 'all';
 const ENG_WORKING_STATES = ['ready', 'building', 'in-review', 'in-qa', 'in-security', 'ready-to-ship'];
+const ENG_POLL_MS = 10000;
+let engPollTimer = null;
 
 async function loadEng() {
   const el = document.getElementById('eng-scroll');
@@ -1391,6 +1413,26 @@ async function loadEng() {
   } catch (e) {
     el.innerHTML = '<div class="empty">Error loading engineering.</div>';
   }
+}
+
+// Live-ish refresh while the tab is open, so "Right now" stays current
+// without a manual reload. Skips a tick rather than re-rendering out from
+// under you if you're mid-note in a "Request changes" textarea — a full
+// re-render replaces that element and would drop what you typed and your
+// cursor focus with it.
+function engPollTick() {
+  const ae = document.activeElement;
+  if (ae && ae.classList && ae.classList.contains('decide-note')) return;
+  loadEng();
+}
+function startEngPoll() {
+  if (engPollTimer) return;
+  engPollTimer = setInterval(engPollTick, ENG_POLL_MS);
+}
+function stopEngPoll() {
+  if (!engPollTimer) return;
+  clearInterval(engPollTimer);
+  engPollTimer = null;
 }
 
 function renderEngInstances() {
@@ -1421,6 +1463,12 @@ function engToggleDropped() {
   renderEng();
 }
 
+function engSetWaitingFilter(v) {
+  engWaitingFilter = v;
+  localStorage.setItem('engWaitingFilter', v);
+  renderEng();
+}
+
 function renderEng() {
   const el = document.getElementById('eng-scroll');
   const d = engData;
@@ -1434,6 +1482,7 @@ function renderEng() {
   h += '<div class="stats">' +
     `<div class="stat"><b>${s.waiting_on_harry}</b>waiting on you</div>` +
     `<div class="stat"><b>${s.in_flight}/${s.machine_limit}</b>in flight</div>` +
+    `<div class="stat"><b>${s.pending_apply}</b>pending apply</div>` +
     `<div class="stat"><b>${s.open_bugs}</b>open bugs</div>` +
     `<div class="stat"><b>${s.shipped_recent}</b>verified</div>` +
     '</div>';
@@ -1442,12 +1491,27 @@ function renderEng() {
 
   if (engView === 'decide') {
     const blocked = d.blocked_on_harry || [];
+    const waitingTotal = d.waiting.length + blocked.length;
     h += '<div class="section"><div class="h">Waiting on you ' +
-         `<span class="count">${d.waiting.length + blocked.length}</span></div>`;
-    if (!d.waiting.length && !blocked.length) {
-      h += '<div class="card"><div class="body-text">Nothing needs you. The department is either working or idle — both are fine.</div></div>';
+         `<span class="count">${waitingTotal}</span></div>`;
+    if (waitingTotal) {
+      const filt = (v, label) =>
+        `<button class="prio-btn${engWaitingFilter === v ? ' on' : ''}" onclick="engSetWaitingFilter('${v}')">${label}</button>`;
+      h += '<div class="prio-row" style="margin-bottom:8px">' +
+        filt('all', 'all') + filt('merge', 'merge') + filt('scope', 'scope') + '</div>';
     }
-    blocked.forEach(t => {
+    // Only "all" surfaces blocked-on-approver tickets — they carry no gate
+    // of their own (a risk acceptance, a direct question; see blocked_on_harry
+    // above), so neither the "merge" nor "scope" filter can honestly claim them.
+    const showBlocked = engWaitingFilter === 'all';
+    const waitingShown = d.waiting.filter(w => engWaitingFilter === 'all' || w.gate === engWaitingFilter);
+    if (!waitingShown.length && !(showBlocked && blocked.length)) {
+      h += '<div class="card"><div class="body-text">' +
+        (waitingTotal ? 'Nothing waiting on you matches this filter.'
+                      : "Nothing needs you. The department is either working or idle — both are fine.") +
+        '</div></div>';
+    }
+    (showBlocked ? blocked : []).forEach(t => {
       h += '<div class="card">' +
         '<div class="row">' +
           '<span class="tag gate">blocked on you</span>' +
@@ -1458,7 +1522,7 @@ function renderEng() {
         (t.pr_url ? ` · <a href="${esc(t.pr_url)}" target="_blank" style="color:#60a5fa">Open the PR →</a>` : '') +
         '</div></div>';
     });
-    d.waiting.forEach((w, i) => {
+    waitingShown.forEach((w, i) => {
       const noteId = `eng-decide-note-${i}`;
       h += '<div class="card accent">' +
         '<div class="row">' +
@@ -1470,7 +1534,7 @@ function renderEng() {
         '</div>' +
         (w.recommendation ? `<div class="meta">Recommendation: <b>${esc(w.recommendation)}</b></div>` : '') +
         `<div class="body-text">${renderDecisionBody(w.body)}</div>` +
-        (w.pr_url ? `<div class="meta"><a href="${esc(w.pr_url)}" target="_blank" style="color:#60a5fa">Open the PR →</a></div>` : '') +
+        renderPrLinks(w.pr_links) +
         `<textarea id="${noteId}" class="decide-note" rows="2" placeholder="Optional note — required if you're asking for changes"></textarea>` +
         '<div class="actions">' +
           `<button class="btn yes" onclick="engDecide('${escAttr(w.file)}','approved','${noteId}')">Approve</button>` +
@@ -1502,6 +1566,7 @@ function renderEng() {
             (w.project ? `<span class="tag">${esc(w.project)}</span>` : '') +
           '</div>' +
           `<div class="meta">you said <b>${esc(w.decision)}</b> ${esc(relTime(w.decided))} · ${activityNote}</div>` +
+          renderPrLinks(w.pr_links) +
           (w.body ? '<details class="activity-detail"><summary>Show what you approved</summary>' +
             `<div class="body-text">${renderDecisionBody(w.body)}</div></details>` : '') +
           '</div>';
@@ -1573,8 +1638,17 @@ function renderEng() {
         h += `<div class="lane"><div class="lane-h">${esc(name)} · ${items.length}</div>`;
         if (!items.length) h += '<div class="lane-empty">—</div>';
         items.forEach(([st, t]) => {
+          // "1/1 in flight" in the stats bar and "Right now" above only ever
+          // named ONE ticket at a time by id — nothing on the board itself
+          // said which of these cards that was, or what stage it was
+          // actually in mid-pass. d.activity carries both (current_ticket,
+          // current_event), so a card matching it gets a live badge with the
+          // real verb (eventVerb — "Building", "Applying decision", etc.,
+          // same vocabulary "Right now" uses) instead of a generic label.
+          const isLive = d.activity && d.activity.running && d.activity.current_ticket === t.id;
           const tags = [];
           tags.push(`<span class="tag stage">${esc(st)}</span>`);
+          if (isLive) tags.push(`<span class="tag live">● ${esc(eventVerb(d.activity))}</span>`);
           if (WAITING_ON_YOU.includes(st) || t.blocked_on === 'approver') {
             tags.push('<span class="tag gate">waiting on you</span>');
           }
@@ -1608,7 +1682,7 @@ function renderEng() {
             timeBits.push(`est. ${esc(t.time_estimate)}`);
           }
           const timeLine = timeBits.length ? `<div class="sub">${timeBits.join(' · ')}</div>` : '';
-          h += '<div class="mini">' +
+          h += `<div class="mini${isLive ? ' mini-active' : ''}">` +
                `<div class="mini-title">${esc(t.title)}</div>` +
                `<div class="mini-tags">${tags.join('')}</div>` +
                `<div class="sub">${esc(t.id)} · ${esc(t.project)} · ${esc(t.owner)}</div>` +

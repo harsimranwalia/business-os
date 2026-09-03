@@ -205,6 +205,43 @@ def parse_frontmatter_keys(fm_text, keys):
     return out
 
 
+def _split_pr_part(p):
+    """One `repo: url` or bare `url` segment from a pipe-separated pr_url
+    string. Guards on the http(s) prefix so a bare URL's own scheme colon
+    (`https://...`) never gets mistaken for a `repo:` separator."""
+    p = p.strip()
+    if not p.startswith(("http://", "https://")):
+        m = re.match(r"^([^:\s]+):\s*(https?://\S+)$", p)
+        if m:
+            return {"repo": m.group(1), "url": m.group(2)}
+    return {"repo": "", "url": p}
+
+
+def _parse_pr_links(fm_text):
+    """PR link(s) out of a merge-request frontmatter block. No YAML dep
+    (matching parse_frontmatter_keys above) — handles every format this
+    board has used: a `pr_urls:` list of `{repo, url}` pairs (current,
+    multi-repo), a quoted `pr_url: "repo: url | repo: url"` string
+    (superseded), and a flat `pr_url:`/`pr:` single URL (single-repo)."""
+    m = re.search(r"^[ \t]*pr_urls:[ \t]*\n((?:[ \t]+-.*\n(?:[ \t]+\S.*\n)*)+)",
+                  fm_text, re.MULTILINE)
+    if m:
+        links = [{"repo": repo, "url": url} for repo, url in
+                 re.findall(r"-\s*repo:\s*(\S+)\s*\n\s*url:\s*(\S+)", m.group(1))]
+        if links:
+            return links
+
+    m = re.search(r"^[ \t]*pr_url:[ \t]*(.+)$", fm_text, re.MULTILINE)
+    if not m:
+        m = re.search(r"^[ \t]+pr:[ \t]*(\S+)[ \t]*$", fm_text, re.MULTILINE)
+    if not m:
+        return []
+    val = m.group(1).strip().strip('"').strip("'")
+    if not val:
+        return []
+    return [_split_pr_part(p) for p in val.split("|") if p.strip()]
+
+
 def read_file_content(rel_path):
     """Read a file relative to ROOT. Returns {frontmatter, body, raw}."""
     path = ROOT / rel_path
@@ -388,7 +425,7 @@ def list_engineering(instance_id=None):
         return {"instance": None, "instances": [], "tickets": [], "by_state": {},
                 "states": ENG_STATES, "bugs": [], "waiting": [], "blocked_on_harry": [],
                 "deciding": [], "submitted": [],
-                "stats": {"waiting_on_harry": 0, "in_flight": 0,
+                "stats": {"waiting_on_harry": 0, "in_flight": 0, "pending_apply": 0,
                           "machine_limit": 0, "open_bugs": 0, "shipped_recent": 0},
                 "empty": "No engineering instance yet — run departments/engineering/install.sh "
                          "to onboard a business."}
@@ -460,6 +497,13 @@ def list_engineering(instance_id=None):
                     "time_estimate", "time_impact"])
             if fm.get("type") != "eng-decision":
                 continue
+            # PR link(s) live in the frontmatter in one of three formats
+            # (see _parse_pr_links) — read straight from the raw file since
+            # parse_frontmatter_keys only pulls flat single-line values and
+            # can't see the `pr_urls:` YAML-list form multi-repo tickets use.
+            raw = f.read_text()
+            fm_m = re.match(r"^---\n(.*?)\n---\n?", raw, re.DOTALL)
+            pr_links = _parse_pr_links(fm_m.group(1) if fm_m else raw)
             if fm.get("decision"):
                 deciding.append({
                     "file": f.name,
@@ -469,6 +513,7 @@ def list_engineering(instance_id=None):
                     "decision": fm.get("decision", ""),
                     "decided": fm.get("decided", ""),
                     "recommendation": fm.get("recommendation", ""),
+                    "pr_links": pr_links,
                     # The full readback/recommendation text — dropped from this
                     # payload before, which is exactly why the text you just
                     # approved became unreadable the moment it moved out of
@@ -483,7 +528,7 @@ def list_engineering(instance_id=None):
                 "project": fm.get("project", ""),
                 "recommendation": fm.get("recommendation", ""),
                 "raised": fm.get("raised", ""),
-                "pr_url": fm.get("pr_url", ""),
+                "pr_links": pr_links,
                 "time_estimate": fm.get("time_estimate", ""),
                 "time_impact": fm.get("time_impact", ""),
                 "body": body,
@@ -543,6 +588,7 @@ def list_engineering(instance_id=None):
         "stats": {
             "waiting_on_harry": len(waiting) + len(blocked_on_harry),
             "in_flight": len(in_flight),
+            "pending_apply": len(deciding),
             "machine_limit": limits["machine_limit"],
             "open_bugs": len(bugs),
             "shipped_recent": len(by_state.get("verified", [])),
@@ -818,8 +864,27 @@ def eng_activity(inst):
     root = Path(inst["env"]["ENG_INSTANCE"])
     state = root / "traces"
     today = datetime.now().strftime("%Y-%m-%d")
+    # Same resolution eng-env.sh's ENG_MODE uses: this instance's own
+    # config/config.yaml `mode:` wins if set, else the business-os-wide
+    # .env MODE is the default. Reading only the global var here (as this
+    # used to) shows the wrong value once an instance sets its own override.
+    eng_mode = ""
+    try:
+        cfg_text = (root / "config" / "config.yaml").read_text()
+        m = re.search(r"^mode:[ \t]*([^\s#]*)", cfg_text, re.MULTILINE)
+        if m:
+            eng_mode = m.group(1)
+    except Exception:
+        pass
+    if not eng_mode:
+        eng_mode = os.environ.get("MODE", "")
     out = {
-        "mode": os.environ.get("MODE", ""),
+        "mode": eng_mode,
+        # Only sabbath/retreat/quiet actually halt anything (eng_mode_halts
+        # in eng-env.sh) — every other value, "active" included, is normal
+        # operation. The dashboard used to warn on ANY non-empty MODE, which
+        # made "active" (the normal, running value) look like an outage.
+        "mode_halting": eng_mode in ("sabbath", "retreat", "quiet"),
         "running": False, "pid": None, "running_seconds": None, "current_event": "",
         "current_ticket": None, "current_activity": "",
         "pending_count": 0, "pending_preview": [],
