@@ -20,7 +20,7 @@ blocked_on: approver
 blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
-updated: 2026-09-02
+updated: 2026-09-03
 branch: feat/ENG-013-foodswipe-funnel-stage-control (same name, both repos)
 depends_on: []
 blocks: []
@@ -1300,3 +1300,70 @@ Append-only. One line per state transition, newest last.
   on a ticket in this state. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
   whole-board: see board index.
+
+- `2026-09-03` **stage-config question answered — approved, Reading A**
+  (eng-manager, `decision` event pass, context
+  `inbox/2026-09-02-eng013-stage-config-question.md`). Reading map for
+  `decision`: steps 4 and 8c; step 5 run too, since resolving this
+  question un-gates what was functionally an L1 merge decision. Mode check
+  clean (business-os `.env` → `MODE=active`). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: both exit 0, clean.
+
+  **Answer, verbatim:** `decision: approved`, `decided:
+  2026-09-03T15:23:36.496711+00:00`, body text "Reading a approved" — ship
+  the two open PRs as-is (per-card manual override, already built, already
+  passed every gate); file custom pipeline-stage definitions as a new,
+  separate ticket built on top.
+
+  **Step 5 run fresh, not assumed.** Both PRs confirmed **still open, not
+  merged**: `git fetch` + `git merge-base --is-ancestor
+  origin/feat/ENG-013-foodswipe-funnel-stage-control origin/main` on both
+  worktrees (`aiorders-api` at `c95b25b`, `aiorders-admin-hub` at
+  `a1c3bdf` — unchanged since this ticket's own `ready-to-ship → blocked`
+  entry), and `gh pr view` on both (`aiorders-api#5`,
+  `aiorders-admin-hub#4`) — `state: OPEN`, `mergedAt: null` on both. Reading
+  A authorises merging; it does not itself merge anything. This ticket
+  stays `blocked`/`blocked_on: approver`/`blocked_from: ready-to-ship`,
+  now simply awaiting the approver's own GitHub merge click, same shape
+  `ENG-009`/`ENG-010`'s plain merge requests are already in — no reply
+  needed, merging either PR directly on GitHub is itself the remaining
+  decision.
+
+  **Filed the follow-up ticket Reading A directs**, per
+  `eng_build_loop.md` step 3's carve-out (the approver's own request,
+  named in their own approved decision text, is not the department
+  inventing work about its own machinery — same carve-out `ENG-027` already
+  used): `ENG-028`, staff-configurable Foodswipe pipeline stage set,
+  `depends_on: [ENG-013]`. Delegated PM judgment to an `opus` subagent per
+  `prd-writer/SKILL.md`'s own model designation; sized `L` (new data
+  model, cross-project — the override column's own `CHECK` constraint
+  cannot survive a staff-editable stage set, named in its own migration
+  comment as exactly this risk). G1 raised
+  (`inbox/2026-09-03-eng028-g1-scope.md`). Full derivation on `ENG-028`'s
+  own board file and PRD; not duplicated here.
+
+  **0 transitions on this ticket** — `state` was `blocked` at pass start
+  and remains `blocked`; only the reason narrows (from "which reading" to
+  "awaiting the merge click"). **Consequence:** no cap change — `ENG-013`
+  was already outside the counted `ready`..`ready-to-ship` machine-WIP
+  range and stays there; approver-facing WIP is uncapped
+  (`wip.approver_limit: unlimited`), so no gating consequence either way.
+
+  **Dead-end sweep (scoped to this event):** this ticket's log now ends in
+  a valid, accounted-for state. `ENG-028` is a direct, filed consequence
+  of this same decision, not a separately-touched ticket. No other ticket
+  swept.
+
+  **Notify sweep:** nothing new to raise for `ENG-013` itself (a
+  reason-narrowing, not a new gate). `ENG-028`'s own G1 raised and stamped
+  on its own file.
+
+  Gate item moved to `inbox/_handled/` with a processed footer; journaled
+  in `agents/eng-manager/config/decision-journal.md`.
+
+  `chained: none` — `blocked`, `blocked_on: approver`; the chaining guard
+  never fires on a ticket waiting on a human, and the only remaining step
+  is the approver's own GitHub merge, which no `continue` fire can do.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-013`) and whole-board: both exit 0, clean.
