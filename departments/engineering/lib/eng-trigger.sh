@@ -101,6 +101,12 @@ REFUNDS="$STATE/.refunds-$(date '+%Y-%m-%d')"
 # 2026-08-13 outage ran 08:30→14:25 — so this stamp outlives a date boundary and
 # expires by its own timestamp instead.
 BACKOFF="$STATE/.backoff"
+# The account roster's cursor: `<current index> <blocked indices…>`. Same
+# not-per-day reasoning as $BACKOFF above — an account's limit clears when it
+# clears, not at midnight. lib/eng-env.sh reads the FIRST FIELD of this file to
+# decide which token every launcher authenticates with; this script is the only
+# thing that ever writes it. See the rotation block above the back-off.
+OAUTH_STATE="$STATE/.oauth-account"
 SELF="$ENG_DEPT/lib/eng-trigger.sh"
 
 # Runaway guard. This loop can trigger itself, so a bug that always re-fires
@@ -866,7 +872,28 @@ Raised by ENG-005's event-lifecycle guard. Before it existed, this event would h
 # happened was three consecutive hour-long `watch` timeouts starting at
 # 08:00: the backlog that should have been drip-fed through the (working)
 # back-off window instead landed all at once the moment the limit lifted.
-NEVER_STARTED_SIGNATURE='monthly spend limit|cc_cli_limit_message|usage limit|weekly limit|rate limit|claude not on PATH|credit balance is too low'
+#
+# ── The list is now SPLIT, and it still matches exactly what it matched ─────
+# The union holds the same seven phrases; only their ORDER differs, which an
+# alternation does not care about — `pass_never_started` classifies every one
+# of them exactly as before, so nothing about refunds, requeues or attempts
+# changes here. Verified phrase by phrase against the pre-split list.
+#
+# The split exists because "did a session run?" and "would another account
+# help?" are different questions, and on one member of this list they have
+# opposite answers. A spend or rate limit is a property of the ACCOUNT: the next
+# account in the roster is unaffected, so rotating onto it is the right response
+# and the back-off is premature. `claude not on PATH` is a property of the HOST:
+# rotating on it would walk the entire roster marking every account blocked for
+# a reason that was never theirs, and land on the same back-off several launches
+# later having corrupted the one piece of state that says which accounts are
+# usable.
+#
+# `credit balance is too low` sits on the ACCOUNT side deliberately — it is an
+# account-level balance, so another account is exactly the right answer to it.
+ACCOUNT_LIMIT_SIGNATURE='monthly spend limit|cc_cli_limit_message|usage limit|weekly limit|rate limit|credit balance is too low'
+HOST_NEVER_STARTED_SIGNATURE='claude not on PATH'
+NEVER_STARTED_SIGNATURE="$ACCOUNT_LIMIT_SIGNATURE|$HOST_NEVER_STARTED_SIGNATURE"
 NEVER_STARTED_MAX_LINES=12
 NEVER_STARTED_MAX_SECONDS=60
 
@@ -910,6 +937,88 @@ refund_hop() {
     [ "$_rf_t" -gt 0 ] && printf '%s\n' "$(( _rf_t - 1 ))" > "$TICKET_HOPS"
   fi
   printf '%s\n' "$(( $(read_counter "$REFUNDS") + 1 ))" > "$REFUNDS"
+}
+
+# ── Account rotation: exhaust the roster BEFORE backing off ────────────────
+# The back-off below answers a blocked account with "wait". With more than one
+# account in .env there is a cheaper answer to try first: use the next one. A
+# weekly limit on one account is not a reason to stop working while another
+# account is fine — the 2026-09-01 outage was eight hours of suppressed fires
+# against a limit that reset at 8am, and with a second account in the roster
+# that whole night is a single rotation and no lost time at all.
+#
+# So the order on an account-limit hit is: mark this account blocked, move to
+# the next one that is not, and let the very next fire launch on it with NO
+# back-off armed. The back-off is reached only when every account is blocked,
+# which is the state it always described — it just used to be reached after one
+# account instead of after N.
+#
+# WHEN A BLOCKED MARK CLEARS. Not on a timer, and not on a successful pass: a
+# pass succeeding on account 2 is evidence about account 2 and says nothing
+# about account 1, so account 1 stays blocked and the loop keeps working where
+# it knows it can. The marks are wiped in exactly one place — the moment the
+# roster runs out and the back-off arms — so the retry after that window starts
+# again at account 1, by which time its own limit has usually reset. That is
+# also what keeps this self-healing with no expiry logic: the worst case is one
+# back-off window, and the existing doubling already sizes that.
+#
+# PER-INSTANCE, like $BACKOFF, even though an account limit is a fact about the
+# account and therefore host-wide. Matching the scope the back-off already has
+# is worth more than introducing a second store with a different lifetime; the
+# cost is that a second instance spends one launch learning what the first
+# already knew.
+oauth_read() {
+  local _oa
+  _oa=$(cat "$OAUTH_STATE" 2>/dev/null || echo "")
+  OAUTH_CURRENT=$(printf '%s' "$_oa" | awk '{print $1+0}')
+  # Everything after the cursor is the blocked set. `tr -dc` is the same
+  # boundary rule read_counter applies: a garbled file reads as "none blocked"
+  # rather than putting `[: foo: integer expression expected` in the pass log.
+  OAUTH_BLOCKED=$(printf '%s' "$_oa" | awk '{$1=""; sub(/^ +/, ""); print}' | tr -dc '0-9 ')
+  [ -n "$OAUTH_CURRENT" ] || OAUTH_CURRENT=0
+  if [ "$OAUTH_CURRENT" -lt 1 ] || [ "$OAUTH_CURRENT" -gt "${ENG_OAUTH_COUNT:-0}" ]; then
+    OAUTH_CURRENT=1
+  fi
+}
+
+# Space-padded on both sides so 1 never matches inside 10.
+oauth_blocked() {
+  case " $OAUTH_BLOCKED " in *" $1 "*) return 0 ;; esac
+  return 1
+}
+
+# Marks the account that just hit its limit and moves to the next one that has
+# not. Returns 0 when there is somewhere to go — the caller then arms NO
+# back-off — and 1 when the whole roster is blocked, having wiped the file so
+# the post-back-off retry starts clean at account 1.
+#
+# OAUTH_PREVIOUS/OAUTH_CURRENT are left set for the caller's log line, which
+# prints account NAMES (eng_oauth_name) and never token values.
+oauth_rotate() {
+  local _or_i _or_n
+  [ "${ENG_OAUTH_COUNT:-0}" -gt 0 ] || return 1
+  oauth_read
+  OAUTH_PREVIOUS="$OAUTH_CURRENT"
+  oauth_blocked "$OAUTH_CURRENT" \
+    || OAUTH_BLOCKED="${OAUTH_BLOCKED}${OAUTH_BLOCKED:+ }$OAUTH_CURRENT"
+  # Walks FORWARD from the current account and wraps, so a roster of three with
+  # only #2 still usable is found from #3 as readily as from #1. Arithmetic
+  # rather than `**` or an array, for the same reason backoff_arm doubles by
+  # loop: this file is parsed by both bash and zsh.
+  _or_i=1
+  while [ "$_or_i" -le "$ENG_OAUTH_COUNT" ]; do
+    _or_n=$(( (OAUTH_CURRENT - 1 + _or_i) % ENG_OAUTH_COUNT + 1 ))
+    if ! oauth_blocked "$_or_n"; then
+      printf '%s %s\n' "$_or_n" "$OAUTH_BLOCKED" > "$OAUTH_STATE"
+      OAUTH_CURRENT="$_or_n"
+      return 0
+    fi
+    _or_i=$(( _or_i + 1 ))
+  done
+  rm -f "$OAUTH_STATE"
+  OAUTH_CURRENT=1
+  OAUTH_BLOCKED=""
+  return 1
 }
 
 # ── AC3: the back-off, and why it GROWS ────────────────────────────────────
@@ -1666,6 +1775,34 @@ log "draining queued event: $EVENT ${CONTEXT:+($CONTEXT)}"
 TICKET_ID=$(echo "$CONTEXT" | grep -oE '[A-Z]{2,4}-[0-9]+' | head -1)
 TICKET_HOPS="$STATE/.hops-$(date '+%Y-%m-%d')-${TICKET_ID:-none}"
 
+# A queued `watch` can be a no-op by the time it's POPPED, even though the
+# top-level gate at :470-492 let it through. That gate compares against
+# `.watch-seen` at ARRIVAL time, before this or any other pass has committed
+# anything — so a watch that fires because a pass mid-flight is moving its own
+# top-level inbox items around gets queued (the fingerprint genuinely looks
+# new against the stale pre-pass baseline), then sits in `.pending` until
+# drained. By drain time the churn that triggered it is exactly what a pass
+# already swept, but nothing here ever re-checked: F4 (above) computes
+# WATCH_FP fresh per popped event for the COMMIT path only, it does not
+# compare-and-skip. Confirmed live 2026-09-02: `watch launchd` accumulated to
+# 11 queued copies over one long-running pass, each destined to burn a full
+# hop and session re-discovering nothing had changed.
+#
+# So: compare the fresh per-pop fingerprint to the last COMMITTED one right
+# here, before any charging. A match means the inbox state this event was
+# raised for has already been swept and committed by an earlier hop in this
+# same drain (or another pass) — `continue`, not `break` or requeue: nothing
+# was lost, there is nothing to retry, and any other queued event must still
+# get its turn.
+if [ "$EVENT" = "watch" ]; then
+  _wfp_pop=$(watch_fingerprint)
+  _wfp_committed=$(cat "$STATE/.watch-seen" 2>/dev/null || echo "")
+  if [ -n "$_wfp_committed" ] && [ "$_wfp_pop" = "$_wfp_committed" ]; then
+    log "watch — already satisfied (fingerprint matches the last commit), settling without a session or a hop"
+    continue
+  fi
+fi
+
 HOP_COUNT=$(cat "$HOPS" 2>/dev/null || echo 0)
 if [ "$HOP_COUNT" -ge "$MAX_HOPS_PER_DAY" ]; then
   # The event has already been popped. It has NOT been run, so it goes back on
@@ -2089,7 +2226,20 @@ if [ "$ENG_HOST" = "mac" ]; then
 else
   _launcher="$(command -v claude 2>/dev/null || echo 'NOT ON PATH')"
 fi
-log "launching claude — model: $MODEL — via: $_launcher"
+# Re-selected per launch rather than trusting the pick lib/eng-env.sh made when
+# this process sourced it: a rotation — this process's own, or another
+# instance's — can have moved the cursor since. Reading the file here is what
+# makes the account named on the line below the account the pass actually runs
+# as, which is the entire value of logging it.
+_acct=""
+if [ "${ENG_OAUTH_COUNT:-0}" -gt 0 ]; then
+  oauth_read
+  eng_oauth_use "$OAUTH_CURRENT"
+  if [ "$ENG_OAUTH_COUNT" -gt 1 ]; then
+    _acct="$(eng_oauth_name "$OAUTH_CURRENT") ($OAUTH_CURRENT of $ENG_OAUTH_COUNT)"
+  fi
+fi
+log "launching claude — model: $MODEL — via: $_launcher${_acct:+ — account: $_acct}"
 
 # ENG-016 AC1/AC4: the output is captured so the exit can be CLASSIFIED. stdout
 # here is already the pass log (the `exec` at the top of this file), so the `cat`
@@ -2151,7 +2301,15 @@ cat "$PASS_OUT" 2>/dev/null
 eng_timed_out "$STATUS" && log "pass TIMED OUT after ${PASS_TIMEOUT_SECONDS}s — killed, lock released"
 
 NEVER_STARTED=0
-if pass_never_started "$STATUS" "$PASS_OUT" "$PASS_ELAPSED"; then NEVER_STARTED=1; fi
+ACCOUNT_LIMITED=0
+ROTATED=0
+if pass_never_started "$STATUS" "$PASS_OUT" "$PASS_ELAPSED"; then
+  NEVER_STARTED=1
+  # WHICH half of the signature matched, decided here rather than at the branch
+  # that needs it: $PASS_OUT is deleted on the next line and the branch is forty
+  # lines further down. An account limit can rotate; a host fault cannot.
+  if grep -qiE "$ACCOUNT_LIMIT_SIGNATURE" "$PASS_OUT" 2>/dev/null; then ACCOUNT_LIMITED=1; fi
+fi
 rm -f "$PASS_OUT"
 
 log "pass end: $EVENT (exit $STATUS, ${PASS_ELAPSED}s)"
@@ -2180,18 +2338,37 @@ if [ "$STATUS" -eq 0 ]; then
 elif [ "$NEVER_STARTED" -eq 1 ]; then
   refund_hop
   requeue_event "$EVENT" "$CONTEXT" "$ATTEMPT"
-  backoff_arm
-  _STALL_DUE="$BACKOFF_STALL_DUE"   # backoff_read below re-reads the latched flag
-  backoff_read
-  log "pass NEVER STARTED (exit $STATUS, vendor limit signature, no session ran) — 1 hop refunded${TICKET_ID:+ to $TICKET_ID too}, event '$EVENT${CONTEXT:+ $CONTEXT}' re-queued at attempt $ATTEMPT with no life spent. Failure $BACKOFF_COUNT in a row: suppressing launches for ${BACKOFF_LAST_DELAY}s, until $(backoff_until_hms "$BACKOFF_UNTIL"). Fires arriving before then are queued and not run; each still logs the queue's ordinary drain lines, and this suppression line appears once per window rather than once per fire."
-  # B2. The one place on this path where anything escalates, and it escalates
-  # once. Everything else about a never-started pass is deliberately free — no
-  # hop, no attempt, no drop — which is right until the condition turns out to be
-  # a host that will never work. See backoff_arm's latch for why the ceiling is
-  # the trigger.
-  if [ "$_STALL_DUE" -eq 1 ]; then
-    log "BACK-OFF AT CEILING after $BACKOFF_COUNT consecutive never-started passes — raising one stall notice. Nothing dropped, nothing charged; the queue is intact."
-    stall_notice "The last $BACKOFF_COUNT launches ended without a session starting. Latest exit **$STATUS**, event \`$EVENT${CONTEXT:+ $CONTEXT}\`, still queued at attempt $ATTEMPT. Launches are now suppressed for ${BACKOFF_LAST_DELAY}s at a time until one starts."
+  # The cheap answer FIRST, and only for an account limit — see the two halves
+  # of the signature above. `oauth_rotate` succeeding means another account is
+  # usable, so nothing is suppressed: the next fire launches straight onto it.
+  # This branch is deliberately as free as the back-off one — no hop, no attempt,
+  # no drop — because no session ran here either.
+  if [ "$ACCOUNT_LIMITED" -eq 1 ] && oauth_rotate; then
+    ROTATED=1
+    log "pass NEVER STARTED (exit $STATUS, account limit on $(eng_oauth_name "$OAUTH_PREVIOUS"), no session ran) — 1 hop refunded${TICKET_ID:+ to $TICKET_ID too}, event '$EVENT${CONTEXT:+ $CONTEXT}' re-queued at attempt $ATTEMPT with no life spent. Rotated to $(eng_oauth_name "$OAUTH_CURRENT") (account $OAUTH_CURRENT of $ENG_OAUTH_COUNT) — NO back-off armed, the next fire launches on it."
+  else
+    ROTATED=0
+    backoff_arm
+    _STALL_DUE="$BACKOFF_STALL_DUE"   # backoff_read below re-reads the latched flag
+    backoff_read
+    # Why the launch stopped, in the words that fit the case: an exhausted roster
+    # is a different fact from a single account's limit, and a one-account setup
+    # must keep reading exactly as it did before there was a roster at all.
+    if [ "$ACCOUNT_LIMITED" -eq 1 ] && [ "${ENG_OAUTH_COUNT:-0}" -gt 1 ]; then
+      _NS_WHY="all $ENG_OAUTH_COUNT accounts limited, no session ran"
+    else
+      _NS_WHY="vendor limit signature, no session ran"
+    fi
+    log "pass NEVER STARTED (exit $STATUS, $_NS_WHY) — 1 hop refunded${TICKET_ID:+ to $TICKET_ID too}, event '$EVENT${CONTEXT:+ $CONTEXT}' re-queued at attempt $ATTEMPT with no life spent. Failure $BACKOFF_COUNT in a row: suppressing launches for ${BACKOFF_LAST_DELAY}s, until $(backoff_until_hms "$BACKOFF_UNTIL"). Fires arriving before then are queued and not run; each still logs the queue's ordinary drain lines, and this suppression line appears once per window rather than once per fire."
+    # B2. The one place on this path where anything escalates, and it escalates
+    # once. Everything else about a never-started pass is deliberately free — no
+    # hop, no attempt, no drop — which is right until the condition turns out to be
+    # a host that will never work. See backoff_arm's latch for why the ceiling is
+    # the trigger.
+    if [ "$_STALL_DUE" -eq 1 ]; then
+      log "BACK-OFF AT CEILING after $BACKOFF_COUNT consecutive never-started passes — raising one stall notice. Nothing dropped, nothing charged; the queue is intact."
+      stall_notice "The last $BACKOFF_COUNT launches ended without a session starting. Latest exit **$STATUS**, event \`$EVENT${CONTEXT:+ $CONTEXT}\`, still queued at attempt $ATTEMPT. Launches are now suppressed for ${BACKOFF_LAST_DELAY}s at a time until one starts."
+    fi
   fi
 else
   backoff_clear
@@ -2266,7 +2443,11 @@ fi
 # a burned hop budget.
 if [ "$STATUS" -ne 0 ]; then
   if [ "$NEVER_STARTED" -eq 1 ]; then
-    log "no session ran — ending this drain; the back-off decides when the next fire may launch"
+    if [ "$ROTATED" -eq 1 ]; then
+      log "no session ran — ending this drain; the next fire launches on the account just rotated to, with nothing suppressed"
+    else
+      log "no session ran — ending this drain; the back-off decides when the next fire may launch"
+    fi
   else
     log "pass failed — ending this drain; the next fire runs the oldest queued event first"
   fi

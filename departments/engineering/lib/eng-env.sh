@@ -88,7 +88,78 @@ if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then export SLACK_WEBHOOK_URL; fi
 # `/login` session (see .env's own comment on this var), which is the point:
 # it pins every automated build-loop pass to one account independent of
 # whatever is logged into `claude` interactively elsewhere on this host.
-if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then export CLAUDE_CODE_OAUTH_TOKEN; fi
+#
+# ── More than one account ──────────────────────────────────────────────────
+# .env may carry a ROSTER: CLAUDE_CODE_OAUTH_TOKEN plus CLAUDE_CODE_OAUTH_TOKEN_2,
+# _3, … one per account. Numbered rather than packed into one delimited value
+# because .env is BOTH sourced by this file and parsed line-by-line by the
+# Python components (load_env() in scripts/telegram.py), so a delimiter would
+# be one more thing to quote wrong in a file that already cost us a silent
+# partial source — see the guard above.
+#
+# Exactly ONE of them is ever exported: the CLI takes a single token. Which one
+# is whatever index the first field of $ENG_INSTANCE/traces/.oauth-account
+# names. lib/eng-trigger.sh OWNS that file — it is the only component that can
+# see an account hit its limit and rotate off it — and every other launcher,
+# this file included, only reads it. A missing, empty or garbled file means
+# account 1, which is exactly the behaviour from before there was a roster.
+#
+# Collected in order, SKIPPING gaps rather than stopping at one: an operator who
+# deletes _2 and leaves _3 has two accounts and stopping at the hole would
+# silently run on one — the failure this roster exists to prevent.
+ENG_OAUTH_NAMES=""
+ENG_OAUTH_COUNT=0
+for _eng_oa in CLAUDE_CODE_OAUTH_TOKEN \
+               CLAUDE_CODE_OAUTH_TOKEN_2 CLAUDE_CODE_OAUTH_TOKEN_3 \
+               CLAUDE_CODE_OAUTH_TOKEN_4 CLAUDE_CODE_OAUTH_TOKEN_5 \
+               CLAUDE_CODE_OAUTH_TOKEN_6 CLAUDE_CODE_OAUTH_TOKEN_7 \
+               CLAUDE_CODE_OAUTH_TOKEN_8 CLAUDE_CODE_OAUTH_TOKEN_9; do
+  eval "_eng_oa_val=\${$_eng_oa:-}"
+  [ -n "$_eng_oa_val" ] || continue
+  ENG_OAUTH_COUNT=$(( ENG_OAUTH_COUNT + 1 ))
+  ENG_OAUTH_NAMES="${ENG_OAUTH_NAMES}${ENG_OAUTH_NAMES:+ }$_eng_oa"
+done
+unset _eng_oa _eng_oa_val
+export ENG_OAUTH_COUNT ENG_OAUTH_NAMES
+
+# The env var NAME of account N — never its value. This is what the rotation
+# log lines print, and a token must not reach a log or a Slack notice.
+eng_oauth_name() {
+  printf '%s' "${ENG_OAUTH_NAMES:-}" \
+    | awk -v n="${1:-0}" 'n+0 >= 1 && n+0 <= NF { print $(n+0) }'
+}
+
+# Export account N as the token the `claude` child authenticates with.
+eng_oauth_use() {
+  _ou_name="$(eng_oauth_name "${1:-0}")"
+  [ -n "$_ou_name" ] || return 1
+  # The name is one of the nine literals above, so this expands a variable we
+  # chose; and an assignment neither word-splits nor globs, so a token holding
+  # anything at all is still assigned whole.
+  # `:-` because eng-trigger.sh sources this file with `set -u` already on, and
+  # an aborted source there kills the whole event loop.
+  eval "CLAUDE_CODE_OAUTH_TOKEN=\"\${$_ou_name:-}\""
+  export CLAUDE_CODE_OAUTH_TOKEN
+  return 0
+}
+
+# Pick the account in force for this process. Called once here, so every
+# launcher that only reads the roster — lib/eng-report.sh's weekly pass, and
+# anything else that sources this file — authenticates as the account currently
+# in force without knowing how rotation works. lib/eng-trigger.sh re-selects per
+# launch, because it is the one that can change the answer mid-flight.
+eng_oauth_select() {
+  [ "${ENG_OAUTH_COUNT:-0}" -gt 0 ] || return 0
+  ENG_OAUTH_CURRENT="$(sed -n '1s/^\([0-9][0-9]*\).*/\1/p' \
+                       "$ENG_INSTANCE/traces/.oauth-account" 2>/dev/null)"
+  [ -n "$ENG_OAUTH_CURRENT" ] || ENG_OAUTH_CURRENT=1
+  if [ "$ENG_OAUTH_CURRENT" -lt 1 ] || [ "$ENG_OAUTH_CURRENT" -gt "$ENG_OAUTH_COUNT" ]; then
+    ENG_OAUTH_CURRENT=1
+  fi
+  export ENG_OAUTH_CURRENT
+  eng_oauth_use "$ENG_OAUTH_CURRENT"
+}
+eng_oauth_select
 
 # The pause switch is PER-INSTANCE, falling back to the business-os-wide MODE.
 # It was global only: one `sabbath` in business-os/.env silenced every business
