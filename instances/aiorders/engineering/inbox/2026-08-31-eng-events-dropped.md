@@ -6,6 +6,8 @@ project: aiorders
 ticket: unknown
 recommendation: find out why passes are failing before re-firing anything
 raised: 2026-08-31
+decision: rejected
+decided: 2026-09-01T16:38:59.834633+00:00
 ---
 
 # Engineering events were dropped today
@@ -542,3 +544,7 @@ failing") is satisfied by this note; re-raising a 2-day-old self-closing
 incident would be noise, and step 3's proposal path (not a fresh gate) is
 where the general "incident items have no closure step" gap is already
 tracked (`proposals.md`, 2026-09-01 row).
+
+## Decision
+
+**rejected** — 2026-09-01T16:38:59.834633+00:00

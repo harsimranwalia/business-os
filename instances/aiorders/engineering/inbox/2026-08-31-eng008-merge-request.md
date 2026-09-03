@@ -13,7 +13,8 @@ pr_urls:
 raised: 2026-08-31
 notified: 2026-08-31T11:15:29
 nudged: 2026-09-01T22:41:10
-decision:
+decision: changed
+decided: 2026-09-01T16:44:07.981185+00:00
 ---
 
 # Merge request — Influencer board admin management (ENG-008)
@@ -85,3 +86,9 @@ standing question (see `ENG-009`), not part of this ticket.
 ## Decision
 
 Filled in by the approver.
+
+## Decision
+
+**changed** — 2026-09-01T16:44:07.981185+00:00
+
+aiorders-api accepts_barter (nullable booleans), backfilled additively from barter_visit (null stays null, not guessed). barter_visit itself is untouched. There is no need for a new column when we already have a column to signify the same intent of whether the influencer accepts barter or not

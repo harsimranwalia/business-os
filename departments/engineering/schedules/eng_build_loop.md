@@ -40,9 +40,27 @@ Each pass, in order:
 
 2. **Business intake → Product Manager.** The PM sweeps
    `agents/product-manager/inbox/` and `inbox/requests/` for cards
-   tagged `eng`. Each becomes a ticket at `intake`, shaped in the same pass, and
-   carried to a PRD. The PM is the department's front door: business needs enter
-   there, not at the EM.
+   tagged `eng`. Each becomes a ticket at `intake`, shaped in the same pass, then
+   carried toward a PRD. The PM is the department's front door: business needs
+   enter there, not at the EM.
+
+   **PRD-writing is not required to finish in the pass that started it.**
+   Observed 2026-09-02: a single sequence-continuation filing (`ENG-007`'s
+   ticket 3, `skills/acceptance-check/SKILL.md` step 6b) ran the full
+   `skills/prd-writer/SKILL.md` process end to end as one atomic unit of work,
+   hit the 3600s ceiling in `lib/eng-trigger.sh` twice in a row with nothing
+   durable written either time, and camped on the single-flight lock for over
+   five hours across eight launches — starving two other answered decisions
+   and every routine `watch`/`scheduled` sweep behind it. Once the ticket
+   exists on the board (as soon as step 1b of `prd-writer` runs), it is a
+   normal machine-owned ticket like any other and chains exactly like one
+   (step 6/9, `continue {TICKET-ID}`): finish the current numbered
+   `prd-writer` step, write what that step produced to disk, and if the PRD
+   process isn't complete, log which step it stopped after and fire
+   `continue {TICKET-ID}` rather than pushing on toward a kill with nothing to
+   show for it. The next hop resumes from that checkpoint. This applies the
+   same way whether the ticket came from this step's fresh intake or from
+   step 3's sequence continuation below.
 
    **Full-lane requests run the readback first** (`skills/request-readback/SKILL.md`):
    the PM's reading of the raw input, the architect's *blind* reading of the same
@@ -93,11 +111,13 @@ Each pass, in order:
    approver, the rest of that sequence isn't agent-originated — it's the
    approver's own request, already reviewed once. `skills/acceptance-check/SKILL.md`
    step 6b is where this runs: on verifying a ticket in that position, the PM
-   shapes and files the next named item itself, in the same pass, and raises
-   its own fresh G1 — then does it again for the item after, until the
-   sequence is done or a G1 comes back rejected or held. No gate gets skipped
-   anywhere in this; what stops being manual is only drafting and filing the
-   next PRD instead of waiting for the approver to notice it's missing.
+   shapes and files the next named item itself — as many hops as that takes,
+   see the checkpoint note in step 2 above, not required to land in the
+   verify hop itself — and raises its own fresh G1, then does it again for
+   the item after, until the sequence is done or a G1 comes back rejected or
+   held. No gate gets skipped anywhere in this; what stops being manual is
+   only drafting and filing the next PRD instead of waiting for the approver
+   to notice it's missing.
 
    **The one carve-out, and the property that makes it safe.** A **P0 on a
    registered project that is not on the internal lane** — production down, or
@@ -147,6 +167,71 @@ Each pass, in order:
      repo is untouchable until this append happens
    - **Risk acceptance** → the architect records it as an ADR, then the ticket
      continues past the security gate
+   - **Incident** (`gate: incident` — the four items `lib/eng-trigger.sh`
+     raises on itself: loop halted, loop stalled, events dropped,
+     gate-violation watch) → act on the item's own `recommendation:`, write
+     the finding as prose in the file, then **move the file into
+     `inbox/_handled/` and commit, in this same pass.** There is no ticket to
+     hand off to and no next owner the way G1/G2/G3 have one, so this move is
+     the only thing that closes the item — write the finding but skip the
+     move, and the file stays a top-level inbox entry indefinitely, looking
+     exactly like an unanswered one to every later sweep.
+
+     **If the file already carries a finished investigation, don't re-derive
+     it — verify it's still current and archive.** A file with prose
+     analysis and a populated `## Decision` section already present usually
+     means an earlier pass did the work; a fresh gate answer from the
+     approver looks the same on disk (`lib/eng-notify.sh` writes
+     `decision:`/`## Decision` the moment the approver answers), so check
+     whether the narrative already on the file answers the
+     `recommendation:` before spending time re-investigating from scratch —
+     if it does, confirm nothing's changed and archive. **And once you've
+     confirmed it's stale, close it — don't let unrelated uncommitted state
+     you notice along the way pull you off this item;** that's its own
+     backlog item to raise, not a reason to widen this one. Observed
+     2026-09-02: `2026-08-30-eng-loop-halted.md` was investigated and
+     answered (`decision: rejected`) on 2026-09-01, and a same-day scheduled
+     sweep (`f376e9c`) even re-confirmed it stale and wrote that finding back
+     into the file — but committed it under `inbox/`, not `inbox/_handled/`,
+     so the file never stopped looking like an open item. It re-surfaced as
+     a fresh `decision` event and burned two full 3600s timeouts today
+     before a third pass finally re-derived the same "already stale"
+     conclusion in minutes — then spent the rest of its hour investigating
+     unrelated uncommitted board state it noticed along the way, timed out a
+     third time, and the event was dropped for good with the archive step
+     still undone.
+
+   **When more than one item is answered, resolve and commit one at a time —
+   oldest first — rather than reading every item's full history before
+   acting on any of them.** Observed 2026-09-01: an overnight vendor rate
+   limit (see the back-off note below) let a six-item backlog build up. The
+   pass that ran once the limit cleared spent its time gathering context
+   across the whole backlog — "the gate-check tooling, the caps/config, the
+   ticket templates, and the relevant skills" for every item at once — before
+   committing anything, hit the 3600s ceiling in `lib/eng-trigger.sh`
+   (`PASS_TIMEOUT_BASE_SECONDS`), and was killed with zero commits. The next
+   fire re-read the same backlog from scratch to work out what, if anything,
+   had actually happened, and repeated the same pattern twice more —
+   three consecutive hour-long timeouts, no forward progress. Committing
+   after each item bounds the loss: a kill mid-backlog then costs at most the
+   one item in flight, and the next pass's `git log` on the instance repo
+   tells it exactly where the previous one stopped, instead of it having to
+   re-derive that from uncommitted, partially-edited files.
+
+   **Read only what the item in front of you needs — not the rest of the
+   backlog "for context."** The 11:15 retry of the same 2026-09-01 incident
+   (above) obeyed "one at a time" at the planning level but then, before
+   resolving the first item, queued a combined read of four large files at
+   once — `ENG-007` (63KB), `ENG-008` (72KB), `ENG-013` (74KB), and the
+   decision-journal (39KB), reasoning that the tickets were "entangled." That
+   single ~250KB combined read, plus everything already in context from the
+   sweep, is what the pass was still silently chewing on 34 minutes later
+   with no commit made. Two tickets sharing history is not a license to load
+   both in full before acting on either: open only the ticket the item you
+   are resolving right now belongs to. If resolving it genuinely requires a
+   fact from another ticket, `grep` for that fact rather than reading the
+   file whole — the same rule step 6b already applies to artifact mentions.
+   Move to the next item's ticket only after the current one is committed.
 
    Never infer approval from silence. An unanswered item is not a rejection — it
    stays open and appears in the weekly report's "Waiting on you" section,
@@ -293,6 +378,24 @@ Each pass, in order:
    guarantee: a session that gets truncated or simply doesn't reach the
    instruction breaks the chain silently, and without a record there is no way
    to tell "waiting normally" from "the chain broke".
+
+   **A chain that was fired is not the same as a chain that ran.** The check
+   above catches a pass that forgot to write `chained:` at all — it does not
+   catch a pass that correctly fired the next hop and then had that queued
+   event fail twice and get DROPPED downstream (`lib/eng-trigger.sh`'s
+   `MAX_EVENT_ATTEMPTS`, logged to the day's `*-eng-events-dropped.md`). To
+   the ticket the two look identical — it sits in an agent-owned state with
+   nothing coming — but the log line reads `chained: {ticket-id}`, so the
+   check above passes it as healthy. Observed 2026-08-30/09-02: `ENG-009`
+   correctly chained its own `continue ENG-009` on reaching `building`; that
+   event was queued, failed twice during a bad stretch of pass timeouts, and
+   was dropped — and the ticket then sat at `building` for three days because
+   nothing re-fired it. Cross-check every ticket's last `chained: {id}`
+   against that day's `*-eng-events-dropped.md` files for a `continue {id}`
+   (or `decision`/`finding`/`intake` naming that ticket) with no later
+   `chained:` line on the ticket since — same remediation as a chain that was
+   never fired: re-fire `lib/eng-trigger.sh continue {ticket-id}` in this
+   pass.
 
    **Leaving `blocked` returns to `blocked_from`** — the state the ticket left
    to enter `blocked`, written on entry and cleared on the way out. Without it

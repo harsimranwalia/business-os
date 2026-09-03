@@ -49,6 +49,34 @@ and hold the ticket at `intake` until it's answered.
 
 ## Steps
 
+**You may be entering this mid-process.** A ticket whose PRD work ran out of
+hop budget chains `continue {TICKET-ID}` like any other machine-owned ticket
+(`eng_build_loop.md` step 2 for the rule, step 6/9 for the mechanism), so
+check what is already on disk before doing anything and resume from the
+first step not yet done — never redo a finished step, never skip an undone
+one. Step 1 runs every hop regardless. The most recent checkpoint line in
+the ticket log names the step the previous hop stopped after (the `chained:`
+line the pass writes after it is the caller's record, not the checkpoint);
+verify it against the artifacts rather than trusting it blind: a board file means 1b is done; a `## Readback`
+section on the ticket means 1c is done;
+`agents/product-manager/specs/{ENG-NNN}-{slug}.md` existing, even partially,
+means 4 has started, and its `## Acceptance criteria`, `## Non-goals` and
+`## Cost` sections say whether 5, 6 and 7 are; a `## Dissent` section on the
+G1 item, or a log line recording that the critic had nothing to add, means
+8b ran — an absent section alone proves nothing, which is why the "nothing
+to add" gets logged. Steps 2–3 leave nothing on disk; a hop that resumes
+before 4 does them on the way.
+
+**Running low on this hop's budget mid-process:** finish the numbered step
+you are in — a half-written PRD file is worse than none — write what it
+produced to disk, append one ticket-log line naming the step just completed,
+and stop; the caller chains `continue {TICKET-ID}` and the next hop resumes
+from that line. No clock or token count of your own — this is the
+checkpoint-and-chain every machine-owned ticket already uses, not a new
+budget mechanism. Observed 2026-09-02 (`ENG-007`'s ticket 3, filed via
+`acceptance-check` step 6b): the whole process run as one unbroken pass hit
+the 3600s ceiling twice with nothing durable written either time.
+
 ### 1. Mode check
 
 Read `.env` → `MODE`. On `sabbath` or `retreat`, exit without writing.

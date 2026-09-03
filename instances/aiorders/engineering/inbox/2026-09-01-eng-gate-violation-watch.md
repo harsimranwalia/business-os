@@ -6,6 +6,8 @@ project: aiorders
 ticket: unknown
 recommendation: investigate before the next release
 raised: 2026-09-01
+decision: rejected
+decided: 2026-09-01T16:38:16.887004+00:00
 ---
 
 # A pass left the board failing the receipt check
@@ -44,3 +46,7 @@ cross-host merge commit `e281c71`'s own BOM strip. Corroborated repeatedly
 since by `lib/eng-gate-check.sh`, whole-board — clean (exit 0, no `WAIVED:`
 lines) on every pass today including this one. No further action; not a
 gate the approver answers.
+
+## Decision
+
+**rejected** — 2026-09-01T16:38:16.887004+00:00

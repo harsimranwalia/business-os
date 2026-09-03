@@ -6,6 +6,8 @@ project: aiorders
 ticket: unknown
 recommendation: investigate before re-enabling
 raised: 2026-08-30
+decision: rejected
+decided: 2026-09-01T17:03:01.281607+00:00
 ---
 
 # Engineering loop halted — whole department
@@ -30,3 +32,7 @@ moot by the time it was checked: no ticket was found bouncing in
 `traces/eng-loop-2026-08-30.log`, and today's own counter
 (`traces/.hops-2026-09-01`) sits at 7/200, nowhere near the ceiling. No
 further action; not a gate the approver answers.
+
+## Decision
+
+**rejected** — 2026-09-01T17:03:01.281607+00:00
