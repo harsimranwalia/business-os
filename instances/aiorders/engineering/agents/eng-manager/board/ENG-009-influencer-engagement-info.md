@@ -1310,3 +1310,97 @@ Append-only. One line per state transition, newest last.
   `chained: none` — no state on this ticket changed; this entry exists so
   the fact is on record before either PR is merged, not to restart this
   ticket's own machine-owned pipeline.
+
+- `2026-09-03` **gate item corrected — the fact above had reached this
+  ticket's own log but not the merge-request the approver actually reads**
+  (eng-manager, `scheduled` event pass, context `auto-drain` — whole-board
+  sweep). Mode check clean (`MODE=active`). Pre-pass `eng-gate-check.sh`,
+  whole-board: exit 0, clean.
+
+  Merge detection (step 5) on all five `blocked` tickets included the
+  sibling-staleness check by habit, not by procedure mandate (the standing
+  proposal below is still unimplemented). Re-ran `git merge-base
+  --is-ancestor` on `ENG-008`'s current tips against this ticket's, fresh
+  rather than trusted from the entry above — same result, still **false**
+  on both repos. Went one step further than that entry did: checked
+  whether the two branches' diffs actually *overlap*, not just share a
+  file. `aiorders-api`: this ticket's diff never mentions
+  `accepts_barter` — clean, no real conflict coming. `aiorders-admin-hub`:
+  grepped this ticket's tip directly, found all 11 `accepts_barter` lines
+  `ENG-008`'s round-3 fix deleted/renamed are still present verbatim in
+  `Influencers.tsx`, untouched by this ticket's own diff (confirmed
+  against the diff stat, not just the grep) — a real conflict, not
+  cosmetic proximity.
+
+  **The actual gap this pass closes: `inbox/2026-09-02-eng009-merge-request.md`**
+  — raised 10:51 on 2026-09-02, well before `ENG-008`'s round-3 fix
+  (~22:48 the same day) — **still read "recommendation: merge" and told the
+  approver merging `ENG-008` first would let this PR "merge cleanly," which
+  is no longer true.** The prior entry's own finding never reached that
+  file. Corrected in place: `recommendation:` now reads `hold` with a
+  one-line reason; an "Update, 2026-09-03" block under Sequencing gives the
+  same repo-by-repo finding this entry states, plus a concrete
+  recommendation (rebase onto `ENG-008`'s current tip, re-run
+  review/quality/security on the delta, same repair the round-1→round-2
+  rebase already did once today). `ENG-010`'s merge request
+  (`inbox/2026-09-02-eng010-merge-request.md`) also corrected with a
+  shorter cross-reference — its own diff doesn't touch the conflicted
+  lines (checked fresh), but it inherits this branch wholesale and will
+  need the same rebase-and-follow treatment once this one is fixed.
+
+  **Deliberately not re-notified.** `eng-notify.sh`'s own header states the
+  budget precisely: one `raise`, one `nudge`, ever, then the daily
+  brief/weekly report — this item already spent its `raise`
+  (`notified: 2026-09-02T10:51:07`) and isn't yet 24h old, so a `nudge`
+  isn't due and using one now would spend this item's only reminder on a
+  content correction rather than "still waiting," blurring what a nudge
+  means. The correction lives in the file itself, which is where the
+  approver actually reads and answers from (established pattern — hand-edits
+  the gate file directly rather than replying via Telegram); no code or
+  branch on this ticket touched.
+
+  **0 transitions** — `state`/`owner` unchanged (`blocked`/`approver`); this
+  is a correction to an already-raised gate item, not a new one, so no
+  approver-facing WIP or cap change. `machine_wip` unaffected (this ticket
+  sits outside the counted range).
+
+  **Dead-end sweep (scoped to this finding):** `ENG-010`'s own merge
+  request corrected in the same pass, above — not a separate dead end,
+  the same fact reaching a second stacked ticket. **Notify sweep:**
+  covered above — deliberately not re-pinged. **No new proposal filed** —
+  the standing one (`proposals.md`, 2026-09-02, principal-engineer)
+  already names this exact gap generally; this is that same proposal's
+  second confirmed occurrence on the same ticket pair, not a third
+  distinct one, so no new row.
+
+  `chained: none` — `blocked`, `blocked_on: approver`, unchanged. Nothing
+  for a machine to do on this ticket until the approver acts (merge, hold
+  per the corrected recommendation, or reply otherwise) or a future pass
+  rebases it. Post-pass `eng-gate-check.sh`, whole-board: see board index.
+
+- `2026-09-03` **merge request nudged — crossed 24h unanswered** (eng-manager,
+  `watch` event pass, context `launchd`). Mode check clean (`MODE=active`).
+
+  Notify sweep (step 7) computed this item's age against current UTC
+  (`date -u`: `2026-09-03T11:33:19Z`) against its own `notified:
+  2026-09-02T10:51:07` — 24h42m, `nudged:` and `decision:` both still empty.
+  Ran `lib/eng-notify.sh nudge inbox/2026-09-02-eng009-merge-request.md`,
+  stamped `nudged: 2026-09-03T11:34:08`. Board index's own "Waiting on the
+  approver" line corrected to match (previously still said "not yet due").
+
+  Re-ran this ticket's own merge-detection check while here (step 5, this
+  pass swept every `blocked` ticket since the watch fired on merge-request
+  files): `feat/ENG-009-influencer-engagement-info` still **not** an
+  ancestor of `origin/main` on either repo — unchanged from the prior
+  entry, still blocked on the rebase-then-remerge this ticket's own
+  `recommendation: hold` already asks for.
+
+  Noted, not re-filed: the nudge's own log line read `sent: active`, the
+  same `$MODE`-clobbered-by-`.env` symptom `proposals.md`'s 2026-08-25 row
+  already tracks — the Slack message still carried the right content, just
+  without the "still waiting" framing line.
+
+  `chained: none` — `blocked`, `blocked_on: approver`, unchanged. A nudge
+  doesn't advance a ticket; the next hop is still the approver's own
+  merge/hold/rebase decision, or a future pass finding the rebase already
+  done.

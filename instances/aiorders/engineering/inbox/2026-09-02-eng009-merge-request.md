@@ -4,7 +4,7 @@ agent: eng-manager
 gate: merge
 project: aiorders-admin-hub
 ticket: ENG-009
-recommendation: merge — migration, code review (round 2), quality, and security all passed; additive-only change (two new nullable columns, a write path on two previously-unwritten existing columns, one new read-only admin-gated route, no schema removal, no new dependency). Both PRs are stacked on ENG-008's still-open branch, not main — see Sequencing below before merging.
+recommendation: hold — was "merge" when raised; a fact discovered since changes that. All four gates below still pass on the diff they were run against, but ENG-008 has since moved a second time (round 3, ~22:48 on 2026-09-02) and this branch was never re-synced to it — see "Update, 2026-09-03" under Sequencing before merging.
 pr_urls:
   - repo: aiorders-api
     url: https://github.com/harsimranwalia/aiorders-api/pull/7
@@ -12,7 +12,7 @@ pr_urls:
     url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/6
 raised: 2026-09-02
 notified: 2026-09-02T10:51:07
-nudged:
+nudged: 2026-09-03T11:34:08
 decision:
 ---
 
@@ -63,6 +63,41 @@ is still open and unanswered. Two ways to sequence:
 
 No functional dependency forces one order — this is purely a review-surface
 choice already made at build time, not a new constraint from this pass.
+
+**Update, 2026-09-03 (`scheduled auto-drain` sweep) — the "merge cleanly"
+claim above is no longer true.** `ENG-008`'s own round-3 code review
+(2026-09-02 ~22:48, after this item was raised at 10:51) fixed a duplicate
+column the approver's own merge-request reply objected to: dropped
+`accepts_barter`, reusing the existing `barter_visit` boolean instead
+(`aiorders-api@7c6e4b8`, `aiorders-admin-hub@141f2eb`). This branch was
+never re-synced to that fix — confirmed fresh this pass,
+`git merge-base --is-ancestor 7c6e4b8/141f2eb` against this branch's tip
+(`d37e0c9`/`92bcacd`) returns **false** on both repos (`ENG-009`'s own
+board log already recorded this as an informational cross-reference,
+2026-09-02, found by that same `ENG-008` round-3 review — this update
+propagates it to the gate item itself, which hadn't been touched).
+
+Checked what that actually means for each repo, not just the ancestry
+fact: **`aiorders-api` is unaffected** — this branch's own diff never
+references `accepts_barter` (grepped directly). **`aiorders-admin-hub`
+will conflict** — `src/pages/Influencers.tsx` on this branch still carries
+the complete pre-round-3 `accepts_barter` UI (interface fields, edit-form
+state, the checkbox, the table badge — 11 lines, untouched by this
+ticket's own diff, just inherited from the stale base) that `ENG-008`'s
+fix deleted/renamed to `barter_visit`. Merging `ENG-008` first will
+**not** let this PR "merge cleanly" the way the paragraph above describes
+— GitHub will show a real conflict on that file, not a silent problem,
+but the resolution isn't a mechanical pick-a-side: `accepts_barter` needs
+to become `barter_visit` throughout this ticket's own additions too,
+same rename `ENG-008` already applied everywhere else.
+
+**Recommendation:** hold this request; have the department rebase this
+branch (`aiorders-admin-hub` only) onto `ENG-008`'s current tip and re-run
+review/quality/security on the delta before treating this as safe to
+merge — the same repair its own round-1→round-2 rebase already did once
+today for an earlier ENG-008 fix. If you'd rather resolve the GitHub
+conflict by hand instead of waiting, do the same rename in ENG-009's
+added lines, not just accept whichever side the merge UI defaults to.
 
 ## Gates passed
 
