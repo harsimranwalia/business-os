@@ -5,19 +5,23 @@ project: aiorders-admin-hub
 type: security
 size: M
 time_estimate: half a day to a day
-time_spent:
-time_remaining:
+time_spent: ~2h build, round-1 combined review/quality hop (fail), ~1h
+  round-1-fix build hop, ~1h round-2 combined review/quality hop (pass),
+  ~30m security gate (pass), ~30m release-readiness hop (two PRs opened)
+time_remaining: none for the department. Waiting on the approver's own
+  merge of both PRs, on their own schedule (L1). No approver time_impact
+  beyond that merge.
 severity: P1
 priority:
-state: designed
-owner: eng-manager
+state: blocked
+owner: approver
 lane: full
-blocked_on:
-blocked_from:
+blocked_on: approver
+blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
-updated: 2026-08-31
-branch:
+updated: 2026-09-03
+branch: fix/ENG-015-agency-reseller-brand-scoping (same name, both repos)
 depends_on: []
 blocks: []
 parent:
@@ -25,11 +29,13 @@ links:
   prd: agents/product-manager/specs/ENG-015-agency-reseller-brand-scoping.md
   design: agents/architect/designs/ENG-015-agency-reseller-brand-scoping.md
   adrs: [ADR-006]
-  review:
-  test_plan:
-  security_review:
+  review: agents/principal-engineer/reviews/ENG-015.md
+  test_plan: agents/qa/test-plans/ENG-015.md
+  security_review: agents/security/reviews/ENG-015.md
   release:
   pr:
+    aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/10
+    aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/8
 ---
 
 ## Input
@@ -478,3 +484,829 @@ Append-only. One line per state transition, newest last.
   no-chain conditions. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
   whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-09-03` **cap cleared — `designed → ready`** (eng-manager, `scheduled`
+  event pass, context `auto-drain` — whole-board sweep). Mode check clean
+  (`MODE=active`). Pre-pass `eng-gate-check.sh`, whole-board: exit 0, clean.
+
+  Machine WIP re-verified fresh from frontmatter, not the board index:
+  `ENG-022` (this same pass-chain's own release-readiness hop, tonight)
+  vacated the sole slot — `blocked` sits outside the counted
+  `ready`..`ready-to-ship` range — leaving it genuinely `0/1`, free. Named
+  as this board's own two next-candidates, both checked fresh rather than
+  taken on the board index's citation: `ENG-015` (this ticket — `designed`,
+  no G2 owed, `ADR-006` already recorded in place of one) and `ENG-024`
+  (`shaped`, fast lane, G1 auto-skipped). Equal severity (`P1`) and equal
+  (unset) `priority` on both — tie-break to the lower ticket id, per
+  `eng_build_loop.md` step 6. `ENG-015` wins it.
+
+  **Nothing else re-litigated.** The design, the RLS-vs-code-side-scoping
+  call (`ADR-006`), and every finding already on this ticket's own log
+  stand as written — this hop's only job is the mechanical transition the
+  cap was the sole thing blocking. `links.design`/`links.adrs` unchanged.
+  No branch cut yet, no code written — that is `building`'s own work, a
+  fresh session's job by this loop's own design (each heavy step gets
+  fresh context), not crammed into an already-large whole-board sweep.
+
+  **1 transition** (`designed → ready`). **Consequence:** machine WIP
+  `0/1 → 1/1`, at cap (not over) — no other `designed`/`shaped` ticket may
+  enter `ready` until this one reaches `shipped`. Approver-facing WIP and
+  approval cap both unaffected — no gate touched, `ready` needs no
+  approver.
+
+  **Dead-end sweep (whole-board, this pass):** covered in full at the
+  board-index entry for this pass — clean, no broken chains, no
+  unprocessed drops. **Notify sweep:** nothing to raise (no gate item);
+  nothing to nudge (checked all eight pending items fresh this pass, none
+  past 24h).
+
+  `chained: ENG-015` — `ready` is agent-owned and chains immediately once
+  nothing else holds it (the cap that was suppressing this ticket
+  specifically is now the thing that just cleared). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  before this pass exits. Post-pass `eng-gate-check.sh`, scoped
+  (`ENG-015`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-09-03` **`ready → building` — the actual build, both repos**
+  (`continue` event pass, context `ENG-015`, its own turn at the front of
+  `traces/.pending` reached). Narrow scope per the event's own contract
+  (resume this ticket from its current state; no board-wide sweep). Mode
+  check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty). Gate check, scoped (`ENG-015`) and
+  whole-board: both exit 0, clean (run mid-pass rather than strictly
+  before the first edit — this pass's own frontmatter/proposals.md edits
+  below were already made when it ran; noted rather than mis-labeled
+  pre-pass).
+
+  **Worktrees.** Both `~/Documents/projects/_eng/aiorders-api` and
+  `~/Documents/projects/_eng/aiorders-admin-hub` already existed on this
+  host, sitting on other tickets' branches (`fix/ENG-022-...`,
+  `feat/ENG-008-...` respectively) — each clean but for `aiorders-api`'s
+  pre-existing untracked `supabase/functions/brand-portal/deno.lock`
+  (already named on `ENG-022`'s own log; not touched, not carried onto
+  this ticket's branch). `git fetch` both, then re-verified the three
+  target files fresh against `origin/main` (`git diff origin/main --
+  <file>`, empty on all three) before trusting anything read from the
+  design/PRD against a checkout that wasn't actually on `main` — no
+  drift found; both `restaurants.ts` and `AddRestaurantModal.tsx` match
+  the design's Evidence section verbatim, byte for byte. Branched both
+  repos fresh off `origin/main` as `fix/ENG-015-agency-reseller-brand-scoping`,
+  same name both repos, same convention `ENG-011`/`ENG-013` used (`fix/`
+  prefix rather than `feat/`, matching `ENG-022`'s own precedent for a
+  security-typed ticket).
+
+  **Re-verified the design's and `ADR-006`'s schema claims directly against
+  tracked migrations, rather than trusting either document's own citations**
+  — no live Postgres or Supabase MCP connection reachable this pass
+  (narrower than `ENG-007`/`ENG-011`/`ENG-013`'s own build passes, which had
+  a working read-only MCP fallback; `deno`/`docker`/`supabase` binaries are
+  present on this host but no authenticated/linked session was available).
+  Read `20250729143357_initial_restaurant_rls.sql` in full: confirmed
+  "Admins can manage all restaurants" (`role IN ('admin','sub-admin')`,
+  `FOR ALL`) and "Restaurant owners can manage their own restaurant"
+  (`auth.uid() = id`, `FOR ALL`) are the only two `INSERT`-capable policies
+  on `restaurants` today — neither grants a partner anything. Read all
+  three RLS-lockdown migrations `ADR-006` cites
+  (`20250814065341`/`065439`/`065606`) in full: confirmed the `USING
+  (false)` public-SELECT lockdown and `restaurants_public` view exist
+  exactly as described. Grepped for a policy already named "Partners can
+  add restaurants to their assigned brands" (none — no collision) and for
+  `brands`' own `CREATE TABLE` or any index on `partner_id` in tracked
+  migration history (neither exists — independently confirms `ADR-006`'s
+  untracked-schema-history claim for this table, not just trusted it).
+  Nothing here had drifted since the design was written on 2026-08-31.
+
+  **Built per the architect's design
+  (`agents/architect/designs/ENG-015-agency-reseller-brand-scoping.md`) and
+  `ADR-006`, read fresh at the start of this pass:**
+
+  - **`aiorders-api`** (`b6b3024`) —
+    `admin-portal/handlers/restaurants.ts`: added `isStaff(profile)`
+    (admin/sub-admin, checked in `role` or `additional_roles`) and
+    `getPartnerBrandIds(partnerId, adminSupabase)` (one query,
+    `brands.select('id').eq('partner_id', partnerId)`, service-role client
+    per `ADR-006` — bypasses `brands`' own untracked RLS deliberately, not
+    an oversight). Applied to all three functions the design named:
+    `getRestaurants` filters `.in('brand_id', brandIds)` for non-staff, or
+    returns `{success:true, data:[], count:0}` immediately if the caller
+    owns no brand yet (a valid state, not an error); `getRestaurantById`
+    and `updateRestaurant` both check the target row's `brand_id` against
+    the caller's owned-brand set before returning/writing, 403 `Access
+    denied to this restaurant` on mismatch (wording matches
+    `_shared/restaurantAccess.ts`'s existing equivalent, confirmed by
+    reading that file this pass, not invented fresh). `updateRestaurant`
+    needed one extra read (`select('brand_id')` before the update) the
+    design's Interfaces section implied but didn't spell out as a
+    separate query — noted here since the design text alone left it to
+    the build hop, same category of gap `ENG-013`'s own build pass logged
+    for its response-shape ambiguity. New migration
+    `20260903120000_partner_restaurant_insert_scoping.sql`: the one
+    `INSERT` policy verbatim from the design, `WITH CHECK (approved =
+    false AND ...)`. Full schema reasoning, index check, and rollback:
+    `agents/database/migrations/ENG-015-agency-reseller-brand-scoping.md`
+    (written this pass).
+  - **`aiorders-admin-hub`** (`8c0db46`) — `AddRestaurantModal.tsx`: added
+    `useAuth()` (confirmed `profile.role`'s exact type union in
+    `AuthContext.tsx` this pass rather than assuming it), changed the
+    new-restaurant insert's hardcoded `approved: true` to a conditional
+    (`false` for `partner-admin`/`partner-user`, `true` otherwise) — the
+    only way a partner's insert lands held instead of being rejected
+    outright by the new RLS policy once both repos' branches merge
+    together. The `update`-mode branch (existing-restaurant Google-Place
+    connect) is untouched — confirmed it never sets `approved`.
+  - **Out of scope, unchanged, per the design's own Out-of-scope section:**
+    `updateBrandOwner()` (same file) — no role/ownership check at all, a
+    real but distinct-resource finding already on `proposals.md`
+    (2026-08-31 row), not this ticket's to fix.
+
+  **Self-tested, per this state's own exit condition and
+  `engineering-standards.md`'s checklist:**
+  - `deno check supabase/functions/admin-portal/handlers/restaurants.ts` —
+    clean, no errors. No `deno.json` in this repo (already-named gap,
+    `config/projects.md`), so a direct single-file check, same as
+    `ENG-013`'s own precedent.
+  - `npm run lint` in `aiorders-admin-hub` — repo-wide, 150 pre-existing
+    errors / 31 warnings (identical count to `ENG-013`'s own build pass,
+    confirming nothing here shifted the baseline). Grepped the output for
+    `AddRestaurantModal.tsx` specifically: one pre-existing
+    missing-dependency warning (line 132, `searchPlaces`) and four
+    pre-existing `no-explicit-any` errors (lines 276/310/318/334) — each
+    individually re-read against the current file and confirmed to be a
+    prior `: any` annotation shifted by exactly +2 lines (this diff's own
+    2-line insertion: one import, one `useAuth()` call), not a new one.
+    Zero new lint issues introduced.
+  - `npm run build` in `aiorders-admin-hub` — clean, 3340 modules, same
+    pre-existing large-chunk warning `ENG-011`'s/`ENG-013`'s own
+    verification already named.
+  - No live Postgres reachable to execute the migration itself (see
+    schema-verification paragraph above); full detail and gate verdict
+    (**pass**) in the migration doc.
+
+  **Artifact enumeration run before finishing** (step 6b):
+  `grep -rn "restaurants\.ts"` and `grep -rln "ENG-015"` across both roots'
+  `agents/`, `skills/`, `lib/`, `docs/`. Most hits are **location**
+  references (other tickets' designs/reviews citing this file, or a
+  same-named-but-different file under `brand-portal/`,
+  `restaurant-portal-onboarding/`, or `restaurant-marketplace/` — confirmed
+  by path, not by filename alone, that these are different files) or
+  historical record (observations.md's own account of what `ENG-015`'s
+  design pass found, still accurate as history regardless of this pass's
+  fix). One real conflict found and fixed in this hop:
+  **`agents/eng-manager/proposals.md`'s 2026-08-29 row** (architect-filed)
+  still named `updateRestaurant()` as open, future S–M work, filed two days
+  *before* the 2026-08-31 design deliberately pulled that exact function
+  into `ENG-015`'s own scope (a reasoned, logged exception to the PRD's
+  general "no full audit" non-goal — same resource, same AC2 wording, not
+  a different page found by auditing). Now that this pass has actually
+  shipped that fix, the row was stale in a way that would have asked the
+  approver to approve future work already done. Corrected in place
+  (inline addendum, matching this file's own established correction style
+  — see its 2026-09-02 row): narrowed the row to `updateBrandOwner()`
+  alone, which now **fully overlaps** the 2026-08-31 row below it (already
+  flagged as merely "overlapping" in `observations.md`, 2026-09-01 — this
+  correction closes that gap the rest of the way) — cross-referenced both
+  rows to each other rather than deleting either (proposals rows aren't
+  this pass's to remove unilaterally, per that same observation). One
+  `ENG-019` citation of `restaurants.ts` (forward-looking: "read `ENG-015`'s
+  review before writing the audience-query code") checked and left alone —
+  prospective advice about a review that will exist once this ticket
+  reaches `in-review`, not a claim this pass's diff contradicts.
+
+  **Branches committed and pushed, both repos**:
+  `fix/ENG-015-agency-reseller-brand-scoping` — `aiorders-api` (`b6b3024`,
+  2 files: the handler + the migration), `aiorders-admin-hub` (`8c0db46`,
+  1 file: the modal). Both `git push -u origin ...` succeeded; no PR opened
+  yet (devops's release-readiness step, per the pipeline).
+
+  **PR body, both repos** (`building`'s own exit condition):
+
+  ***`aiorders-api`***
+  - *What it does:* Brand-scopes `getRestaurants`/`getRestaurantById`/
+    `updateRestaurant` in `admin-portal/handlers/restaurants.ts` to a
+    partner's own `brands.partner_id` set, enforced in code (service-role
+    client, explicit filter/check — not RLS, see `ADR-006`). Adds one RLS
+    `INSERT` policy letting a partner add a restaurant under their own
+    brand, hard-held for review (`WITH CHECK (approved = false)`).
+  - *What it deliberately does not do:* Touch `updateBrandOwner()` (same
+    file, different resource, filed separately in `proposals.md`); add a
+    partner-scoped `SELECT` policy on `restaurants` (code-side filter is
+    the enforcement boundary per `ADR-006`, not RLS); change staff
+    (`admin`/`sub-admin`) behavior at all.
+  - *Uncertainties:* Neither the handler diff nor the new policy has
+    executed against any live Postgres this pass — verified instead by
+    re-reading every relevant tracked migration directly (no read-only MCP
+    fallback available this time, unlike `ENG-007`/`ENG-011`/`ENG-013`).
+    Full reasoning: `agents/database/migrations/ENG-015-*.md`.
+  - *What to review hardest:* The `updateRestaurant` ownership check runs
+    *before* the update, on a freshly-fetched `brand_id` — not the
+    post-update row — so a partner cannot use this endpoint to move a
+    restaurant they own into a brand they don't (the check would already
+    have rejected the call). Also: the new policy's `approved = false`
+    clause is what makes `AddRestaurantModal.tsx`'s matching change
+    load-bearing, not cosmetic — the two must ship together (named as a
+    sequencing risk in the design, not an open one, since both are in this
+    same ticket's branch).
+
+  ***`aiorders-admin-hub`***
+  - *What it does:* `AddRestaurantModal.tsx` now sends `approved: false`
+    for a partner-admin/partner-user's new-restaurant insert instead of
+    the unconditional `true` every caller got before.
+  - *What it deliberately does not do:* Touch the `update`-mode branch
+    (Google-Place reconnect for an existing restaurant) — confirmed it
+    never sets `approved` either way. No UI change communicating "pending
+    review" to the partner — not asked for by any acceptance criterion.
+  - *Uncertainties:* None functional. Four pre-existing `no-explicit-any`
+    lint errors and one pre-existing missing-dependency warning in this
+    file, all confirmed unchanged by this diff (see Self-tested above).
+  - *What to review hardest:* That this change alone, without the paired
+    `aiorders-api` migration, would make every partner-attempted insert
+    silently *succeed* as auto-approved (today's actual bug) rather than
+    fail — the two repos' PRs must land together, not independently, for
+    AC3/AC5 to both hold.
+
+  **1 transition this pass** (`ready → building`), well under the cap of
+  4 — `in-review`+`in-qa` (combined hop, this board's established
+  convention) is a fresh session's work, per `eng_build_loop.md`'s "a pass
+  stops after `building` on purpose." **Consequence:** no machine-WIP
+  change — `ENG-015` was already the sole occupant of the counted
+  `ready`..`ready-to-ship` range; `building` is still inside it.
+  Approver-facing WIP and approval cap both untouched — no gate raised
+  this pass. `time_spent`/`time_remaining` set in frontmatter (~2h this
+  pass; review/QA/security/release-readiness hops remain).
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched,
+  per this event's own narrower contract.
+
+  **Notify sweep:** nothing to raise — `building` needs no approver gate.
+  Nothing to nudge (out of this event's scope; the whole-board nudge
+  check ran fresh in the immediately-prior `scheduled` pass).
+
+  **Observations:** none new beyond the `proposals.md` correction above
+  (logged there, not duplicated here).
+
+  `chained: ENG-015` — `building` transitions to the combined review+QA
+  hop next, owned by `principal-engineer`/`qa`, not the approver, not
+  blocked, not terminal, not held by a cap (machine WIP unaffected, still
+  `ENG-015`'s own slot). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  before this pass exits. Post-pass `eng-gate-check.sh`, scoped
+  (`ENG-015`) and whole-board: both exit 0, clean.
+
+  business-os itself left uncommitted — same standing default every prior
+  pass has used; the commit-convention question
+  (`[[project-buildloop-instance-repo-commit-gap]]`) remains open, not
+  re-decided here.
+
+- `2026-09-03` **code review round 1: FAIL — automatic-failure #3/#10 (zero
+  test coverage, third occurrence this week), plus a real authorization bug
+  the missing tests let through** (principal-engineer, `continue` event
+  pass, context `ENG-015` — this ticket's own turn at the front of
+  `traces/.pending`, per the prior `continue ENG-015` (build) pass's own
+  `chained: ENG-015`). Narrow scope per the event's own contract (resume
+  this ticket only; no board-wide sweep). Mode check clean (business-os
+  `.env` → `MODE=active`; instance `config/config.yaml` → `mode:` empty).
+  Pre-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-015`) and whole-board: both exit 0, clean.
+
+  **Combined review + quality hop**, per `eng_build_loop.md` step 6 — both
+  gates read the same diff in one session. Reviewed `git diff
+  origin/main...HEAD` on both worktrees (fresh `git fetch` first),
+  confirmed each matches the ticket's own recorded commits exactly
+  (`aiorders-api@b6b3024`, `aiorders-admin-hub@8c0db46` — `git status`/`git
+  log -1` on both, no drift, both clean but for `aiorders-api`'s
+  pre-existing untracked `deno.lock`, already named on `ENG-022`'s log).
+  `aiorders-api`: 2 files, 93 insertions / 4 deletions (`restaurants.ts`,
+  one new migration). `aiorders-admin-hub`: 1 file, 7 insertions / 1
+  deletion (`AddRestaurantModal.tsx`).
+
+  **Automatic-failure scan (`engineering-standards.md`):**
+
+  | # | Check | Result |
+  |---|---|---|
+  | 1 | Secret/credential/token/key committed | Clean |
+  | 2 | Silent exception swallow | Clean — `getPartnerBrandIds`'s thrown error propagates to each caller's existing `catch`, which logs (`console.error`) and returns 500; not swallowed |
+  | 3 | Missing test on a bug fix | **Hit** — see below |
+  | 4 | Untyped public interface, undocumented | Clean — `getPartnerBrandIds`'s `adminSupabase: any` matches the file's pre-existing `AuthenticatedRequest.adminSupabase: any` shape, not a fresh violation |
+  | 5 | Unbounded query / missing pagination | Clean — `getPartnerBrandIds` is scoped to one partner's own rows; the unpaginated `getRestaurants` query predates this diff |
+  | 6 | New dependency, no justification | Clean |
+  | 7 | Unrelated refactor bundled in | Clean — diff is exactly the three functions/helpers/migration/modal-field the design describes |
+  | 8 | Commented-out code / unowned `TODO` | Clean |
+  | 9 | Datastore write bypassing the data layer | Clean — no new write path beyond the design's own migration and the pre-existing `updateRestaurant`/insert calls |
+  | 10 | Auth path changed, no failure-case test | **Hit** — same gap as #3, from the auth-path angle |
+
+  **#3/#10 — zero test coverage, third occurrence of this exact shape in one
+  week.** Neither `isStaff`/`getPartnerBrandIds` nor any of the three
+  brand-scoping branches in `getRestaurants`/`getRestaurantById`/
+  `updateRestaurant` has a test. No test proves a partner sees only their
+  own brand's restaurants (AC1/2), no test proves a partner is denied a
+  restaurant outside their brand on the by-id or update paths (AC2/4), no
+  test proves the empty-brand-list early return. Direct precedent sits in
+  the same directory today: `brands.test.ts`, `loyalty-config.test.ts` —
+  and `ENG-022`, this same board, same day, shipped 24 tests for the
+  identical class of fix (tenant-scoped access control) in a sibling
+  handlers directory. This is the **third** occurrence of automatic-failure
+  #10 on this exact `admin-portal/handlers/` family this week — `ENG-013`
+  round 1 (2026-08-29) and `ENG-008` round 1 (2026-08-30), both explicitly
+  logged as "not yet a third" in
+  `agents/principal-engineer/notebook/2026-08-29-review-log.md` and
+  `.../2026-08-30-review-log.md`, waiting for exactly this. Crosses
+  `skills/code-review-gate/SKILL.md` step 10's promotion threshold — flagged
+  below rather than actioned directly (see Observations).
+
+  **Blocking correctness finding, independent of the missing tests and more
+  serious: `updateRestaurant` lets a partner bypass AC5 and reassign a
+  restaurant to a brand they don't own.**
+  `supabase/functions/admin-portal/handlers/restaurants.ts:207–232`. The new
+  ownership check (207–223) validates only that the restaurant's *existing*
+  `brand_id` belongs to the caller; line 225 (`const { brand_owner,
+  ...updates } = body;`) then passes every other field in the request body
+  — unchecked — straight to `adminSupabase.from('restaurants').update
+  (updates)`, the **service-role** client, so RLS provides no backstop here
+  the way it does on the INSERT path (frontend conditional *and* the new
+  `WITH CHECK` clause). Concretely:
+  - **AC5 bypass.** A partner creates a restaurant under their own brand
+    (correctly held, `approved: false`, per this same ticket's own fix),
+    then immediately calls `PUT /admin-portal/restaurants/{id}` with
+    `{approved: true}`. The ownership check passes (it's their restaurant),
+    `updates` includes `approved: true` unfiltered, and the write lands —
+    self-approving a row this ticket's entire AC5/migration exists to keep
+    held for staff review. Not a hypothetical UI gap: AC2's own wording
+    ("enforces the same brand scoping itself... not just a UI filter") is
+    this ticket's own stated reason the API must be safe independent of
+    what any current frontend happens to send, and that reasoning applies
+    here exactly as it does to the read paths.
+  - **Brand reassignment.** The same call with `{brand_id: <a brand the
+    caller does not own>}` succeeds for the same reason — the check never
+    inspects the *incoming* `brand_id`, only the row's current one.
+  - The build hop's own PR body ("What to review hardest") claims "a
+    partner cannot use this endpoint to move a restaurant they own into a
+    brand they don't (the check would already have rejected the call)" —
+    checked directly against the code, and this is incorrect: the check
+    inspects `existing.brand_id` (line 217) and never touches
+    `updates.brand_id` or `updates.approved` at all.
+  - **Fix shape** (for the next build hop, not applied here): when
+    `!isStaff(user.profile)`, strip `approved` and `brand_id` from `updates`
+    before the write (or 403 if either is present) — the same "server
+    enforces it, not just the client" principle this ticket already applies
+    to the INSERT path.
+
+  **Verified independently, not trusted from the build hop's own claims:**
+  `deno check supabase/functions/admin-portal/handlers/restaurants.ts` —
+  clean, matches the build log; typecheck cannot catch either finding above
+  (both are authorization-logic gaps, not type errors). Confirmed the
+  `AddRestaurantModal.tsx` `update`-mode branch (Google-Place reconnect)
+  never sets `approved`, matching the build log's own claim. Confirmed
+  `AuthContext.tsx`'s `Profile['role']` union includes the exact literals
+  (`'partner-admin' | 'partner-user'`) the modal's new conditional checks
+  against — no typo. `admin-portal/index.ts`'s `authenticate()` confirms
+  `user.profile` (the shape both `isStaff` calls and this review's own
+  reasoning depend on) is `{role, additional_roles}`, matching the design.
+  Wording of the new 403 (`'Access denied to this restaurant'`) matches
+  `_shared/restaurantAccess.ts`'s existing convention verbatim. No migration
+  name collision (`grep -rln` across `supabase/migrations/`: one match,
+  this ticket's own file).
+
+  **Verdict: FAIL, round 1.** No receipt written
+  (`agents/principal-engineer/reviews/ENG-015.md` stays absent, per
+  `skills/code-review-gate/SKILL.md` step 8 — a receipt is written on `pass`
+  only). QA's hop not run this round — discarded per the combined-hop
+  design (the code is about to change); no
+  `agents/qa/test-plans/ENG-015.md` written.
+
+  **0 net transitions** — `state`/`owner` unchanged (`building`/
+  `eng-manager`), same precedent `ENG-008`'s and `ENG-013`'s own round-1
+  entries set. `machine_wip` unaffected, still 1/1 (`ENG-015`).
+  Approver-facing WIP and approval cap both unaffected — a code-review
+  failure is not an approver-facing gate. `time_spent`/`time_remaining`
+  updated in frontmatter.
+
+  **Dead-end sweep (scoped to this event):** nothing else on this ticket's
+  own lineage to resume. **Notify sweep:** nothing raised — a review
+  failure routes back to `building`, not to the approver.
+
+  **Observations filed** (`observations.md`): the third-occurrence
+  standards-promotion flag for `engineering-standards.md` step 10 (file
+  lives in the read-only department tree — noted, not edited, same
+  precedent `ENG-010`'s 2026-09-02 security-gate entry set for exactly this
+  situation); and, unrelated to this ticket's own diff, a discrepancy
+  noticed while reading instance config for this hop —
+  `config/config.yaml`'s `wip.approver_limit` reads `unlimited` (raised
+  2026-09-02, per the file's own comment) while this board's own header and
+  every dated entry since have kept computing and enforcing an `8/2, over
+  cap` limit of 2 — flagged, not resolved, since it's outside this
+  narrowly-scoped ticket and touches board-wide accounting this event's own
+  contract doesn't cover.
+
+  `chained: ENG-015` — `building` is agent-owned (round 1's two findings
+  are the next hop's own work: strip the mass-assignment gap, add the
+  missing tests), not the approver, not blocked, not terminal, not held by
+  a cap. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+  business-os itself left uncommitted — same standing default every prior
+  pass has used; the commit-convention question
+  (`[[project-buildloop-instance-repo-commit-gap]]`) remains open, not
+  re-decided here.
+
+- `2026-09-03` **round-1-fix build hop: mass-assignment bug closed, 22 tests
+  added** (eng-manager, `continue` event pass, context `ENG-015` — this
+  ticket's own turn at the front of `traces/.pending`, per the round-1
+  review's own `chained: ENG-015`). Narrow scope per the event's own contract
+  (resume this ticket only; no board-wide sweep). Mode check clean
+  (business-os `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-015`) and whole-board: both exit 0, clean. Both worktrees
+  already on `fix/ENG-015-agency-reseller-brand-scoping`, clean but for
+  `aiorders-api`'s pre-existing untracked `brand-portal/deno.lock` (same one
+  named on every prior pass's log, still not this ticket's).
+
+  **Fix (`aiorders-api`, `admin-portal/handlers/restaurants.ts`).** Read
+  round 1's own finding fresh against the live file rather than trusting the
+  review's prose alone — confirmed line-for-line: the ownership check at
+  what was then lines 207–223 validated only `existing.brand_id`, then
+  `const { brand_owner, ...updates } = body` let every other field, including
+  `approved`/`brand_id`, reach the service-role `.update(updates)`
+  unfiltered. Applied the review's own first-listed fix shape (strip, not
+  403) over the "or 403 if either is present" alternative it also named:
+  a partner caller that merely echoes back a restaurant's current
+  (unchanged) `approved`/`brand_id` value — a realistic shape for a form that
+  round-trips the full record — would be rejected outright under a
+  presence-based 403, where stripping harmlessly no-ops on an unchanged
+  value and still blocks a changed one. No existing precedent in this
+  codebase settles it either way (`brand-portal/profiles.ts`'s own
+  update-field handling is an allow-list building `updateData` field-by-field,
+  not a strip/reject-on-forbidden-field pattern, and doesn't even guard
+  `role` — a distinct, real gap, out of scope, not filed here since it isn't
+  this pass's own diff to extend into). Added `isStaff`'s companion,
+  `stripPartnerRestrictedFields(updates)`, deleting `approved`/`brand_id`
+  from a shallow copy; `updateRestaurant` now computes `staff =
+  isStaff(user.profile)` once (previously called twice) and applies the
+  strip only on the non-staff branch — staff behavior (AC6) byte-for-byte
+  unchanged. Exported both `isStaff` and the new helper (previously
+  module-private) to unit-test them directly, matching this file family's
+  own convention (`brands.ts`'s exported `deriveStage`/`deriveHealth`,
+  `loyalty-config.ts`'s exported `hasLoyaltyConfigAccess`) rather than only
+  exercising them indirectly through the HTTP handler.
+
+  **Tests added:** `admin-portal/handlers/restaurants.test.ts`, new file, 22
+  `Deno.test` cases — zero existed before this hop, the exact gap round 1's
+  #3/#10 automatic-failure hit named. Modeled the fake-Supabase-client shape
+  directly on `ENG-022`'s reviewed `offers.test.ts` (this same board, same
+  day, the review's own cited precedent for this class of fix): a
+  `.from(table)` router over per-table resolvers supporting
+  `select`/`update`/`eq`/`in`/`order`/`single`/`maybeSingle`/`then`, with
+  every `.update()` call recorded so a test can assert on the exact payload
+  that would have reached Postgres — not just on the HTTP response. Coverage,
+  mapped to what round 1 named as missing: `isStaff` (7 cases: admin,
+  sub-admin, partner-admin, partner-user, `additional_roles` both ways, a
+  missing `additional_roles` not throwing) and the new strip helper (2
+  cases) as direct pure-function tests; `getRestaurants` — staff unfiltered
+  (AC6), partner sees only their own brand (AC1/AC2), a brand-less partner
+  gets `{success:true,data:[],count:0}` **without the `restaurants` table
+  ever being queried** (proved by a `from()` override that throws if that
+  table is touched on this branch — the specific "empty-brand-list early
+  return" gap round 1 named, same throw-on-unstubbed-table technique
+  `loyalty-config.test.ts`'s `uncalledAuth` already established for this
+  repo); `getRestaurantById` — staff unrestricted, partner allowed within
+  brand, partner denied (403) outside it, partner denied on a
+  `brand_id: null` row (AC2); `updateRestaurant` — staff can still set
+  `approved`/`brand_id` (AC6), partner can update an unrelated field on
+  their own restaurant, partner denied (403) outside their brand with **zero
+  `.update()` calls recorded** (proves the ownership check still runs before
+  any write), plus the three cases naming round 1's own findings directly:
+  self-approve blocked, brand reassignment blocked, and both stripped
+  together while an accompanying legitimate field (`name`) still lands in
+  the same write — proving this is a strip, not a full-body rejection.
+
+  **Mutation check, executed, not hand-traced — same rigor `ENG-022`'s own
+  round-1 review used and was praised for in its own verdict.** Temporarily
+  reverted the fix line (`const updates = rest` — the exact pre-fix
+  behavior) and re-ran the suite: **exactly** the three tests naming round
+  1's findings by name went red (`self-approve`, `brand reassignment`, `both
+  stripped together`); all other 19 stayed green, confirming those three are
+  wired to this specific fix and not vacuous, and that nothing else changed
+  behavior. Restored the fix; `diff` against a pre-mutation backup confirmed
+  byte-identical restoration; re-ran clean.
+
+  **Self-tested:**
+  - `deno check supabase/functions/admin-portal/handlers/restaurants.ts` —
+    clean, no errors.
+  - `deno test --no-check supabase/functions/admin-portal/handlers/restaurants.test.ts`
+    — **22 passed, 0 failed.**
+  - `deno test --no-check supabase/functions/admin-portal/handlers/` (whole
+    directory, checking for cross-file interference) — first run: **77
+    passed, 1 failed**
+    (`brands.test.ts`: "deriveHealth: exactly 14 days ago is still active
+    (boundary is inclusive)"). Investigated rather than dismissed:
+    `brands.ts`/`brands.test.ts` are untouched by this diff
+    (`git diff --stat origin/main -- ...brands.ts ...brands.test.ts` empty on
+    both), the same file passed 12/12 twice in isolation immediately after,
+    and a second full-directory run passed **78/78** with no code change in
+    between — a pre-existing, wall-clock-boundary-sensitive flake in a test
+    literally named "boundary is inclusive" comparing against `Date.now()`,
+    not a regression this diff introduced. Filed to `observations.md`, not
+    fixed — different file, different ticket, and file-touch is the
+    documented boundary for what a build hop corrects in passing (step 6b),
+    not open-ended flake-hunting.
+  - No live Postgres reachable this pass either (same gap the original build
+    hop logged); nothing in this hop's diff touches schema or the migration,
+    so nothing new to re-verify there.
+
+  **Artifact enumeration run before finishing (step 6b):** `grep -rln
+  "updateRestaurant\|mass-assignment\|mass assignment\|AC5-bypass\|AC5 bypass"`
+  across `agents/` and `inbox/` (both roots) and the department tree. Every
+  hit is either this ticket's own artifacts (this file, the PRD, the design,
+  `ADR-006` — updated by this same entry) or already-correct history: the
+  2026-08-29 and 2026-08-31 `proposals.md` rows about this file's
+  `updateRestaurant()`/`updateBrandOwner()` pair were already corrected by
+  the prior build hop (2026-09-03) to say `updateRestaurant()` "is no longer
+  open" and narrow both rows to `updateBrandOwner()` alone — re-read fresh
+  this pass, still accurate: neither row claims anything about the
+  mass-assignment gap specifically that this hop's fix would contradict, and
+  `updateBrandOwner()` (the only thing either row still calls open) is
+  untouched by this hop, correctly. The original filed finding,
+  `inbox/_processed/2026-08-29-restaurant-detail-write-partner-exposure.md`,
+  is frozen history in `_processed/` per step 3's own convention — not
+  re-edited. Nothing to correct this round.
+
+  **0 transitions** — `state`/`owner` unchanged (`building`/`eng-manager`),
+  same shape as every round-1-fix hop on this board that doesn't itself
+  reach the next gate. Machine WIP unaffected, still 1/1 (`ENG-015`).
+  Approver-facing WIP unaffected — no gate raised. `time_spent`/
+  `time_remaining` updated in frontmatter.
+
+  **Committed and pushed, `aiorders-api` only** (`aiorders-admin-hub` has no
+  round-1 findings — both were backend-only — so it's untouched this hop):
+  `99ea353` on `fix/ENG-015-agency-reseller-brand-scoping`, 2 files (378
+  insertions, 3 deletions — the handler fix plus the new test file). Pushed
+  clean: `b6b3024..99ea353`. No PR exists yet for either repo (devops's
+  release-readiness step, unchanged from the original build hop).
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  **Notify sweep:** nothing to raise or nudge — `building` needs no
+  approver gate.
+
+  **Observations filed** (`observations.md`): the pre-existing
+  `brands.test.ts` `deriveHealth` boundary-timing flake found while
+  self-testing (above) — unrelated file, not this ticket's to fix, flagged
+  for whoever next touches that file's health-bucket thresholds.
+
+  `chained: ENG-015` — `building` → combined review+QA hop next (round 2),
+  owned by `principal-engineer`/`qa`, not the approver, not blocked, not
+  terminal, not held by a cap (machine WIP unaffected, still `ENG-015`'s own
+  slot). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+  business-os itself left uncommitted — same standing default every prior
+  pass has used; the commit-convention question
+  (`[[project-buildloop-instance-repo-commit-gap]]`) remains open, not
+  re-decided here.
+
+- `2026-09-03` **code review + QA round 2: PASS — `building → in-security`**
+  (principal-engineer/qa, `continue` event pass, context `ENG-015`, its own
+  turn at the front of `traces/.pending`). Both round-1 findings verified
+  fixed, independently re-derived (mutation check re-run fresh, not
+  trusted from the fix hop). Automatic-failure scan: clear. Receipts:
+  `agents/principal-engineer/reviews/ENG-015.md`,
+  `agents/qa/test-plans/ENG-015.md`. Full reasoning, non-blocking notes,
+  and QA's one named coverage gap (AC3/4/5 — the add-location write path
+  rests on the new RLS policy + a frontend conditional, neither
+  automatable this pass — no live Postgres, no test runner on
+  `aiorders-admin-hub`; de-risked by a full policy-history static trace,
+  manual staging smoke-test recommended, not gated on):
+  `agents/principal-engineer/notebook/2026-09-03-review-log.md`,
+  `agents/qa/notebook/2026-09-03-coverage-gaps.md`. **1 transition**
+  (`building → in-security`). Machine WIP unaffected (still `ENG-015`'s own
+  slot — `in-security` is inside the counted `ready`..`ready-to-ship`
+  range). Approver-facing WIP/approval cap untouched — no gate raised.
+  `time_spent`/`time_remaining` updated in frontmatter. Pre/post-pass
+  `eng-gate-check.sh`, scoped and whole-board: both exit 0, clean.
+
+  `chained: ENG-015` — `in-security` is agent-owned (security), not the
+  approver, not blocked, not terminal, not held by a cap. Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  before this pass exits.
+
+- `2026-09-03` **security gate: PASS — `in-security → ready-to-ship`**
+  (security, `continue` event pass, context `ENG-015` — this ticket's own
+  turn at the front of `traces/.pending`, per the prior `continue ENG-015`
+  (review+QA round 2) pass's own `chained: ENG-015`). Narrow scope per the
+  event's own contract (resume this ticket only; no board-wide sweep). Mode
+  check clean (business-os `.env` → `MODE=active`; instance
+  `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: both exit 0, clean.
+
+  **Threat-modeled the change** (four questions, `security-gate/SKILL.md`
+  step 2) before walking the checklist: no new attacker-controlled input: (
+  the caller's own `restaurant_id`/`brand_id`/`approved` claims are no
+  longer trusted at face value); no new capability granted (this diff
+  *revokes* platform-wide reach, and the one new working path —
+  add-restaurant — lands explicitly held for review); no new data exposed
+  (narrows exposure, this is the fix for the ticket's own P1 leak); blast
+  radius of a compromised partner session now bounded to that partner's own
+  brand(s), against platform-wide reach before this diff.
+
+  **Independently re-ran rather than trusted the round-2 review's/QA's own
+  accounts:** `deno check restaurants.ts` clean; `deno test --no-check
+  restaurants.test.ts` — 22/22, matched test-by-test by name against both
+  prior hops' own logs. Did not re-run the mutation check a third time
+  (round-1-fix and round-2 review each already executed and reported it
+  independently same day — re-deriving again adds no material confidence).
+  Read the full current `restaurants.ts` and the new migration in full, not
+  only their diffs.
+
+  **Walked OWASP A01–A10 per `security-baseline.md`**, each marked
+  applicable or `n/a` with a reason (full table:
+  `agents/security/reviews/ENG-015.md`). A01 (this ticket's own category):
+  all three functions re-confirmed correctly brand-scoped; both round-1
+  findings (self-approve, brand-reassignment) re-verified closed by reading
+  the live diff directly, not only the receipts. A03/A04 reasoned through
+  explicitly rather than assumed: the query builder is used throughout (no
+  raw SQL), and the new INSERT policy's `WITH CHECK` fails closed on an
+  omitted/null `approved` (Postgres evaluates `WITH CHECK` after column
+  defaults apply, and treats `NULL` as a failed check the same as `false`).
+  A05/A09 non-blocking notes only, both pre-existing and unchanged by this
+  diff. Secrets scan (diff and branch history, both repos): clean. No new
+  dependencies.
+
+  **One new finding, more specific than anything named so far, non-blocking
+  — RLS activation on `public.restaurants` itself is unverified from this
+  repo**, a layer beneath the policy-*logic* trace QA already ran assuming
+  RLS is active. No migration in tracked history creates the table or
+  enables RLS on it — the same untracked-schema-history gap `ADR-006`
+  already names for `brands`, now confirmed at the RLS-toggle level for
+  `restaurants` too. Reasoned, not asserted as a live defect: this table's
+  own multi-migration public-SELECT lockdown history would be pointless
+  theatre unless RLS has been enforced throughout, and no incident in this
+  business's history suggests otherwise. Not fixed blind — a defensive
+  `ENABLE ROW LEVEL SECURITY` would be an unbounded-blast-radius change
+  across all four frontends' direct-client callers, considered and
+  rejected, same reasoning that kept `updateBrandOwner()` out of this
+  ticket. Folded into a sharpened version of QA's own already-planned
+  manual staging smoke test (confirm a test partner's insert/update is
+  actually rejected or held, never unrestricted) rather than filed as a
+  new proposal. Full reasoning and a second, pre-existing, already-tracked
+  finding (verbose `error.message` in this file's catch blocks, not
+  re-proposed): `agents/security/reviews/ENG-015.md`, Findings #1–2; also
+  logged to `agents/security/notebook/2026-09-03-findings.md`.
+
+  **Verdict: PASS.** Zero blocking findings. Receipt written
+  (`agents/security/reviews/ENG-015.md`); `links.security_review` set on
+  this ticket in the same edit, per `security-gate/SKILL.md` step 9 (a
+  receipt is written on `pass` only).
+
+  **1 transition** (`in-security → ready-to-ship`). **Consequence:** no
+  machine-WIP change — `ready-to-ship` is still inside the counted
+  `ready`..`ready-to-ship` range, `ENG-015` remains the sole occupant.
+  Approver-facing WIP unaffected — this hop raises no gate; the L1 merge
+  request is devops's own next hop. `time_spent`/`time_remaining` updated
+  in frontmatter; `owner` moves `security → devops`.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  **Notify sweep:** nothing to raise or nudge this hop —
+  `ready-to-ship` needs no approver gate yet; that comes from devops's own
+  release-readiness hop next. **Observations:** none beyond what's already
+  in the two notebook entries above (both are security findings, filed to
+  the security notebook per convention, not `observations.md`).
+
+  `chained: ENG-015` — `ready-to-ship` is agent-owned (devops), not the
+  approver, not blocked, not terminal, not held by a cap (machine WIP
+  unaffected, still `ENG-015`'s own slot). Firing
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-015`
+  before this pass exits. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: see pass notes in `agents/eng-manager/board/_index.md`.
+
+  business-os itself left uncommitted — same standing default every prior
+  pass has used; the commit-convention question
+  (`[[project-buildloop-instance-repo-commit-gap]]`) remains open, not
+  re-decided here.
+
+  business-os itself left uncommitted — same standing default; commit
+  question remains open, not re-decided here.
+
+- `2026-09-03` **release-readiness: PASS — `ready-to-ship → blocked`, both
+  PRs opened** (devops, `continue` event pass, context `ENG-015` — this
+  ticket's own turn at the front of `traces/.pending`, per the prior
+  `continue ENG-015` (security gate) pass's own `chained: ENG-015`). Narrow
+  scope per the event's own contract (resume this ticket only; no
+  board-wide sweep). Mode check clean (business-os `.env` → `MODE=active`;
+  instance `config/config.yaml` → `mode:` empty). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-015`) and
+  whole-board: both exit 0, clean.
+
+  **Ran `skills/release-runner/SKILL.md` steps 1–4.** Step 1 (window check):
+  both `aiorders-api` and `aiorders-admin-hub` are registered **L1**
+  (`agents/eng-manager/config/projects.md`) — per the skill, step 1 does not
+  apply to L1 and this pass went straight to step 4. Step 2 (upstream
+  gates): all four receipts re-confirmed present and `pass` — code review
+  round 2 (`agents/principal-engineer/reviews/ENG-015.md`), quality
+  (`agents/qa/test-plans/ENG-015.md`), security
+  (`agents/security/reviews/ENG-015.md`), migration
+  (`agents/database/migrations/ENG-015-agency-reseller-brand-scoping.md`).
+  Step 3 (readiness gate): **rollback** — the migration doc's own rollback
+  (`DROP POLICY IF EXISTS "Partners can add restaurants to their assigned
+  brands" ON public.restaurants;`) is written and reasoned through as
+  independent of the handler-code changes in the same ticket, same bar this
+  instance's own precedent (`ENG-007`'s 2026-08-29 release-readiness entry)
+  already accepted given the standing no-live-DB constraint; the
+  `aiorders-admin-hub` side has no migration, rollback is reverting the one
+  commit. **Observability** — both functions' errors already propagate to
+  each caller's existing `catch` (`console.error` + Supabase function logs,
+  confirmed clean on the automatic-failure scan, round 1) and the new 403
+  denials are consistent with this codebase's own existing convention
+  (`_shared/restaurantAccess.ts`); nothing new and silent. **Cost** — no new
+  service, dependency, or infra: one additive RLS policy plus a code branch
+  and a one-field frontend conditional, $0/month; no cost notice required.
+  **Window** — n/a, both repos L1 (step 1 doesn't apply).
+
+  **Worked in the department's own worktrees, not the human's**
+  (`~/Documents/projects/_eng/aiorders-api`,
+  `~/Documents/projects/_eng/aiorders-admin-hub`), per skill step 4b.
+  Verified fresh rather than trusted the prior hops' own accounts: both
+  already on `fix/ENG-015-agency-reseller-brand-scoping`; `git status
+  --short --branch` clean but for `aiorders-api`'s pre-existing untracked
+  `supabase/functions/brand-portal/deno.lock` (same one named on every
+  earlier hop of this ticket, not this ticket's own file); `git log -1`
+  matches the ticket's own recorded commits exactly (`99ea353`, `8c0db46`).
+  `git fetch origin` both, then `git merge-base --is-ancestor
+  origin/fix/ENG-015-agency-reseller-brand-scoping origin/main` on each —
+  **not an ancestor on either repo**, confirming neither branch is merged
+  yet. `gh pr list --head fix/ENG-015-agency-reseller-brand-scoping --state
+  all` on both repos, before opening anything — empty on both, confirming no
+  PR already existed for this branch (unlike a same-named-branch collision,
+  not a concern here since both repos share the ticket's own branch name by
+  convention, not by accident).
+
+  **Opened both PRs** (skill step 4, L1 route — "any day, any time," not
+  gated by the window check): `aiorders-api` first (the backend the
+  frontend depends on, same ordering `ENG-013` used) —
+  https://github.com/harsimranwalia/aiorders-api/pull/10 — then
+  `aiorders-admin-hub` — https://github.com/harsimranwalia/aiorders-admin-hub/pull/8.
+  Each PR body states what it does, what it deliberately doesn't, the gates
+  it passed, and — in both directions — that the two must merge together,
+  not independently (the backend's new `approved = false` INSERT policy is
+  what makes the frontend's conditional load-bearing rather than cosmetic;
+  either alone leaves AC3/AC5 only half-satisfied, in opposite failure
+  directions). `links.pr` set on this ticket as a `{project: url}` map, same
+  format `ENG-013`'s own two-repo precedent established.
+
+  **Raised one L1 merge-request item covering both PRs**
+  (`inbox/2026-09-03-eng015-merge-request.md`), `pr_urls:` as a YAML list of
+  `{repo, url}` pairs per the current skill format (not the single
+  delimited-string format `ENG-011` used before the approver corrected it).
+  Named both round-1 findings' resolution, the security review's one
+  non-blocking RLS-activation finding and its folded-in staging-smoke-test
+  recommendation, and the already-tracked verbose-error-message finding
+  (not re-proposed). Ran
+  `departments/engineering/lib/eng-notify.sh raise` on it — exit 0 — and
+  stamped `notified: 2026-09-03T10:03:53` in its frontmatter (the script
+  sends the notification; stamping the field is this pass's own job, per
+  `eng_build_loop.md` step 7).
+
+  **1 transition** (`ready-to-ship → blocked`). **Consequence:** no
+  machine-WIP change — `blocked` sits outside the counted
+  `ready`..`ready-to-ship` range, so this pass **frees** `ENG-015`'s slot
+  (machine WIP `1/1 → 0/1`) for the next To-do-column candidate on a future
+  pass; not spent here, per the same precedent `ENG-004`/`ENG-022` set of
+  not dispatching newly-freed capacity onto a different ticket within the
+  pass that freed it. Approver-facing WIP: this ticket's blocked-on-approver
+  slot is held (per the Guards section, a `blocked` ticket on
+  `blocked_on: approver` counts against the approver-facing WIP limit too,
+  not only an open gate) — moot this instance, since `wip.approver_limit` is
+  currently `unlimited` (raised 2026-09-02; the board header's own `8/2,
+  over cap` text is the stale, unconverted accounting already flagged as a
+  discrepancy in this ticket's own round-1 review entry, not re-litigated
+  here). `owner` moves `devops → approver`. `time_spent`/`time_remaining`
+  set in frontmatter.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched.
+  **Notify sweep:** this pass's own merge-request item raised and stamped
+  above; nothing else to nudge — out of this narrowly-scoped event's own
+  contract to sweep the rest of the approver's queue.
+
+  **Observations:** none new — the `wip.approver_limit`
+  unlimited-vs-board-header discrepancy noted above is the same one already
+  filed in this ticket's own round-1 code-review entry, not a fresh finding.
+
+  `chained: none` — **blocked on the approver**
+  (`blocked_on: approver`), one of the documented no-chain conditions per
+  `eng_build_loop.md` step 9 and the Guards section. The next hop is a human
+  merging both PRs on GitHub; the build loop detects each merge itself by
+  local git ancestry on a future pass (`scheduled`, `watch`, or a `decision`
+  event once the approver answers) and advances the ticket to `shipped`
+  only once **both** repos' branches have merged — no action to fire here.
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-015`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+  business-os itself left uncommitted — same standing default every prior
+  pass has used; the commit-convention question
+  (`[[project-buildloop-instance-repo-commit-gap]]`) remains open, not
+  re-decided here.
