@@ -8,15 +8,15 @@ time_estimate: half a day to a day
 time_spent:
 time_remaining:
 severity: P3
-priority:
-state: awaiting-scope
-owner: approver
+priority: now
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-09-01
-updated: 2026-09-02
+updated: 2026-09-03
 branch:
 depends_on: []
 blocks: []
@@ -158,3 +158,137 @@ Append-only. One line per state transition, newest last.
   guard never fires on a ticket waiting on a human. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-026`) and
   whole-board: see board index.
+
+- `2026-09-03` no state change — duplicate board file for this same ticket
+  found and retired (eng-manager, `scheduled` event pass, context
+  `manual-drain`, whole-board dead-end sweep). The rescope logged directly
+  above was written to a **new** file (this one) instead of editing
+  `ENG-026-foodswipe-multichannel-filters-and-promo-engine.md` — the
+  original ticket file — in place, unlike `ENG-016`'s Piece 1, which kept
+  its original file and id through an equivalent rescope. The old file was
+  never deleted or marked superseded, so two board files carried
+  `id: ENG-026` at once: this one (live, gated, cross-referenced
+  everywhere) and the original (frozen at `state: intake` since
+  2026-09-01, `priority: now`, never touched again). Confirmed
+  `lib/eng-gate-check.sh` has no id-uniqueness check across board files —
+  nothing mechanical would ever have caught this.
+
+  **One real signal was stranded on the orphaned file, not just stale
+  prose.** Commit `a862607` (2026-09-02 21:18:16, "capture uncommitted
+  gate-answer bookkeeping before switching hosts") stamped `priority: now`
+  on the old file as partial bookkeeping ahead of full gate processing —
+  the same commit parked `ENG-016`'s `changed` G1 answer the same way
+  ahead of its own full processing later that night. The 23:56 pass that
+  did this ticket's full processing wrote the new file from the approver's
+  answer directly and never carried that `priority: now` stamp forward.
+  Not applied here: whether `now` was meant for the toggle piece
+  specifically (already in-flight on its own G1 regardless of priority) or
+  for the three deferred capabilities (not filed as tickets yet, by
+  design — see Notes above) is genuinely unclear from the commit message
+  alone, and priority is the approver's field to set, never this pass's to
+  infer (`eng_build_loop.md` step 6, "never write to priority yourself").
+  **Flagged so it isn't lost twice: when the deferred operational-status/
+  filters/promo-badge work is eventually filed as its own ticket(s), check
+  this entry and ask whether `now` still applies.**
+
+  The old file's fuller four-way readback split (A: visibility toggle: B:
+  operational-status engine; C: consumer filters; D: promo-badge overlay —
+  more detail than this ticket's own Notes restate) is preserved in git
+  history, last live at commit `a862607`:
+  `git log --follow -- agents/eng-manager/board/ENG-026-foodswipe-multichannel-filters-and-promo-engine.md`.
+  Removed the file from the live board directory (`git rm`) now that its
+  content is folded in here and its continued presence was the actual
+  hazard, not the history itself. Observation and a proposal filed
+  (`observations.md`, `proposals.md`): the systemic gap is that rescoping
+  a ticket by writing a new file loses non-prose frontmatter (`priority`,
+  and anything else the prose doesn't restate) silently — the fix is to
+  always rescope a ticket in place, same file and id, per `ENG-016`'s own
+  precedent, never fork a new file for an id that already exists.
+
+  **0 transitions** — `state`/`owner` unchanged (`awaiting-scope`/
+  `approver`). Approver-facing WIP unaffected — no gate touched, no new
+  item raised.
+
+  `chained: none` — `awaiting-scope`, owned by the approver; unaffected by
+  this bookkeeping fix. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+  whole-board: see board index.
+
+- `2026-09-03` **`awaiting-scope → designed`, `owner: approver →
+  architect`** (`decision` event pass, context
+  `inbox/2026-09-02-eng026-g1-scope.md`). Reading map for `decision`: steps
+  4 and 8c, plus step 6 (this answer advances the ticket into a
+  machine-owned state) and the not-negotiable set (step 1, 7, 8b, 9, 10;
+  *Enforced vs instructed*, *The four lanes*, *Guards*). Mode check clean
+  (repo-root `.env` → `MODE=active`). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-026`) and
+  whole-board: both exit 0, clean.
+
+  **The answer:** `approved` (`decided: 2026-09-03T15:51:04.400168+00:00`).
+  No additional comment. Read as accepting the recommendation exactly as
+  scoped — this piece only, the other three bundled capabilities deferred
+  as separate future tickets — and as accepting requirement 6's proposed
+  default (staff-set via `aiorders-admin-hub`, not restaurant self-service)
+  since the readback's explicit "correct this if wrong" went uncorrected.
+
+  **One gap found and fixed while processing this decision:** the PRD
+  (`agents/product-manager/specs/ENG-026-foodswipe-channel-visibility.md`)
+  had neither the frontmatter block nor the `## Decision` section every
+  sibling PRD carries — added both per `templates/prd.md` (`status:
+  approved`, `decided:` stamped, a `## Decision` section naming requirement
+  7's rollout/backfill question as still open). Not a proposal — a
+  one-document authoring gap, fixed in the same edit this decision already
+  required.
+
+  Journal entry written (`agents/eng-manager/config/decision-journal.md`).
+  Gate item's own `## Decision` footer already carried the answer;
+  appended a processed note and moved the file
+  `inbox/2026-09-02-eng026-g1-scope.md` →
+  `inbox/_handled/2026-09-02-eng026-g1-scope.md`.
+
+  **Requirement 7 (rollout/backfill for existing merchants) stays open,
+  inherited here at `designed` — not resolved by this approval and not
+  silently defaulted.** A straight column-default migration would set
+  every existing merchant to `has_order_food: true, has_dine_in: false,
+  has_catering: false`, silently dropping any merchant that already does
+  dine-in/catering today out of those tabs. This needs a real look at live
+  data (does any existing column/tag carry a usable signal to backfill
+  from, or does every merchant genuinely start blank and wait for staff to
+  opt them in) before this reaches `building` — PRD Risks, and the
+  ticket's own Notes above, both already flag it; restated here so this
+  hop doesn't have to re-derive it.
+
+  **Machine WIP re-checked fresh from every ticket's own frontmatter, not
+  the cached board header:** `1/1`, occupied by `ENG-024`
+  (`ready-to-ship`, not yet `shipped`). Irrelevant to this transition —
+  `designed` sits outside the counted `ready`..`ready-to-ship` range;
+  shaping/design work is backlog grooming regardless of who holds the
+  slot (`eng_build_loop.md` step 6).
+
+  **1 transition** (`awaiting-scope → designed`), well under the cap of 4
+  — the actual design work is the architect's own next hop, not attempted
+  inline here, same precedent `ENG-016`'s and `ENG-015`'s identical
+  G1-approved hand-offs already set. **Consequence:** ticket now owned by
+  `architect`, outside both the machine-WIP and approver-WIP counted
+  ranges. Approver-facing WIP uncapped; this G1 drops off the "Waiting on
+  the approver" list — same shape `ENG-013`'s and `ENG-016`'s closures
+  already set.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched, per
+  this event's own narrower contract. **Notify sweep:** nothing raised
+  this pass — no new gate item written. **Observations/proposals filed:**
+  none — the PRD-template gap above was fixed inline, not filed, as a
+  one-document miss rather than a recurring mechanism gap.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-026`) and whole-board: both exit 0, clean.
+
+  `chained: ENG-026` — `designed` is agent-owned (`architect`, via
+  `tech-design/SKILL.md`, triggered by this exact state); not the
+  approver, not blocked, not terminal, not held by a cap. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-026`
+  before this pass exits — confirmed queued (`traces/.pending`, appended
+  behind four already-outstanding events).
+
+  business-os itself left uncommitted — same standing default every pass
+  has used; the commit-convention question remains open, not re-decided
+  here.

@@ -1,3 +1,13 @@
+---
+ticket: ENG-026
+project: restaurant-marketplace
+status: approved
+size: M
+author: product-manager
+created: 2026-09-02
+decided: 2026-09-03T15:51:04.400168+00:00
+---
+
 # PRD — FoodSwipe channel-visibility toggles and capability-based discovery (ENG-026)
 
 ## Readback
@@ -65,3 +75,9 @@ Rough band: **half a day to a day** — a three-boolean migration plus query-sha
 3. FoodSwipe's Dine-In and Catering tabs show only merchants with the respective flag `true`; a merchant with the flag `false` never appears there regardless of "Open Now" state (negative case).
 4. A flag-enabled merchant that is currently closed still appears by default, with a status string, and is excluded only when "Open Now" is explicitly on.
 5. The rollout/backfill question (Risk, above) has an explicit, evidence-based answer on file before this reaches `building` — not silently defaulted.
+
+## Decision
+
+- **The approver's answer:** approved
+- **Date:** 2026-09-03T15:51:04.400168+00:00
+- **Notes:** Bare approval, no comment. Requirement 6 (staff-set via `aiorders-admin-hub`, not restaurant self-service) carried an explicit "correct this if wrong" — silence reads as accepting it as proposed. Requirement 7's rollout/backfill question was deliberately left unresolved for design, not for G1, and stays open for the architect.
