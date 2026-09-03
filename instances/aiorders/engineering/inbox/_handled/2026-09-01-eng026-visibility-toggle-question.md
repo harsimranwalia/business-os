@@ -83,3 +83,18 @@ Visibility must be driven by what services a restaurant actually offers, not ope
 * Base filter: WHERE has_[channel] = true
 * If open_now = true: evaluate operating hours and cutoffs for that channel against the current timestamp and exclude closed locations.
 * If open_now = false (default): return all merchants where has_[channel] = true regardless of current open/closed status.
+
+---
+
+**Processed 2026-09-02**, `watch` event pass (context `launchd`) — read as an
+approver-authored spec confirming Reading B, not a bare pick between the two
+offered readings. Scoped down from the original four-capability request to
+just this piece (the only one the answer actually specifies); the other
+three (operational status engine, smart filters, promo badges) named as
+deferred follow-on work in the ticket's own PRD rather than folded in or
+dropped. PRD written
+(`agents/product-manager/specs/ENG-026-foodswipe-channel-visibility.md`),
+ticket moved `intake → shaped → awaiting-scope`, G1 raised
+(`inbox/2026-09-02-eng026-g1-scope.md`). Journaled in
+`agents/eng-manager/config/decision-journal.md`. Full trace: `ENG-026`'s own
+board file.
