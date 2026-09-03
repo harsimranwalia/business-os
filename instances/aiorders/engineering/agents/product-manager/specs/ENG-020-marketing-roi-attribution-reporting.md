@@ -1,11 +1,11 @@
 ---
 ticket: ENG-020
 project: restaurant-portal
-status: draft
+status: approved
 size: M
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-09-03T15:53:14.495206+00:00
 ---
 
 # Marketing ROI reporting — traffic source and revenue attribution on the brand dashboard
@@ -236,11 +236,18 @@ Dashboard/Reports surfaces, rather than introducing a new subsystem.
 
 ## Decision
 
-Not yet raised. **Held at `shaped`, not advanced to `awaiting-scope` this
-pass** — the approver-facing WIP cap (2) is currently full (`ENG-014`,
-`ENG-015`, both re-verified open in `inbox/` immediately before this
-decision). Will raise G1 once a slot frees.
-
-- **The approver's answer:** —
-- **Date:** —
-- **Notes:** —
+- **The approver's answer:** approved
+- **Date:** 2026-09-03T15:53:14.495206+00:00
+- **Notes:** Bare approval, no additional comment — read as accepting the
+  recommendation exactly as scoped (per-restaurant traffic-source/revenue
+  breakdown reusing already-captured attribution data; Clarity integration, a
+  true ROI ratio, isolating AI-SEO specifically from organic traffic, and a
+  staff-facing all-restaurants rollup all deferred as later, separate work),
+  and every item in the readback's "Assumed, correctable here" list as
+  proposed, same convention this journal already applies to an
+  unremarked-on assumption (`ENG-019`'s row, `ENG-026`'s requirement 6,
+  `ENG-016`'s unremarked riders). The Risks this PRD flagged — attribution
+  honesty, cross-domain attribution completeness, PIPEDA/Law 25 exposure, no
+  historical baseline, small-restaurant noise, and tenant isolation — are not
+  resolved by this approval and stay open, inherited by the architect at
+  `designed`.

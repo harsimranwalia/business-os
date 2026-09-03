@@ -8,15 +8,15 @@ time_estimate: a day and a half to two days
 time_spent:
 time_remaining:
 severity: P2
-priority:
-state: shaped
-owner: product-manager
+priority: now
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-09-03
 branch:
 depends_on: []
 blocks: []
@@ -139,3 +139,119 @@ honestly rather than as a number that claims to isolate AI SEO's effect alone.
   same cap with no new work to do. Re-check once a
   `decision`/`watch`/`scheduled` pass clears `ENG-014` or `ENG-015`, or via
   a dedicated `continue ENG-020` once either does.
+
+## 2026-09-03 — scheduled: G1 raised — `shaped → awaiting-scope`
+
+Same stale premise as `ENG-019` (see that ticket's own dated entry for the
+full derivation): `agents/eng-manager/config.yaml`'s `approver_limit: 2` is
+the department default, but this instance's own override,
+`config/config.yaml`, raised it to `unlimited` on 2026-09-02 by the
+approver's own explicit, dated decision — never checked by any pass that
+held this ticket at `shaped`. Readback already converged (no material
+divergence), so straight to G1.
+
+Wrote `inbox/2026-09-03-eng020-g1-scope.md` (recommendation: build now,
+scoped to per-restaurant traffic-source/revenue breakdown, exactly as the
+PRD proposes). `lib/eng-notify.sh raise` called, exit 0 (logged
+`sent: active`, the already-tracked `MODE`-clobber bug, not re-filed).
+Stamped `notified: 2026-09-03T11:56:39`.
+
+**1 transition** (`shaped → awaiting-scope`). **Consequence:** no
+machine-WIP change. Approver-facing WIP uncapped, so this adds to the queue
+without displacing anything — `owner` moves `product-manager → approver`.
+
+`chained: none` — `awaiting-scope` is one of the documented no-chain
+conditions (waiting on the approver).
+
+## 2026-09-03 — decision: G1 approved — `awaiting-scope → designed`
+
+`decision` event pass, context `inbox/2026-09-03-eng020-g1-scope.md`.
+Reading map for `decision`: steps 4 and 8c, plus step 6 (this answer
+advances the ticket into a machine-owned state) and the not-negotiable set
+(step 1, 7, 8b, 9, 10; *Enforced vs instructed*, *The four lanes*,
+*Guards*). Mode check clean (repo-root `.env` → `MODE=active`). Pre-pass
+`lib/eng-gate-check.sh`, scoped (`ENG-020`) and whole-board: both exit 0,
+clean.
+
+**The answer:** `approved` (`decided: 2026-09-03T15:53:14.495206+00:00`).
+No additional comment. Read as accepting the recommendation exactly as
+scoped — per-restaurant traffic-source/revenue breakdown on the brand
+dashboard, reusing already-captured attribution data, Clarity integration/a
+true ROI ratio/AI-SEO isolation/a staff-facing rollup all named as later,
+separate work — and as accepting every item in the readback's "Assumed,
+correctable here" list since none was corrected. Full reasoning on this
+ticket's own PRD, not repeated here.
+
+`ENG-020` moved `awaiting-scope → designed`, `owner: approver →
+architect`. PRD `status: approved`, `decided:` stamped
+(`agents/product-manager/specs/ENG-020-marketing-roi-attribution-reporting.md`).
+Journaled (`decision-journal.md`). Gate item's `## Decision` footer filled
+in and moved to `inbox/_handled/`.
+
+**Risks named in the PRD are not resolved by this approval and stay open,
+inherited by the architect at `designed`:** attribution honesty (a
+last-click number will overstate SEO's specific effect); cross-domain
+attribution completeness (`user-tracking.js`'s own README documents the
+online-ordering-side wiring as a per-deployment task, not guaranteed live
+everywhere — verify actual coverage before presenting numbers as complete);
+privacy/legal exposure (PIPEDA and Quebec's Law 25 — session recording and
+first-party UTM capture both touch consent questions); no historical
+baseline for existing customers; small-restaurant traffic noise; and tenant
+isolation (`ENG-015` precedent — acceptance criterion 5 exists because of
+it). Restated here so the `continue ENG-020` hop below doesn't have to
+re-derive them from the PRD alone.
+
+**Priority column corrected while already touching this row:** this
+ticket's own frontmatter has carried `priority: now` since the G1 was
+raised; the board index's In-flight table still cached it blank (the same
+drift `ENG-016`'s, `ENG-026`'s and `ENG-019`'s decision passes each flagged
+or fixed for their own rows) — fixed here as part of this pass's board
+update.
+
+**Machine WIP re-checked fresh from every ticket's own frontmatter, not the
+cached board header:** `1/1`, occupied by `ENG-024` (`ready-to-ship`, not
+yet `shipped`). Irrelevant to this transition — `designed` sits outside the
+counted `ready`..`ready-to-ship` range; shaping/design work is backlog
+grooming regardless of who holds the slot (`eng_build_loop.md` step 6).
+
+**1 transition** (`awaiting-scope → designed`), well under the cap of 4 —
+the actual design work is the architect's own next hop, not attempted
+inline here, same precedent `ENG-019`'s, `ENG-026`'s, `ENG-016`'s and
+`ENG-015`'s identical G1-approved hand-offs already set. **Consequence:**
+ticket now owned by `architect`, outside both the machine-WIP and
+approver-WIP counted ranges. Approver-facing WIP uncapped
+(`wip.approver_limit: unlimited`); this G1 drops off the "Waiting on the
+approver" list.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched, per
+this event's own narrower contract (act on the answered gate item, advance
+only the ticket it belongs to).
+
+**Notify sweep:** nothing raised this pass — no new gate item written.
+Nothing else nudged — `ENG-008`'s and `ENG-010`'s open merge requests are
+both still under the 24h nudge threshold (~17.5h and ~23.2h respectively as
+of this pass), `ENG-009`'s already carries its one-ever nudge; out of this
+event's own scope regardless.
+
+**Observations/proposals filed:** none this pass. The priority-column drift
+fixed above is the same mechanism gap already on file from `ENG-016`'s
+decision pass, not re-filed.
+
+**Board update** — In-flight table's `ENG-020` row (`state`, `owner`,
+`priority` corrected to match the ticket's own frontmatter, `updated`
+date); header bullet, "unanswered items" paragraph and count, "Waiting on
+the approver" section's `ENG-020` paragraph and item count. Rolled the
+oldest of the four now-live dated entries (`decision (ENG-016 rescope
+G1)`) to `_index-archive.md` per the keep-three rule.
+
+Post-pass `lib/eng-gate-check.sh`, scoped (`ENG-020`) and whole-board: both
+exit 0, clean.
+
+`chained: ENG-020` — `designed` is agent-owned (`architect`, via
+`tech-design/SKILL.md`, triggered by this exact state); not the approver,
+not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-020`
+before this pass exits.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
