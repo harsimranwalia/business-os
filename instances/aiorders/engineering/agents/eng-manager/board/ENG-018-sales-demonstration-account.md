@@ -8,7 +8,7 @@ time_estimate: several days to a week
 time_spent:
 time_remaining:
 severity: P2
-priority: hold
+priority: 
 state: shaped
 owner: product-manager
 lane: full
@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-09-03
 branch:
 depends_on: []
 blocks: []
