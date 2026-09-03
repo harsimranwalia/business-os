@@ -20,6 +20,14 @@ them as non-negotiable when writing or modifying any agent/skill:
 - **No auto-send.** Content reaches an external platform only after a human approves it via Telegram.
   Agents/skills draft and persist to the CRM at `status=pending`; they never flip a record to
   `approved` or `posted` themselves.
+  - **One sanctioned exception: SMS Smart Reactivation** (`control-center/sms.py`,
+    `run_reactivation`), approved by Harry on 2026-09-03. It picks lapsed customers, drafts a
+    message each on the partner's own Claude token, and sends with no human gate — being hands-off
+    is the feature. It is not a precedent: SMS *campaigns* in the same file keep the gate, and
+    nothing else may auto-send without the same explicit decision. The guardrails standing in for
+    the human are a per-run recipient cap, a 30-day per-customer cooldown, and the `MODE` quiet
+    switch; do not remove them, and do not "fix" reactivation into a gated flow — that would be
+    reverting a decision, not correcting a bug.
 - **Quiet mode.** If repo-root `.env` sets `MODE=sabbath|retreat|quiet`, every component (listener,
   notifier, poster, agent) exits immediately/silently. Cron keeps firing; the check happens inside
   each component.

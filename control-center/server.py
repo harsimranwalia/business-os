@@ -5,12 +5,12 @@ A standalone command center for business-os, with zero dependency on
 life-os. Runs entirely off this repo: departments/, instances/, and this
 repo's own .env (TWENTY_API_KEY etc).
 
-Gated by email+PIN — the same gate life-os's control-center already had,
-ported rather than reinvented, because this is now also reachable over the
-internet via a Cloudflare Tunnel (see control-center/cloudflare-tunnel.sh).
-Users are `email:pin` pairs in CONTROL_CENTER_USERS (repo-root .env). No
-account system, no password reset — just enough to keep this off the open
-internet's script kiddies while staying a single human's tool.
+Gated by email+PIN, and now by ROLE. See control-center/accounts.py for the
+store: an admin has no restrictions, a partner sees only the business
+instances assigned to them and must supply their own Claude OAuth token and
+SMS gateway before any work runs on their behalf. CONTROL_CENTER_USERS in
+.env is no longer the user model — it seeds users.json once, on first run,
+and is then ignored.
 
 Tabs:
   Marketing    The marketing department, per business instance. Four views
@@ -32,7 +32,14 @@ Tabs:
                costs-*.jsonl ledger lib/run-stream.py already writes per
                instance.
   Logs         Cron job stdout/stderr from logs/*.log (listeners,
-               content_loop, reddit_post, eng-loop-all runs).
+               content_loop, reddit_post, eng-loop-all runs). ADMIN ONLY —
+               these are repo-wide cron logs with no instance scoping in
+               them, so there is no honest way to show a partner their
+               slice of one.
+  Partners     ADMIN ONLY. The user store: who exists, what role they hold,
+               and which instances each partner may work on.
+  Config       Your own credentials — Claude OAuth token, HTTP SMS gateway,
+               and which customer database your SMS segments read from.
 """
 
 import hmac
@@ -49,6 +56,9 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+import accounts
+import sms
 
 ROOT = Path(__file__).resolve().parent.parent  # business-os root
 HTML_FILE = Path(__file__).parent / "index.html"
@@ -74,13 +84,18 @@ load_env()
 
 
 # ── Auth gate ────────────────────────────────────────────────────────────────
-# Email+PIN, server-side session store — no external deps, no accounts. Sized
-# for "one household, two people," not a multi-tenant login system. A session
-# token is an opaque random id (not a signed cookie): the only thing worth
-# protecting is which requests are self-authenticated, and a server-side dict
-# does that without needing HMAC signing at all. _AUTH_LOCK exists because
+# Email+PIN, server-side session store — no external deps. A session token is
+# an opaque random id (not a signed cookie): the only thing worth protecting
+# is which requests are self-authenticated, and a server-side dict does that
+# without needing HMAC signing at all. _AUTH_LOCK exists because
 # ThreadingHTTPServer runs each request on its own thread now — it did not
 # before this gate needed one — and SESSIONS/LOGIN_ATTEMPTS are shared state.
+#
+# What changed when roles arrived: the session still stores only an email, and
+# the ROLE is looked up per request from accounts.py rather than captured at
+# login. That is the point — an admin who demotes a partner or narrows their
+# instances takes effect on that partner's very next request, with no logout
+# and no session invalidation to remember.
 
 SESSION_COOKIE = "cc_session"
 SESSION_TTL = 30 * 24 * 3600  # 30 days
@@ -90,25 +105,6 @@ LOGIN_LOCKOUT_SECONDS = 15 * 60
 _AUTH_LOCK = threading.Lock()
 SESSIONS = {}         # token -> {"email": str, "expires": float}
 LOGIN_ATTEMPTS = {}   # ip -> {"count": int, "locked_until": float}
-
-
-def _load_users():
-    """email (lowercased) -> pin, from CONTROL_CENTER_USERS in .env:
-    `CONTROL_CENTER_USERS=a@b.com:1234,c@d.com:5678`. Re-read every call
-    (env is a module-level dict already loaded once at startup, so this is
-    cheap) rather than cached, so editing .env and restarting is the only
-    step to add or change a user — no separate user store to keep in sync."""
-    raw = os.environ.get("CONTROL_CENTER_USERS", "")
-    users = {}
-    for pair in raw.split(","):
-        pair = pair.strip()
-        if not pair or ":" not in pair:
-            continue
-        email, _, pin = pair.partition(":")
-        email, pin = email.strip().lower(), pin.strip()
-        if email and pin:
-            users[email] = pin
-    return users
 
 
 def _new_session(email):
@@ -327,14 +323,26 @@ def _business_label(inst_dir):
     return inst_dir.name.replace("-", " ").replace("_", " ").title()
 
 
+def _instance_dirs():
+    """Every instance directory the ACTING USER may see, in one place.
+
+    Role scoping lives here rather than at each API handler on purpose. There
+    are five instance rosters in this file and a partner-visible endpoint that
+    forgot to filter would be a silent cross-tenant leak — the exact defect
+    class the engineering board has spent three tickets closing in the product
+    itself (ENG-015, ENG-022). One choke point, and every roster below is a
+    caller of it. accounts.filter_instance_dirs returns everything for an
+    admin, and only the assigned ids for a partner."""
+    if not INSTANCES_DIR.is_dir():
+        return []
+    dirs = sorted(p for p in INSTANCES_DIR.iterdir() if p.is_dir())
+    return accounts.filter_instance_dirs(dirs)
+
+
 def business_instances():
     """Every business this control center knows about, rebuilt per request —
     onboarding one shouldn't need a server restart to show up."""
-    out = []
-    if INSTANCES_DIR.is_dir():
-        for d in sorted(p for p in INSTANCES_DIR.iterdir() if p.is_dir()):
-            out.append({"id": d.name, "label": _business_label(d)})
-    return out
+    return [{"id": d.name, "label": _business_label(d)} for d in _instance_dirs()]
 
 
 def _resolve_instance_id(instance_id):
@@ -380,27 +388,26 @@ def eng_instances():
     board — listing it would offer a selector option whose every action
     then fails."""
     out = []
-    if INSTANCES_DIR.is_dir():
-        for d in sorted(p for p in INSTANCES_DIR.iterdir() if p.is_dir()):
-            eng = d / "engineering"
-            if not (eng / "config" / "instantiated-from").exists():
-                continue
-            out.append({
-                "id": d.name,
-                "label": _business_label(d),
-                "root": ROOT,
-                "board": eng / "agents" / "eng-manager" / "board",
-                "bugs": eng / "agents" / "qa" / "bugs" / "_index.md",
-                "pm_inbox": eng / "agents" / "product-manager" / "inbox",
-                # The approver's decision inbox and the filer's intake queue —
-                # an instance has both; a filer (a cofounder, via Telegram)
-                # writes `inbox/requests/` directly.
-                "inbox": eng / "inbox",
-                "requests": eng / "inbox" / "requests",
-                "config": eng / "config" / "config.yaml",
-                "trigger": ENG_TRIGGER_SCRIPT,
-                "env": {"ENG_DEPT": str(ENG_DEPT_DIR), "ENG_INSTANCE": str(eng)},
-            })
+    for d in _instance_dirs():
+        eng = d / "engineering"
+        if not (eng / "config" / "instantiated-from").exists():
+            continue
+        out.append({
+            "id": d.name,
+            "label": _business_label(d),
+            "root": ROOT,
+            "board": eng / "agents" / "eng-manager" / "board",
+            "bugs": eng / "agents" / "qa" / "bugs" / "_index.md",
+            "pm_inbox": eng / "agents" / "product-manager" / "inbox",
+            # The approver's decision inbox and the filer's intake queue —
+            # an instance has both; a filer (a cofounder, via Telegram)
+            # writes `inbox/requests/` directly.
+            "inbox": eng / "inbox",
+            "requests": eng / "inbox" / "requests",
+            "config": eng / "config" / "config.yaml",
+            "trigger": ENG_TRIGGER_SCRIPT,
+            "env": {"ENG_DEPT": str(ENG_DEPT_DIR), "ENG_INSTANCE": str(eng)},
+        })
     return out
 
 
@@ -1013,7 +1020,12 @@ def _activity_snippet(state, pid):
         s = line.strip()
         if not s or s.startswith("·"):
             continue
-        return s[:220]
+        # Generous cap — just a DOM-size guard against one freak unwrapped
+        # line, not the visual boundary. The frontend's own 2-line CSS clamp
+        # (.now-line) is what decides where this actually gets cut, so it
+        # ends at a real line edge with an ellipsis instead of mid-word at a
+        # fixed offset that had no relationship to the rendered width.
+        return s[:600]
     return ""
 
 
@@ -1301,19 +1313,18 @@ def mkt_instances():
     marker, same test the engineering roster uses). A directory without it is
     a half-made instance, not a department."""
     out = []
-    if INSTANCES_DIR.is_dir():
-        for d in sorted(p for p in INSTANCES_DIR.iterdir() if p.is_dir()):
-            mkt = d / "marketing"
-            if not (mkt / "config" / "instantiated-from").exists():
-                continue
-            out.append({
-                "id": d.name,
-                "label": _business_label(d),
-                "root": mkt,
-                "config": mkt / "config" / "config.yaml",
-                "content": mkt / "content",
-                "topic_bank": mkt / "content" / "topic-bank.md",
-            })
+    for d in _instance_dirs():
+        mkt = d / "marketing"
+        if not (mkt / "config" / "instantiated-from").exists():
+            continue
+        out.append({
+            "id": d.name,
+            "label": _business_label(d),
+            "root": mkt,
+            "config": mkt / "config" / "config.yaml",
+            "content": mkt / "content",
+            "topic_bank": mkt / "content" / "topic-bank.md",
+        })
     return out
 
 
@@ -2030,6 +2041,17 @@ def mkt_approve(rel_path, instance_id=None):
 
 
 # ── Reddit view (Twenty CRM) ────────────────────────────────────────────────
+# NOT INSTANCE-SCOPED, and the only view here that is not. Twenty's Marketing
+# Content records carry a community, not a business — this pipeline predates
+# the instance model (see CLAUDE.md) and reads the repo-root knowledge/ files
+# rather than any instance's. So role scoping cannot reach it: every signed-in
+# user sees every record. That is correct today, with one business whose Reddit
+# account is the only one, and it is a cross-tenant leak the day a second
+# business gets a pipeline. The fix when that day comes is a business field on
+# the Twenty object, filtered here through accounts.visible_instances() the way
+# _instance_dirs does everywhere else — not an admin-only gate, which would
+# take the view away from the partner whose business it actually is.
+#
 # The Reddit community pipeline, and a view UNDER Marketing rather than a tab
 # of its own. It was the whole Marketing tab until the marketing department
 # landed; that made it one channel among several rather than the surface, so
@@ -2139,9 +2161,13 @@ MODEL_TIERS = {"classification": "haiku", "reasoning": "sonnet", "complex": "opu
 def list_costs(days=30):
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     rows = []
-    if INSTANCES_DIR.is_dir():
-        for traces_dir in INSTANCES_DIR.glob("*/engineering/traces"):
-            business = traces_dir.parent.parent.name
+    # Through _instance_dirs, not a glob of INSTANCES_DIR — spend is per
+    # business, and a partner reading another business's token burn is the
+    # same leak as reading its board.
+    for inst_dir in _instance_dirs():
+        traces_dir = inst_dir / "engineering" / "traces"
+        if traces_dir.is_dir():
+            business = inst_dir.name
             for f in sorted(traces_dir.glob("costs-*.jsonl")):
                 try:
                     for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -2252,6 +2278,80 @@ def read_log(name):
             "text": "\n".join(tail)}
 
 
+# ── SMS — the fifth marketing channel ────────────────────────────────────────
+# A view under Marketing rather than a tab, for the same reason Reddit is one:
+# it is one channel, not the department. Two halves under it — CAMPAIGNS (bulk,
+# human-gated) and SMART REACTIVATION (autonomous, no copy and no segment to
+# choose). Everything that decides what either can do lives in the acting
+# user's own config: their SMS gateway, their Claude OAuth token, and which
+# customer database their segments read from. See control-center/sms.py.
+
+
+def list_sms(instance_id=None, email=None):
+    """Everything the SMS view renders, in one request.
+
+    Deliberately does NOT go through mkt_instance(): SMS works whether or not
+    the marketing department has been installed for this business, the same
+    way the Reddit view does. Its instance roster is the plain business list.
+    """
+    inst_id = _resolve_instance_id(instance_id)
+    cfg = accounts.read_config(email)
+    missing = accounts.config_missing(email)
+    if not inst_id:
+        return {"instance": None, "instances": [], "segments": [],
+                "campaigns": [], "reactivations": [], "config_missing": missing,
+                "empty": "No business instance yet."}
+    return {
+        "instance": inst_id,
+        "instances": business_instances(),
+        "customer_source": cfg.get("customer_source") or "",
+        "segments": sms.segments_for(cfg),
+        "campaigns": sms.list_campaigns(inst_id),
+        "reactivations": sms.list_reactivations(inst_id),
+        "config_missing": missing,
+        "quiet_mode": sms.quiet_mode(),
+        "max_chars": sms.MAX_SMS_CHARS,
+        "reactivation": {
+            "cap": sms.REACTIVATION_MAX_RECIPIENTS,
+            "cooldown_days": sms.REACTIVATION_COOLDOWN_DAYS,
+            "lapsed_days": sms.REACTIVATION_LAPSED_DAYS,
+        },
+    }
+
+
+def sms_action(path, body, email):
+    """One dispatcher for every SMS write. The instance was already checked
+    against the actor's assignments in do_POST, so these only have to be
+    correct about SMS."""
+    inst_id = _resolve_instance_id(body.get("instance"))
+    if not inst_id:
+        return None, "no business instance"
+    cfg = accounts.read_config(email)
+    campaign_id = body.get("id")
+
+    if path == "/api/sms/campaign":
+        return sms.create_campaign(inst_id, cfg, body, email)
+    if path == "/api/sms/campaign/update":
+        return sms.update_campaign(inst_id, campaign_id, body)
+    if path == "/api/sms/campaign/approve":
+        return sms.approve_campaign(inst_id, campaign_id, email)
+    if path == "/api/sms/campaign/discard":
+        return sms.discard_campaign(inst_id, campaign_id)
+    if path == "/api/sms/campaign/send":
+        # The gateway is the only part of the config a campaign needs. A
+        # partner with no Claude token can still run campaigns — refusing
+        # them for a credential this path never touches would be theatre.
+        if not cfg.get("sms_url"):
+            return None, "add your SMS server in Config first"
+        return sms.send_campaign(inst_id, campaign_id, cfg)
+    if path == "/api/sms/reactivate":
+        missing = accounts.config_missing(email)
+        if missing:
+            return None, "finish your configuration first — missing: " + ", ".join(missing)
+        return sms.run_reactivation(inst_id, cfg, email)
+    return None, "unknown SMS action"
+
+
 # ── HTTP handler ─────────────────────────────────────────────────────────────
 
 class ControlCenterHandler(BaseHTTPRequestHandler):
@@ -2286,11 +2386,28 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
     def current_email(self):
         return _session_email(_parse_cookies(self).get(SESSION_COOKIE))
 
+    def current_user(self):
+        """The full account record behind this request's session, or None.
+
+        Resolved fresh every time rather than cached on the session, so a role
+        change or an instance reassignment lands on the next request instead of
+        the next login."""
+        return accounts.get_user(self.current_email())
+
     def require_auth(self, is_api):
         """True if the request may proceed. False means a response (redirect
-        for a page, 401 for an API call) has already been sent."""
-        if self.current_email():
+        for a page, 401 for an API call) has already been sent.
+
+        Also publishes the acting user to accounts, which is where every
+        instance roster in this file reads its scope from. A deleted account
+        with a live session cookie resolves to None here and is treated as
+        signed out — deleting a partner takes their access away immediately,
+        not whenever their cookie happens to expire."""
+        user = self.current_user()
+        if user:
+            accounts.set_current(user)
             return True
+        accounts.set_current(None)
         if is_api:
             self.send_json(401, {"error": "unauthenticated"})
         else:
@@ -2298,6 +2415,26 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             self.send_header("Location", "/login")
             self.end_headers()
         return False
+
+    def require_admin(self):
+        """The Partners page and the Logs tab. 403, not 404 — a partner who
+        pokes at this URL should learn that it exists and is not theirs,
+        rather than that the server is broken."""
+        if accounts.is_admin():
+            return True
+        self.send_json(403, {"error": "admins only"})
+        return False
+
+    def require_instance(self, instance_id):
+        """Guard for every write that names an instance. The read path is
+        already scoped by _instance_dirs, but a POST resolves its instance by
+        falling back to the first known one when the id is unknown — which for
+        a partner naming someone else's business would silently redirect the
+        write into their own. Reject it instead."""
+        if instance_id and not accounts.can_see_instance(instance_id):
+            self.send_json(403, {"error": "that business is not assigned to you"})
+            return False
+        return True
 
     def handle_login(self):
         body = self.read_body()
@@ -2308,7 +2445,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
         email = (body.get("email") or "").strip().lower()
         pin = (body.get("pin") or "").strip()
-        expected = _load_users().get(email)
+        user = accounts.get_user(email)
+        expected = (user or {}).get("pin")
         # constant-time compare so a valid email can't be timed out of an
         # invalid one — the whole point of a PIN gate is that the PIN, not
         # the email, is the secret.
@@ -2318,8 +2456,9 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             self.send_json(401, {"error": "wrong email or PIN"})
             return
         _login_ok(ip)
+        accounts.touch_login(email)
         token = _new_session(email)
-        self.send_json(200, {"ok": True, "email": email},
+        self.send_json(200, {"ok": True, "email": email, "role": user["role"]},
                        extra_headers={"Set-Cookie": _cookie_header(token)})
 
     def handle_logout(self):
@@ -2328,8 +2467,21 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
                        extra_headers={"Set-Cookie": _cookie_header(None, clear=True)})
 
     def handle_me(self):
-        email = self.current_email()
-        self.send_json(200, {"email": email})
+        """What the browser needs to draw the right tabs. Advisory only — the
+        server re-checks the role on every request that matters, so hiding the
+        Partners tab is a courtesy, not the access control."""
+        user = self.current_user()
+        if not user:
+            self.send_json(200, {"email": None})
+            return
+        self.send_json(200, {
+            "email": user["email"],
+            "name": user.get("name", ""),
+            "role": user.get("role", "partner"),
+            "instances": list(user.get("instances", [])),
+            "config_ready": accounts.config_ready(user["email"]),
+            "config_missing": accounts.config_missing(user["email"]),
+        })
 
     def read_body(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -2398,11 +2550,49 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             self.send_json(200, list_costs(max(1, min(days, 365))))
             return
 
+        if parsed.path == "/api/partners":
+            if not self.require_admin():
+                return
+            self.send_json(200, {
+                "users": [accounts.public_user(u) for u in accounts.all_users()],
+                "instances": business_instances(),
+                "roles": list(accounts.ROLES),
+            })
+            return
+
+        if parsed.path == "/api/config":
+            # An admin may read anyone's config (redacted, like everyone
+            # else's); a partner may read only their own.
+            who = (qs.get("email", [None])[0] or "").strip().lower()
+            if who and who != self.current_email():
+                if not self.require_admin():
+                    return
+                if not accounts.get_user(who):
+                    self.send_json(404, {"error": "no such user"})
+                    return
+            else:
+                who = self.current_email()
+            self.send_json(200, accounts.read_config_public(who))
+            return
+
+        if parsed.path == "/api/sms":
+            inst_id = qs.get("instance", [None])[0]
+            if not self.require_instance(inst_id):
+                return
+            self.send_json(200, list_sms(inst_id, self.current_email()))
+            return
+
         if parsed.path == "/api/logs":
+            # Repo-wide cron logs. Nothing in logs/*.log is scoped by
+            # business, so there is no partner-safe subset to show.
+            if not self.require_admin():
+                return
             self.send_json(200, list_logs())
             return
 
         if parsed.path == "/api/logs/view":
+            if not self.require_admin():
+                return
             name = qs.get("name", [None])[0]
             result = read_log(name)
             if result is None:
@@ -2429,8 +2619,60 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
         if not self.require_auth(is_api=True):
             return
 
+        # Every write that names a business is checked against the actor's
+        # assignments before it reaches a handler, once, here — rather than
+        # trusting a dozen handlers to each remember.
+        if parsed.path.startswith("/api/") and self.headers.get("Content-Length"):
+            self._body = self.read_body()
+            if not self.require_instance(self._body.get("instance")):
+                return
+        else:
+            self._body = {}
+
+        if parsed.path == "/api/partners/create":
+            if not self.require_admin():
+                return
+            result, err = accounts.create_user(self._body)
+            self.send_json(400 if err else 201, {"error": err} if err else result)
+            return
+
+        if parsed.path == "/api/partners/update":
+            if not self.require_admin():
+                return
+            result, err = accounts.update_user(self._body.get("email"), self._body)
+            self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
+        if parsed.path == "/api/partners/delete":
+            if not self.require_admin():
+                return
+            result, err = accounts.delete_user(self._body.get("email"),
+                                               acting_email=self.current_email())
+            self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
+        if parsed.path == "/api/config":
+            # Same rule as the GET: your own, or anyone's if you are an admin.
+            who = (self._body.get("email") or "").strip().lower()
+            if who and who != self.current_email():
+                if not self.require_admin():
+                    return
+                if not accounts.get_user(who):
+                    self.send_json(404, {"error": "no such user"})
+                    return
+            else:
+                who = self.current_email()
+            result, err = accounts.write_config(who, self._body)
+            self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
+        if parsed.path.startswith("/api/sms/"):
+            result, err = sms_action(parsed.path, self._body, self.current_email())
+            self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
         if parsed.path == "/api/eng/intake":
-            body = self.read_body()
+            body = self._body
             inst_id = body.get("instance")
             path, err = eng_intake(body.get("title"), body.get("description"), inst_id)
             if err:
@@ -2441,7 +2683,7 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/eng/priority":
-            body = self.read_body()
+            body = self._body
             inst_id = body.get("instance")
             result, err = eng_priority(body.get("ticket"), body.get("priority"), inst_id)
             if err:
@@ -2453,7 +2695,7 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/eng/merge-check":
-            body = self.read_body()
+            body = self._body
             result, err = eng_merge_check(body.get("ticket"), force=bool(body.get("force")),
                                           instance_id=body.get("instance"))
             if err:
@@ -2463,7 +2705,7 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/eng/decide":
-            body = self.read_body()
+            body = self._body
             inst_id = body.get("instance")
             result, err = eng_decide(body.get("file"), body.get("decision"),
                                      body.get("note"), inst_id)
@@ -2475,7 +2717,7 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/sales/lead":
-            body = self.read_body()
+            body = self._body
             result, err = sales_create_lead(body.get("instance"), body)
             if err:
                 self.send_json(400, {"error": err})
@@ -2484,7 +2726,7 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/sales/lead/update":
-            body = self.read_body()
+            body = self._body
             result, err = sales_update_lead(body.get("instance"), body.get("slug"),
                                             body.get("fields") or {}, body.get("note"))
             if err:
@@ -2494,7 +2736,7 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/sales/move-lead":
-            body = self.read_body()
+            body = self._body
             result, err = sales_move_lead(body.get("instance"), body.get("slug"),
                                           body.get("to_stage"))
             if err:
@@ -2504,27 +2746,27 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/mkt/approve":
-            body = self.read_body()
+            body = self._body
             result, err = mkt_approve(body.get("path"), body.get("instance"))
             self.send_json(400 if err else 200, {"error": err} if err else result)
             return
 
         if parsed.path == "/api/mkt/topic":
-            body = self.read_body()
+            body = self._body
             result, err = mkt_topic(body.get("topic"), body.get("note"),
                                     body.get("instance"))
             self.send_json(400 if err else 200, {"error": err} if err else result)
             return
 
         if parsed.path == "/api/settings/channel":
-            body = self.read_body()
+            body = self._body
             result, err = set_channel_field(body.get("channel"), body.get("field"),
                                             body.get("value"), body.get("instance"))
             self.send_json(400 if err else 200, {"error": err} if err else result)
             return
 
         if parsed.path == "/api/reddit/action":
-            body = self.read_body()
+            body = self._body
             try:
                 result, err = reddit_action(body.get("id"), body.get("action"),
                                             body.get("body"), body.get("reason"))
@@ -2549,9 +2791,13 @@ if __name__ == "__main__":
     # and once this is reachable over the internet concurrent requests are
     # the normal case, not the exception.
     server = ThreadingHTTPServer((HOST, PORT), ControlCenterHandler)
-    if not _load_users():
-        print("WARNING: CONTROL_CENTER_USERS is not set in .env — nobody can log in.")
-        print("  Add e.g.  CONTROL_CENTER_USERS=you@example.com:1234,other@example.com:5678\n")
+    if not accounts.any_users():
+        print("WARNING: no users — nobody can log in.")
+        print("  Set CONTROL_CENTER_USERS=you@example.com:1234 in .env and restart;")
+        print(f"  it seeds {accounts.USERS_FILE.name} once, and the Partners tab owns it after that.\n")
+    else:
+        admins = [u["email"] for u in accounts.all_users() if u["role"] == "admin"]
+        print(f"Users             → {len(accounts.all_users())} ({len(admins)} admin: {', '.join(admins)})")
     print(f"Business OS Control Center → http://localhost:{PORT}")
     print(f"Root              → {ROOT}")
     print(f"Instances found   → {[i['id'] for i in business_instances()] or '(none yet)'}")

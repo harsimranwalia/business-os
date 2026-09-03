@@ -109,7 +109,9 @@
     .tag.time-impact { background: #92400e; color: #fff; border-color: transparent; }
     .meta.warn { color: #fbbf24; }
     .now-line { font-size: 12px; color: var(--muted-mid); margin-top: 8px; line-height: 1.4;
-      padding-left: 10px; border-left: 2px solid rgba(139,92,246,.45); }
+      padding-left: 10px; border-left: 2px solid rgba(139,92,246,.45);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; text-overflow: ellipsis; }
     .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
     .status-dot.dot-on { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,.7); }
     .status-dot.dot-off { background: var(--muted); }
@@ -221,6 +223,58 @@
     .mkt-rationale { font-size: 11.5px; color: var(--muted); margin-top: 8px; font-style: italic; }
     .mkt-link { font-size: 11px; color: #60a5fa; margin-top: 6px; display: inline-block; }
 
+    /* ── Partners + Config ── */
+    .user-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr .7fr 1.2fr auto;
+      gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; font-size: 12px; }
+    .user-row .who { color: var(--text); font-weight: 600; font-size: 13px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-row .sub { color: var(--muted); font-size: 10.5px; margin-top: 2px; }
+    .user-row .dim { color: var(--muted-mid); white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; }
+    .role-pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: .04em; }
+    .role-pill.admin { background: rgba(139,92,246,.16); color: #a78bfa; }
+    .role-pill.partner { background: rgba(59,130,246,.14); color: #60a5fa; }
+    .user-head { display: grid; grid-template-columns: 1.6fr 1fr 1fr .7fr 1.2fr auto;
+      gap: 12px; padding: 0 14px 6px; font-size: 9.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    @media (max-width: 860px) {
+      .user-row, .user-head { grid-template-columns: 1fr; }
+      .user-head { display: none; }
+    }
+    .cfg-grid { display: grid; grid-template-columns: 190px 1fr; gap: 10px 16px;
+      align-items: start; font-size: 12px; max-width: 720px; }
+    .cfg-grid label { color: var(--muted); padding-top: 8px; }
+    .cfg-grid input, .cfg-grid select { width: 100%; }
+    .cfg-hint { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+    .cfg-set { font-size: 10.5px; color: #34d399; margin-top: 4px; }
+    .missing { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.35);
+      border-radius: 8px; padding: 11px 14px; font-size: 12px; color: #fbbf24;
+      line-height: 1.6; margin-bottom: 18px; }
+    .missing b { display: block; margin-bottom: 3px; }
+
+    /* ── SMS ── */
+    .sms-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .status-pill.draft { background: rgba(120,120,140,.16); color: var(--muted-mid); }
+    .status-pill.approved { background: rgba(59,130,246,.14); color: #60a5fa; }
+    .status-pill.sent { background: rgba(16,185,129,.14); color: #34d399; }
+    .status-pill.failed { background: rgba(239,68,68,.14); color: #f87171; }
+    .status-pill.discarded { background: rgba(120,120,140,.14); color: var(--muted-mid); }
+    .status-pill.running { background: rgba(245,158,11,.14); color: #fbbf24; }
+    .status-pill.no-one { background: rgba(120,120,140,.14); color: var(--muted-mid); }
+    .sms-msg { font-size: 12.5px; color: var(--muted-mid); line-height: 1.6; margin-top: 10px;
+      white-space: pre-wrap; padding: 10px 12px; background: var(--surface);
+      border-radius: 8px; border: 1px solid var(--border); }
+    .sms-fact { font-size: 11px; color: var(--muted); margin-top: 8px; }
+    .sms-fact b { color: var(--muted-mid); font-weight: 600; }
+    .sms-out { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .sms-out .one { font-size: 11.5px; color: var(--muted-mid); line-height: 1.5;
+      border-left: 2px solid var(--border-light); padding-left: 9px; }
+    .sms-out .one.bad { border-color: rgba(239,68,68,.5); color: #f87171; }
+    .auto-note { font-size: 11.5px; color: var(--muted); line-height: 1.65;
+      max-width: 660px; margin-bottom: 16px; }
+
     /* ── Cost ── */
     .cost-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
     .cost-table th { text-align: right; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
@@ -303,7 +357,11 @@
   <button class="tab-btn" id="tab-sales" onclick="switchTab('sales')">Sales</button>
   <button class="tab-btn" id="tab-eng" onclick="switchTab('eng')">Engineering</button>
   <button class="tab-btn" id="tab-cost" onclick="switchTab('cost')">Cost</button>
-  <button class="tab-btn" id="tab-logs" onclick="switchTab('logs')">Logs</button>
+  <!-- Admin only. Hidden here as a courtesy; the server re-checks the role on
+       every /api/partners and /api/logs call, so this is not the gate. -->
+  <button class="tab-btn" id="tab-logs" onclick="switchTab('logs')" hidden>Logs</button>
+  <button class="tab-btn" id="tab-partners" onclick="switchTab('partners')" hidden>Partners</button>
+  <button class="tab-btn" id="tab-config" onclick="switchTab('config')">Config</button>
 </div>
 
 <!-- ── Marketing ── -->
@@ -322,6 +380,9 @@
          view — but under Marketing, because it is one channel and not the
          department. -->
     <button class="filter-btn" data-mview="reddit" onclick="setMktView('reddit')">Reddit</button>
+    <!-- SMS. Another channel with its own system of record (the partner's own
+         customer database and gateway), so another view rather than a tab. -->
+    <button class="filter-btn" data-mview="sms" onclick="setMktView('sms')">SMS</button>
     <!-- Marketing's own configuration, not the system's. Everything in it is
          a channel setting, so the channel dropdown above scopes it too. -->
     <button class="filter-btn" data-mview="settings" onclick="setMktView('settings')">Settings</button>
@@ -344,6 +405,10 @@
       <button class="filter-btn" data-mf="FAILED" onclick="setRedditFilter('FAILED')">Failed</button>
       <button class="filter-btn" data-mf="" onclick="setRedditFilter('')">All</button>
     </span>
+    <span id="mkt-sms-filters" style="display:none">
+      <button class="filter-btn active" data-sf="campaigns" onclick="setSmsView('campaigns')">Campaigns</button>
+      <button class="filter-btn" data-sf="reactivation" onclick="setSmsView('reactivation')">Smart reactivation</button>
+    </span>
     <div class="toolbar-spacer"></div>
     <button class="refresh-btn" onclick="mktRefresh()" title="Refresh">↻</button>
   </div>
@@ -351,6 +416,7 @@
   <div class="scroll" id="content-scroll" style="display:none"><div class="empty">Loading…</div></div>
   <div class="scroll" id="reddit-scroll" style="display:none"><div class="empty">Loading…</div></div>
   <div class="scroll" id="settings-scroll" style="display:none"><div class="empty">Loading…</div></div>
+  <div class="scroll" id="sms-scroll" style="display:none"><div class="empty">Loading…</div></div>
 </div>
 
 <!-- ── Sales ── -->
@@ -400,6 +466,116 @@
     <div id="logs-list"><div class="empty">Loading…</div></div>
   </div>
   <div class="logs-main" id="logs-main"><div class="empty">Pick a log file.</div></div>
+</div>
+
+<!-- ── Partners (admin only) ── -->
+<!-- The user store, editable. Everything here was a hand edit to a comma-
+     separated line in .env, where a role and an instance assignment had
+     nowhere to live at all. -->
+<div class="view" id="partners-view">
+  <div class="toolbar">
+    <div class="toolbar-spacer"></div>
+    <button class="btn yes" onclick="openUserModal(null)">+ Add user</button>
+    <button class="refresh-btn" onclick="loadPartners()" title="Refresh">↻</button>
+  </div>
+  <div class="scroll" id="partners-scroll"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- ── Config (your own credentials) ── -->
+<div class="view" id="config-view">
+  <div class="toolbar">
+    <select class="instance-select" id="config-who" onchange="loadConfig(this.value)"
+            title="Whose configuration" style="display:none"></select>
+    <div class="toolbar-spacer"></div>
+    <button class="refresh-btn" onclick="loadConfig()" title="Refresh">↻</button>
+  </div>
+  <div class="scroll" id="config-scroll"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- ── User modal (add / edit) ── -->
+<div class="modal-backdrop" id="user-modal" onclick="if(event.target===this)closeUserModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div style="min-width:0">
+        <div class="modal-title" id="um-title">Add user</div>
+        <div class="modal-sub" id="um-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeUserModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field full">
+        <label for="um-email">Email</label>
+        <input type="email" id="um-email" autocomplete="off" />
+      </div>
+      <div class="form-field">
+        <label for="um-name">Name</label>
+        <input type="text" id="um-name" autocomplete="off" />
+      </div>
+      <div class="form-field">
+        <label for="um-phone">Phone</label>
+        <input type="text" id="um-phone" autocomplete="off" />
+      </div>
+      <div class="form-field">
+        <label for="um-pin">PIN <span id="um-pin-note" class="note-text"></span></label>
+        <input type="text" id="um-pin" inputmode="numeric" maxlength="12" autocomplete="off" />
+      </div>
+      <div class="form-field">
+        <label for="um-role">Role</label>
+        <select class="instance-select" id="um-role" onchange="onRoleChange()"
+                style="width:100%">
+          <option value="partner">Partner</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-field full" id="um-inst-wrap">
+        <label>Instances this partner may work on</label>
+        <div class="set-days" id="um-instances"></div>
+        <div class="note-text" style="margin-top:6px">An admin has no
+          restrictions, so this list applies to partners only.</div>
+      </div>
+      <div class="form-field full"><div class="set-err" id="um-err"></div></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn no" id="um-delete" onclick="deleteUser()">Delete</button>
+      <div class="toolbar-spacer"></div>
+      <button class="btn" onclick="closeUserModal()">Cancel</button>
+      <button class="btn yes" id="um-save" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SMS campaign modal ── -->
+<div class="modal-backdrop" id="camp-modal" onclick="if(event.target===this)closeCampModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div style="min-width:0">
+        <div class="modal-title" id="cm-title">New campaign</div>
+        <div class="modal-sub" id="cm-sub">Drafts go out only after you approve them.</div>
+      </div>
+      <button class="modal-close" onclick="closeCampModal()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field full">
+        <label for="cm-name">Campaign name</label>
+        <input type="text" id="cm-name" autocomplete="off" />
+      </div>
+      <div class="form-field full" id="cm-seg-wrap">
+        <label for="cm-segment">Send to</label>
+        <select class="instance-select" id="cm-segment" style="width:100%"
+                onchange="renderSegmentNote()"></select>
+        <div class="note-text" id="cm-seg-note" style="margin-top:6px"></div>
+      </div>
+      <div class="form-field full">
+        <label for="cm-body">Message <span class="note-text" id="cm-count"></span></label>
+        <textarea id="cm-body" rows="5" oninput="renderCharCount()"></textarea>
+      </div>
+      <div class="form-field full"><div class="set-err" id="cm-err"></div></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeCampModal()">Cancel</button>
+      <button class="btn yes" id="cm-save" onclick="saveCampaign()">Save draft</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Lead modal ── -->
@@ -476,9 +652,29 @@ async function logout() {
   window.location.href = '/login';
 }
 
-fetch('/api/auth/me').then(r => r.json()).then(d => {
-  if (d && d.email) document.getElementById('user-email').textContent = d.email;
-}).catch(() => {});
+// Who is signed in, and what they may see. `me` is advisory — the server
+// re-checks the role on every request that matters — but it decides which tabs
+// are drawn, so nothing offers a partner a page that would only 403.
+let me = { email: '', role: 'partner', instances: [], config_ready: false, config_missing: [] };
+
+async function loadMe() {
+  try {
+    const d = await (await fetch('/api/auth/me')).json();
+    if (!d || !d.email) return;
+    me = Object.assign(me, d);
+    document.getElementById('user-email').textContent =
+      d.email + (d.role === 'admin' ? ' · admin' : ' · partner');
+    const admin = d.role === 'admin';
+    document.getElementById('tab-partners').hidden = !admin;
+    document.getElementById('tab-logs').hidden = !admin;
+    // A partner whose config is incomplete cannot do SMS work at all, so say
+    // so on the tab rather than letting them find out at the send button. Not
+    // for admins: an admin who never intends to run a campaign would carry a
+    // permanent dot for a credential they have no use for.
+    document.getElementById('tab-config').textContent =
+      'Config' + (!admin && d.config_missing && d.config_missing.length ? ' •' : '');
+  } catch (e) { /* the 401 interceptor already redirects */ }
+}
 
 function esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -619,9 +815,10 @@ updateDate();
 setInterval(updateDate, 60000);
 
 let activeTab = 'marketing';
+const TABS = ['marketing', 'sales', 'eng', 'cost', 'logs', 'partners', 'config'];
 function switchTab(tab) {
   activeTab = tab;
-  ['marketing', 'sales', 'eng', 'cost', 'logs'].forEach(t =>
+  TABS.forEach(t =>
     document.getElementById('tab-' + t).classList.toggle('active', tab === t));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(tab + '-view').classList.add('active');
@@ -630,6 +827,8 @@ function switchTab(tab) {
   if (tab === 'eng') loadEng();
   if (tab === 'cost') loadCost();
   if (tab === 'logs') loadLogList();
+  if (tab === 'partners') loadPartners();
+  if (tab === 'config') loadConfig();
   if (tab === 'eng') startEngPoll(); else stopEngPoll();
 }
 
@@ -661,7 +860,7 @@ function setMktInstance(id) {
   mktInstance = id;
   localStorage.setItem('mkt-instance', id);
   // Every view is scoped to the instance, so all of them are now stale.
-  contentItems = []; settingsData = null;
+  contentItems = []; settingsData = null; smsData = null;
   mktRefresh();
 }
 
@@ -686,12 +885,17 @@ function setMktView(v) {
   document.getElementById('content-scroll').style.display = v === 'content' ? '' : 'none';
   document.getElementById('reddit-scroll').style.display = v === 'reddit' ? '' : 'none';
   document.getElementById('settings-scroll').style.display = v === 'settings' ? '' : 'none';
+  document.getElementById('sms-scroll').style.display = v === 'sms' ? '' : 'none';
   document.getElementById('mkt-phase-filters').style.display = v === 'content' ? 'contents' : 'none';
   document.getElementById('mkt-reddit-filters').style.display = v === 'reddit' ? 'contents' : 'none';
+  document.getElementById('mkt-sms-filters').style.display = v === 'sms' ? 'contents' : 'none';
   // The channel dropdown scopes the department's own views. Reddit's records
   // live in Twenty and carry no department channel, so it would filter them
   // all away — hide it there rather than leave a control that empties the view.
-  document.getElementById('mkt-channel').style.display = v === 'reddit' ? 'none' : '';
+  // Same reason SMS hides it: its records are the partner's own customer
+  // database and gateway, not the department's channel config.
+  document.getElementById('mkt-channel').style.display =
+    (v === 'reddit' || v === 'sms') ? 'none' : '';
   if (v === 'decide' && mktData) renderMarketing();
   // Loaded on first visit rather than with the tab: these are the views opened
   // least often, and reading the library or the config on every Marketing open
@@ -699,6 +903,7 @@ function setMktView(v) {
   if (v === 'content') { contentItems.length ? renderContent() : loadContent(); }
   if (v === 'reddit') { redditItems.length ? renderReddit() : loadReddit(); }
   if (v === 'settings') { settingsData ? renderSettings() : loadSettings(); }
+  if (v === 'sms') { smsData ? renderSms() : loadSms(); }
 }
 
 // One refresh button, four views. Refreshing settings by reloading the library
@@ -707,6 +912,7 @@ function mktRefresh() {
   if (mktView === 'settings') loadSettings();
   else if (mktView === 'content') loadContent();
   else if (mktView === 'reddit') loadReddit();
+  else if (mktView === 'sms') loadSms();
   else loadMarketing();
 }
 
@@ -1495,10 +1701,13 @@ function renderEng() {
     h += '<div class="section"><div class="h">Waiting on you ' +
          `<span class="count">${waitingTotal}</span></div>`;
     if (waitingTotal) {
-      const filt = (v, label) =>
-        `<button class="prio-btn${engWaitingFilter === v ? ' on' : ''}" onclick="engSetWaitingFilter('${v}')">${label}</button>`;
+      const gateCount = g => d.waiting.filter(w => w.gate === g).length;
+      const filt = (v, label, count) =>
+        `<button class="prio-btn${engWaitingFilter === v ? ' on' : ''}" onclick="engSetWaitingFilter('${v}')">` +
+        `${label}${count != null ? ' (' + count + ')' : ''}</button>`;
       h += '<div class="prio-row" style="margin-bottom:8px">' +
-        filt('all', 'all') + filt('merge', 'merge') + filt('scope', 'scope') + '</div>';
+        filt('all', 'all') + filt('merge', 'merge', gateCount('merge')) +
+        filt('scope', 'scope', gateCount('scope')) + '</div>';
     }
     // Only "all" surfaces blocked-on-approver tickets — they carry no gate
     // of their own (a risk acceptance, a direct question; see blocked_on_harry
@@ -1898,8 +2107,590 @@ async function viewLog(name) {
   loadLogList();
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// Partners — the user store (admin only)
+// ══════════════════════════════════════════════════════════════════════════
+// Who exists, what role they hold, and which businesses each partner may work
+// on. An admin has no restrictions; a partner sees only their assignments, on
+// their very next request after a change here.
+
+let partnersData = null;
+let editingEmail = null;   // null while adding
+
+async function loadPartners() {
+  const el = document.getElementById('partners-scroll');
+  try {
+    const r = await fetch('/api/partners');
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    partnersData = d;
+    renderPartners();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Error loading users: ${esc(String(e))}</div>`;
+  }
+}
+
+function instLabel(id) {
+  const i = (partnersData?.instances || []).find(x => x.id === id);
+  return i ? i.label : id;
+}
+
+function renderPartners() {
+  const el = document.getElementById('partners-scroll');
+  const users = partnersData.users || [];
+  const head = '<div class="user-head"><div>User</div><div>Phone</div>' +
+    '<div>Instances</div><div>Role</div><div>Last sign-in</div><div></div></div>';
+  el.innerHTML = head + users.map(u => {
+    const insts = u.role === 'admin'
+      ? '<span class="dim">all (no restrictions)</span>'
+      : (u.instances.length
+          ? u.instances.map(i => `<span class="chip">${esc(instLabel(i))}</span>`).join(' ')
+          : '<span class="dim">none assigned</span>');
+    // Config completeness is a partner's problem — an admin has no SMS
+    // gateway to be missing, so saying so on their row would be noise.
+    const cfg = u.role === 'partner' && !u.config_ready
+      ? '<div class="sub" style="color:#fbbf24">configuration incomplete</div>' : '';
+    return `<div class="user-row">
+      <div>
+        <div class="who">${esc(u.name || u.email)}</div>
+        <div class="sub">${esc(u.name ? u.email : '')}${u.pin_set ? '' : ' · no PIN set'}</div>
+        ${cfg}
+      </div>
+      <div class="dim">${esc(u.phone) || '—'}</div>
+      <div>${insts}</div>
+      <div><span class="role-pill ${esc(u.role)}">${esc(u.role)}</span></div>
+      <div class="dim">${esc((u.last_login || '').slice(0, 10)) || 'never'}</div>
+      <div><button class="btn" onclick="openUserModal('${escAttr(u.email)}')">Edit</button></div>
+    </div>`;
+  }).join('') || '<div class="empty">No users.</div>';
+}
+
+function openUserModal(email) {
+  editingEmail = email;
+  const u = email ? (partnersData.users || []).find(x => x.email === email) : null;
+  document.getElementById('um-title').textContent = u ? 'Edit user' : 'Add user';
+  document.getElementById('um-sub').textContent = u ? u.email : '';
+  document.getElementById('um-email').value = u ? u.email : '';
+  document.getElementById('um-email').disabled = !!u;   // the email is the key
+  document.getElementById('um-name').value = u ? u.name : '';
+  document.getElementById('um-phone').value = u ? u.phone : '';
+  document.getElementById('um-pin').value = '';
+  document.getElementById('um-pin-note').textContent = u
+    ? '— leave blank to keep the current one' : '— 4 to 12 digits';
+  document.getElementById('um-role').value = u ? u.role : 'partner';
+  document.getElementById('um-delete').style.display = u ? '' : 'none';
+  document.getElementById('um-err').textContent = '';
+  renderInstancePicker(u ? u.instances : []);
+  onRoleChange();
+  document.getElementById('user-modal').classList.add('open');
+}
+
+function closeUserModal() {
+  document.getElementById('user-modal').classList.remove('open');
+}
+
+function renderInstancePicker(selected) {
+  const sel = new Set(selected || []);
+  document.getElementById('um-instances').innerHTML =
+    (partnersData.instances || []).map(i =>
+      `<button type="button" class="set-day${sel.has(i.id) ? ' on' : ''}"
+        data-inst="${escAttr(i.id)}" onclick="this.classList.toggle('on')">${esc(i.label)}</button>`
+    ).join('') || '<span class="note-text">No business instances exist yet.</span>';
+}
+
+function onRoleChange() {
+  // An admin has no restrictions, so the picker is not just irrelevant for
+  // them — showing it would imply an assignment that is never consulted.
+  document.getElementById('um-inst-wrap').style.display =
+    document.getElementById('um-role').value === 'admin' ? 'none' : '';
+}
+
+function pickedInstances() {
+  return Array.from(document.querySelectorAll('#um-instances .set-day.on'))
+    .map(b => b.dataset.inst);
+}
+
+async function saveUser() {
+  const err = document.getElementById('um-err');
+  const btn = document.getElementById('um-save');
+  const payload = {
+    email: document.getElementById('um-email').value.trim().toLowerCase(),
+    name: document.getElementById('um-name').value.trim(),
+    phone: document.getElementById('um-phone').value.trim(),
+    pin: document.getElementById('um-pin').value.trim(),
+    role: document.getElementById('um-role').value,
+    instances: pickedInstances(),
+  };
+  err.textContent = '';
+  btn.disabled = true;
+  try {
+    const r = await fetch(editingEmail ? '/api/partners/update' : '/api/partners/create', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.error || ('Failed (' + r.status + ')'); btn.disabled = false; return; }
+    closeUserModal();
+    loadPartners();
+  } catch (e) {
+    err.textContent = String(e);
+  }
+  btn.disabled = false;
+}
+
+async function deleteUser() {
+  if (!editingEmail) return;
+  if (!confirm(`Delete ${editingEmail}? Their configuration — Claude token, SMS ` +
+               `server, customer source — is deleted with them. Campaigns they ` +
+               `created stay on the board.`)) return;
+  const r = await fetch('/api/partners/delete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: editingEmail }),
+  });
+  const d = await r.json();
+  if (!r.ok) { document.getElementById('um-err').textContent = d.error || 'Failed'; return; }
+  closeUserModal();
+  loadPartners();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Config — your own credentials
+// ══════════════════════════════════════════════════════════════════════════
+// Secrets go up but never come back: the server returns `_set` and the last
+// four characters, so a blank secret field means "leave it alone" rather than
+// "clear it". Clearing one is the ✕ next to it, deliberately.
+
+let configData = null;
+let configWho = '';
+
+async function loadConfig(who) {
+  if (who !== undefined) configWho = who || '';
+  const el = document.getElementById('config-scroll');
+  // An admin can fix a partner's configuration for them, which is the whole
+  // point of holding the Partners page — but the default is always your own.
+  const sel = document.getElementById('config-who');
+  if (me.role === 'admin') {
+    if (!partnersData) { try { await loadPartners(); } catch (e) {} }
+    const users = (partnersData?.users) || [];
+    sel.style.display = users.length > 1 ? '' : 'none';
+    sel.innerHTML = users.map(u =>
+      `<option value="${escAttr(u.email)}"${(configWho || me.email) === u.email ? ' selected' : ''}>` +
+      `${esc(u.name || u.email)}</option>`).join('');
+  }
+  try {
+    const q = configWho && configWho !== me.email ? '?email=' + encodeURIComponent(configWho) : '';
+    const r = await fetch('/api/config' + q);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    configData = d;
+    renderConfig();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Error loading configuration: ${esc(String(e))}</div>`;
+  }
+}
+
+function secretField(id, label, hintText) {
+  const isSet = configData[id + '_set'];
+  return `<label for="cfg-${id}">${esc(label)}</label>
+    <div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="password" id="cfg-${id}" autocomplete="new-password"
+               placeholder="${isSet ? 'unchanged' : 'not set'}" />
+        ${isSet ? `<button class="btn no" title="Clear this value"
+                     onclick="clearSecret('${escAttr(id)}')">✕</button>` : ''}
+      </div>
+      ${isSet ? `<div class="cfg-set">set · ${esc(configData[id + '_hint'])}</div>` : ''}
+      <div class="cfg-hint">${hintText}</div>
+    </div>`;
+}
+
+function renderConfig() {
+  const el = document.getElementById('config-scroll');
+  const d = configData;
+  const source = d.customer_source || '';
+  const forSelf = !configWho || configWho === me.email;
+
+  const missing = (d.missing || []).length
+    ? `<div class="missing"><b>Not usable yet</b>Still missing: ${esc(d.missing.join(', '))}.
+        SMS campaigns need the gateway; Smart reactivation needs all of it.</div>`
+    : '';
+
+  el.innerHTML = missing + `
+    <div class="section">
+      <div class="h">Claude</div>
+      <div class="note-text" style="margin-bottom:12px">Agent work runs on your own
+        account, not the host's. Generate a token with <code>claude setup-token</code>
+        on any machine with a browser; it lasts a year.</div>
+      <div class="cfg-grid">
+        ${secretField('claude_oauth_token', 'OAuth token',
+          'Required for Smart reactivation. Without it, nothing that needs a model runs for you.')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="h">SMS server</div>
+      <div class="note-text" style="margin-bottom:12px">An HTTP gateway. The control
+        center POSTs <code>username</code>, <code>password</code>, <code>to</code> and
+        <code>message</code> as form fields.</div>
+      <div class="cfg-grid">
+        <label for="cfg-sms_url">Server URL</label>
+        <div>
+          <input type="text" id="cfg-sms_url" value="${escAttr(d.sms_url || '')}"
+                 placeholder="https://sms.example.com/send" />
+          <div class="cfg-hint">Must start with http:// or https://.</div>
+        </div>
+        <label for="cfg-sms_username">Username</label>
+        <div><input type="text" id="cfg-sms_username" autocomplete="off"
+                    value="${escAttr(d.sms_username || '')}" /></div>
+        ${secretField('sms_password', 'Password', 'Stored server-side; never sent back to this page.')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="h">Customer database</div>
+      <div class="note-text" style="margin-bottom:12px">Where campaign segments and
+        reactivation candidates are read from.</div>
+      <div class="cfg-grid">
+        <label for="cfg-source">Source</label>
+        <div>
+          <select class="instance-select" id="cfg-source" style="width:100%"
+                  onchange="onSourceChange()">
+            <option value=""${source ? '' : ' selected'}>— pick one —</option>
+            <option value="aiorders"${source === 'aiorders' ? ' selected' : ''}>AIOrders</option>
+            <option value="crm"${source === 'crm' ? ' selected' : ''}>CRM (Twenty)</option>
+          </select>
+          <div class="cfg-hint">AIOrders reads your brand's customers directly and
+            gives you order-based segments. The CRM has no order history, so it offers
+            only date-based ones.</div>
+        </div>
+        <div id="cfg-aiorders" style="display:${source === 'aiorders' ? 'contents' : 'none'}">
+          <label for="cfg-brand_id">Brand id</label>
+          <div><input type="text" id="cfg-brand_id" autocomplete="off"
+                      value="${escAttr(d.brand_id || '')}" placeholder="uuid" /></div>
+          ${secretField('pg_dsn', 'Database connection',
+            'Postgres/Supabase connection string, e.g. postgresql://user:pass@host:5432/db. ' +
+            'Needs the psycopg driver installed on the machine running this server.')}
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn yes" id="cfg-save" onclick="saveConfig()">Save configuration</button>
+      <span class="set-saved" id="cfg-saved"></span>
+      <span class="set-err" id="cfg-err"></span>
+    </div>
+    ${forSelf ? '' : `<div class="note-text" style="margin-top:14px">
+      You are editing <b>${esc(configWho)}</b>'s configuration as an admin.</div>`}`;
+}
+
+function onSourceChange() {
+  const v = document.getElementById('cfg-source').value;
+  document.getElementById('cfg-aiorders').style.display = v === 'aiorders' ? 'contents' : 'none';
+}
+
+function configPayload(extra) {
+  const val = id => (document.getElementById('cfg-' + id)?.value || '').trim();
+  return Object.assign({
+    email: configWho || me.email,
+    sms_url: val('sms_url'),
+    sms_username: val('sms_username'),
+    sms_password: val('sms_password'),
+    claude_oauth_token: val('claude_oauth_token'),
+    customer_source: val('source'),
+    brand_id: val('brand_id'),
+    pg_dsn: val('pg_dsn'),
+  }, extra || {});
+}
+
+async function postConfig(payload) {
+  const err = document.getElementById('cfg-err');
+  const saved = document.getElementById('cfg-saved');
+  if (err) err.textContent = '';
+  if (saved) saved.textContent = '';
+  const r = await fetch('/api/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const d = await r.json();
+  if (!r.ok) { if (err) err.textContent = d.error || ('Failed (' + r.status + ')'); return false; }
+  configData = d;
+  renderConfig();
+  const s2 = document.getElementById('cfg-saved');
+  if (s2) s2.textContent = 'Saved.';
+  // The tab's dot and the SMS view's warnings both key off config state.
+  loadMe();
+  smsData = null;
+  return true;
+}
+
+function saveConfig() { postConfig(configPayload()); }
+
+function clearSecret(field) {
+  if (!confirm('Clear this value?')) return;
+  postConfig(configPayload({ clear: [field] }));
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SMS — campaigns and smart reactivation
+// ══════════════════════════════════════════════════════════════════════════
+// Two halves, and they are not symmetric. A CAMPAIGN is bulk copy you write
+// and then approve; nothing sends until you do. SMART REACTIVATION takes no
+// copy and no segment — it reads the lapsed end of your customer database,
+// decides who is worth reaching, writes each message, and sends. That is the
+// one auto-send path in the system, so the guardrails (a per-run cap, a
+// 30-day per-person cooldown, and the global pause switch) are stated on the
+// view rather than buried in the server.
+
+let smsData = null;
+let smsView = localStorage.getItem('sms-view') || 'campaigns';
+let editingCampaign = null;
+
+function setSmsView(v) {
+  smsView = v;
+  localStorage.setItem('sms-view', v);
+  document.querySelectorAll('[data-sf]').forEach(b =>
+    b.classList.toggle('active', b.dataset.sf === v));
+  renderSms();
+}
+
+async function loadSms() {
+  const el = document.getElementById('sms-scroll');
+  try {
+    const r = await fetch('/api/sms' + mktQ());
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    smsData = d;
+    document.querySelectorAll('[data-sf]').forEach(b =>
+      b.classList.toggle('active', b.dataset.sf === smsView));
+    renderSms();
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Error loading SMS: ${esc(String(e))}</div>`;
+  }
+}
+
+function smsBanner() {
+  let h = '';
+  if (smsData.quiet_mode) {
+    h += '<div class="missing"><b>Paused</b>MODE is set in .env — nothing sends ' +
+         'until it is cleared. Drafting and approving still work.</div>';
+  }
+  const missing = smsData.config_missing || [];
+  if (missing.length) {
+    h += `<div class="missing"><b>Configuration incomplete</b>Missing:
+      ${esc(missing.join(', '))}. <a class="mkt-link" href="#"
+      onclick="switchTab('config');return false">Open Config →</a></div>`;
+  }
+  return h;
+}
+
+function renderSms() {
+  const el = document.getElementById('sms-scroll');
+  if (!smsData) return;
+  if (smsData.empty) { el.innerHTML = `<div class="empty">${esc(smsData.empty)}</div>`; return; }
+  el.innerHTML = smsBanner() +
+    (smsView === 'reactivation' ? renderReactivation() : renderCampaigns());
+}
+
+function fmtWhen(ts) { return (ts || '').replace('T', ' ').replace('Z', '') || '—'; }
+
+function segLabel(id) {
+  const s = (smsData.segments || []).find(x => x.id === id);
+  return s ? s.label : id;
+}
+
+function renderCampaigns() {
+  const noSource = !smsData.customer_source;
+  const bar = `<div class="sms-bar">
+    <button class="btn yes" onclick="openCampModal(null)"${noSource ? ' disabled' : ''}>+ New campaign</button>
+    <span class="note-text">${noSource
+      ? 'Pick a customer database source in Config before writing a campaign.'
+      : 'Segments read from your ' + esc(smsData.customer_source === 'crm' ? 'CRM' : 'AIOrders') +
+        ' customer database.'}</span>
+  </div>`;
+
+  const items = smsData.campaigns || [];
+  if (!items.length) return bar + '<div class="empty">No campaigns yet.</div>';
+
+  return bar + items.map(c => {
+    const canEdit = c.status === 'draft' || c.status === 'approved';
+    return `<div class="mkt-card">
+      <div class="mkt-head">
+        <div class="mkt-title-wrap">
+          <div class="mkt-title">${esc(c.name)}</div>
+          <div class="mkt-sub">${esc(segLabel(c.segment))} · ${c.recipient_count} recipient${
+            c.recipient_count === 1 ? '' : 's'} at last count · created ${esc(fmtWhen(c.created_at))}</div>
+        </div>
+        <span class="status-pill ${esc(c.status)}">${esc(c.status)}</span>
+      </div>
+      <div class="sms-msg">${esc(c.body)}</div>
+      ${c.sizing_error ? `<div class="set-err" style="margin-top:8px">Could not size this
+        segment: ${esc(c.sizing_error)}</div>` : ''}
+      ${c.approved_by ? `<div class="sms-fact">Approved by <b>${esc(c.approved_by)}</b>
+        ${esc(fmtWhen(c.approved_at))}</div>` : ''}
+      ${c.sent_at ? `<div class="sms-fact">Sent ${esc(fmtWhen(c.sent_at))} —
+        <b>${c.results ? c.results.sent : 0}</b> delivered, <b>${c.results ? c.results.failed : 0}</b> failed</div>` : ''}
+      ${(c.results && (c.results.errors || []).length) ? `<div class="sms-out">${
+        c.results.errors.map(e => `<div class="one bad">…${esc(e.phone)} — ${esc(e.error)}</div>`).join('')
+      }</div>` : ''}
+      <div class="actions">
+        ${canEdit ? `<button class="btn edit" onclick="openCampModal('${escAttr(c.id)}')">Edit</button>` : ''}
+        ${c.status === 'draft' ? `<button class="btn yes" onclick="campAction('approve','${escAttr(c.id)}')">Approve</button>` : ''}
+        ${c.status === 'approved' ? `<button class="btn yes" onclick="sendCampaign('${escAttr(c.id)}')">Send now</button>` : ''}
+        ${c.status !== 'sent' && c.status !== 'discarded'
+          ? `<button class="btn no" onclick="campAction('discard','${escAttr(c.id)}')">Discard</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderReactivation() {
+  const r = smsData.reactivation || {};
+  const blocked = (smsData.config_missing || []).length || smsData.quiet_mode;
+  const bar = `<div class="auto-note">
+    Smart reactivation takes no copy and no segment. It reads the lapsed end of your
+    customer database, runs a pass on <b>your</b> Claude OAuth token to choose who is
+    worth reaching and what to say to each of them, and sends — with no approval step.
+    Guardrails, since nobody is reviewing: at most <b>${r.cap}</b> people per run,
+    nobody texted twice within <b>${r.cooldown_days} days</b>, and the run stops
+    entirely while the global pause switch is set. Phone numbers are never sent to
+    the model — it sees a first name and how long it has been, nothing else.
+  </div>
+  <div class="sms-bar">
+    <button class="btn yes" id="react-btn" onclick="runReactivation()"${blocked ? ' disabled' : ''}>
+      Run reactivation now</button>
+    <span class="note-text" id="react-status"></span>
+  </div>`;
+
+  const runs = smsData.reactivations || [];
+  if (!runs.length) return bar + '<div class="empty">No reactivation runs yet.</div>';
+
+  return bar + runs.map(run => `<div class="mkt-card">
+    <div class="mkt-head">
+      <div class="mkt-title-wrap">
+        <div class="mkt-title">Run ${esc(fmtWhen(run.created_at))}</div>
+        <div class="mkt-sub">${run.candidates} lapsed · ${run.skipped_cooldown || 0} in cooldown ·
+          ${run.considered} considered · ${run.chosen == null ? 0 : run.chosen} chosen</div>
+      </div>
+      <span class="status-pill ${esc(run.status)}">${esc(run.status)}</span>
+    </div>
+    ${run.error ? `<div class="set-err" style="margin-top:8px">${esc(run.error)}</div>` : ''}
+    ${(run.messages || []).length ? `<div class="sms-out">${run.messages.map(m =>
+      `<div class="one${m.sent ? '' : ' bad'}"><b>${esc(m.name || m.phone)}</b> —
+        ${esc(m.message)}${m.sent ? '' : ' · not sent: ' + esc(m.detail)}</div>`).join('')}</div>` : ''}
+    <div class="sms-fact"><b>${run.results ? run.results.sent : 0}</b> sent ·
+      <b>${run.results ? run.results.failed : 0}</b> failed</div>
+  </div>`).join('');
+}
+
+function openCampModal(id) {
+  editingCampaign = id;
+  const c = id ? (smsData.campaigns || []).find(x => x.id === id) : null;
+  document.getElementById('cm-title').textContent = c ? 'Edit campaign' : 'New campaign';
+  document.getElementById('cm-sub').textContent = c && c.status === 'approved'
+    ? 'Editing an approved campaign sends it back to draft — the gate is on the words, not the record.'
+    : 'Drafts go out only after you approve them.';
+  document.getElementById('cm-name').value = c ? c.name : '';
+  document.getElementById('cm-body').value = c ? c.body : '';
+  document.getElementById('cm-err').textContent = '';
+  // The segment is fixed once a campaign exists: it was sized and approved
+  // against that audience, and swapping it underneath would keep neither.
+  document.getElementById('cm-seg-wrap').style.display = c ? 'none' : '';
+  const sel = document.getElementById('cm-segment');
+  sel.innerHTML = (smsData.segments || []).map(sg =>
+    `<option value="${escAttr(sg.id)}">${esc(sg.label)}</option>`).join('');
+  document.getElementById('cm-save').textContent = c ? 'Save' : 'Save draft';
+  renderSegmentNote();
+  renderCharCount();
+  document.getElementById('camp-modal').classList.add('open');
+}
+
+function closeCampModal() {
+  document.getElementById('camp-modal').classList.remove('open');
+}
+
+function renderSegmentNote() {
+  const id = document.getElementById('cm-segment').value;
+  const sg = (smsData.segments || []).find(x => x.id === id);
+  document.getElementById('cm-seg-note').textContent = sg ? sg.note : '';
+}
+
+function renderCharCount() {
+  const n = document.getElementById('cm-body').value.length;
+  const max = smsData.max_chars;
+  const el = document.getElementById('cm-count');
+  el.textContent = `— ${n}/${max} characters`;
+  el.style.color = n > max ? '#f87171' : '';
+}
+
+async function saveCampaign() {
+  const err = document.getElementById('cm-err');
+  const btn = document.getElementById('cm-save');
+  err.textContent = '';
+  btn.disabled = true;
+  const payload = {
+    instance: mktInstance,
+    id: editingCampaign,
+    name: document.getElementById('cm-name').value.trim(),
+    body: document.getElementById('cm-body').value.trim(),
+    segment: document.getElementById('cm-segment').value,
+  };
+  const url = editingCampaign ? '/api/sms/campaign/update' : '/api/sms/campaign';
+  const r = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const d = await r.json();
+  btn.disabled = false;
+  if (!r.ok) { err.textContent = d.error || ('Failed (' + r.status + ')'); return; }
+  closeCampModal();
+  loadSms();
+}
+
+async function campAction(action, id) {
+  const r = await fetch('/api/sms/campaign/' + action, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instance: mktInstance, id }),
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed'); return; }
+  loadSms();
+}
+
+async function sendCampaign(id) {
+  const c = (smsData.campaigns || []).find(x => x.id === id);
+  if (!confirm(`Send "${c.name}" to roughly ${c.recipient_count} people now? ` +
+               `This cannot be recalled.`)) return;
+  await campAction('send', id);
+}
+
+async function runReactivation() {
+  if (!confirm('Run smart reactivation now? Messages send automatically — nobody ' +
+               'reviews them first.')) return;
+  const btn = document.getElementById('react-btn');
+  const status = document.getElementById('react-status');
+  btn.disabled = true;
+  status.textContent = 'Running — the Claude pass takes a minute or two…';
+  try {
+    const r = await fetch('/api/sms/reactivate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instance: mktInstance }),
+    });
+    const d = await r.json();
+    if (!r.ok) { status.textContent = ''; alert(d.error || 'Failed'); btn.disabled = false; return; }
+  } catch (e) {
+    status.textContent = '';
+    alert(String(e));
+    btn.disabled = false;
+    return;
+  }
+  status.textContent = '';
+  loadSms();
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────
-loadMarketing();
+// Tabs before data: a partner must not see the Partners tab flicker into view
+// for the length of one round trip.
+loadMe().then(loadMarketing);
 </script>
 </body>
 </html>

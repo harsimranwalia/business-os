@@ -4,3 +4,9 @@ __pycache__/
 *.pyc
 instances/*/engineering/traces/
 logs/
+
+# Control Center account store and per-partner credentials. Both hold secrets
+# (PINs, Claude OAuth tokens, SMS gateway passwords, database DSNs) and both
+# are written by the running server, not by hand.
+control-center/users.json
+control-center/partner-config.json
