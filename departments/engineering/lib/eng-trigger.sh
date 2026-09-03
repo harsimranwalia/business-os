@@ -148,7 +148,38 @@ read_plan_budget() {
 
 MAX_HOPS_PER_TICKET="${ENG_MAX_HOPS_PER_TICKET:-$(read_plan_budget hops_per_ticket 8)}"
 MAX_HOPS_PER_DAY="${ENG_MAX_HOPS_PER_DAY:-$(read_plan_budget hops_per_day 40)}"
-STALE_LOCK_SECONDS=1800
+# 2026-09-02: was 1800 — half of PASS_TIMEOUT_BASE_SECONDS below, and stale
+# from when the default pass ceiling was itself 1800s (see the
+# `building`/`in-review`/`in-qa`/`in-security` 30-minute-ceiling comment a few
+# lines down); never raised when that default became 3600. A pass legitimately
+# alive between 1800s and 3600s falls into `acquire()`'s stale-check branch
+# below, which only refuses to steal if `kill -0 "$owner"` finds the recorded
+# PID alive — and on this Windows/Git-Bash host that check is not reliable:
+# traced live on `decision 2026-08-31-eng013-merge-request.md` (started
+# 19:50:06) — `.loop.lock/pid` recorded 1096917, but neither `tasklist` nor
+# `Get-Process` could find that PID anywhere, while the pass's actual process
+# chain (eng-watch's bash.exe -> sh -> eng-loop-all.sh -> this script ->
+# `timeout.exe` -> run-claude.sh -> claude.exe, ten hops, traced by command
+# line) was very much alive under ten *different* PIDs, none of them
+# 1096917. `run-claude.sh`'s own `exec "$ENG_CLAUDE" ...` is one confirmed
+# PID-changing hop (MSYS `exec` into a native .exe spawns a new Windows PID
+# rather than replacing the process in place, unlike real POSIX exec); it did
+# not by itself explain the gap back to this script's own `$$`, and three
+# OTHER lock-owner PIDs recorded earlier the same day (1036513, 1082246,
+# 1092639) WERE each confirmed alive by a later `kill -0` — so whatever
+# breaks the PID this script hands to a competing `acquire()` call is real
+# but not yet understood well enough to fix at the source. Until it is, the
+# safe lever is the one already used elsewhere in this file (see the
+# `PASS_TIMEOUT_INTAKE_SECONDS` comment below): raise the threshold high
+# enough that the failure mode can't fire, rather than trust a check that
+# just failed a live audit. 3900 clears `PASS_TIMEOUT_BASE_SECONDS` (3600)
+# with a 300s margin for `timeout`'s kill plus this script's own exit
+# logging, so by the time any lock is old enough to even reach the `kill -0`
+# branch, the pass that held it should already have exited on its own and
+# released it cleanly — the unreliable check stops being reachable during a
+# still-legitimately-running pass, which is the actual risk (a second
+# session launched on top of a live one, racing on the same board index).
+STALE_LOCK_SECONDS=3900
 PASS_TIMEOUT_BASE_SECONDS=3600    # a hung session must not hold the lock forever
 # `intake` runs PM shaping and often architect design in the same pass —
 # investigation with no natural stopping point (read live schema, correct a
@@ -624,9 +655,10 @@ collapse_pending() {
   fi
 }
 
-# Pop the oldest queued event into ATTEMPT / EVENT / CONTEXT.
-# Returns 0 with a VALID event loaded; 1 when the queue is empty, or holds only
-# lines that could not be parsed into a legal event.
+# Pop the highest-priority queued event into ATTEMPT / EVENT / CONTEXT — the
+# oldest event within the highest-priority class present, not simply the
+# oldest line. Returns 0 with a VALID event loaded; 1 when the queue is empty,
+# or holds only lines that could not be parsed into a legal event.
 #
 # B4 (ENG-009 review round 1). EVENT has THREE assignment sites, not two: the
 # argument, this drain, and the ticket-hop-limit skip that also reads the queue
@@ -642,17 +674,42 @@ collapse_pending() {
 # event it had just announced it was dropping. A drop path that is worse than no
 # drop path is not a small bug; it is the loud half of a fix doing the opposite of
 # what it says.
+#
+# ── 2026-09-02: PRIORITY, NOT STRICT FIFO ───────────────────────────────────
+# `watch`/`scheduled` are polls fired by schtasks/launchd on a clock — "go
+# check whether anything needs doing" — and carry no payload of their own.
+# `intake`/`decision`/`finding`/`continue` are the opposite: each one names
+# concrete, already-identified work — a request that arrived, a gate the
+# approver already answered, a bug QA already found, a ticket mid-build that
+# already knows its own next hop. Strict FIFO let a poll that happened to
+# queue first make an already-answered decision, or an already-chained
+# continue, wait behind it — and worse, wait behind its RETRIES:
+# `requeue_event` puts a failed event back at the front, one attempt older, so
+# a `watch`/`scheduled` sweep that keeps timing out can occupy the front of
+# the queue, fail, retry, fail again and drop, while a `continue ENG-009` sat
+# one line back the entire time. That is exactly what stalled ENG-009 at
+# `building` from 2026-08-30: its own chained `continue` event was dropped
+# after two failed attempts during a bad stretch of timeouts, and strict FIFO
+# gave the sweeps repeatedly eating the front of the queue no reason to step
+# aside for it.
+#
+# So: among the QUEUED events, the oldest one whose type is in {intake,
+# decision, finding, continue} runs before any {watch, scheduled} ahead of
+# it in the file — never the reverse, and never reordering within a class
+# (still FIFO there). A queue holding only watch/scheduled still drains
+# strict FIFO, since there is nothing to prefer it over.
 drain_next() {
-  local _dn_line
+  local _dn_line _dn_scan_no _dn_prio_no
+  # Drop leading corrupt lines exactly as before — this only ever inspects
+  # the front, so a corrupt line further back is found lazily once it
+  # becomes the front on a later call.
   while [ -s "$PENDING" ]; do
     _dn_line=$(head -n 1 "$PENDING")
+    parse_queue_line "$_dn_line"
+    valid_event "$EVENT" && break
     tail -n +2 "$PENDING" > "$PENDING.tmp" 2>/dev/null
     mv -f "$PENDING.tmp" "$PENDING" 2>/dev/null
     [ -s "$PENDING" ] || rm -f "$PENDING"
-    parse_queue_line "$_dn_line"
-    if valid_event "$EVENT"; then
-      return 0
-    fi
     log "DROPPED queued event: unrecognised event name in $PENDING — not one of intake/decision/finding/continue/watch/scheduled"
     drop_notice "a corrupt queue line" \
       "A line in \`$PENDING\` did not parse into a legal event name and has been discarded rather than run.
@@ -660,7 +717,41 @@ drain_next() {
 Whatever wrote it has NOT been processed. The queue is transient state under \`traces/\`, so the likely causes are a hand-edit, a partially-written line, or a deploy that changed the line format underneath a queue written by the old code." \
       ""
   done
-  return 1
+  [ -s "$PENDING" ] || return 1
+
+  # Front is valid. Look for an older priority-class event anywhere behind it
+  # — if the front is already priority-class, or the rest of the queue is all
+  # watch/scheduled, this finds nothing and the plain FIFO pop below runs.
+  _dn_scan_no=0
+  _dn_prio_no=""
+  while IFS= read -r _dn_line; do
+    _dn_scan_no=$(( _dn_scan_no + 1 ))
+    [ -n "$_dn_line" ] || continue
+    parse_queue_line "$_dn_line"
+    case "$EVENT" in
+      intake|decision|finding|continue)
+        _dn_prio_no="$_dn_scan_no"
+        break
+        ;;
+    esac
+  done < "$PENDING"
+
+  if [ -n "$_dn_prio_no" ] && [ "$_dn_prio_no" -gt 1 ]; then
+    _dn_line=$(awk -v n="$_dn_prio_no" 'NR==n' "$PENDING")
+    awk -v n="$_dn_prio_no" 'NR!=n' "$PENDING" > "$PENDING.tmp"
+    mv -f "$PENDING.tmp" "$PENDING"
+    [ -s "$PENDING" ] || rm -f "$PENDING"
+    parse_queue_line "$_dn_line"
+    return 0
+  fi
+
+  # The front is already the highest-priority event present — pop it FIFO.
+  _dn_line=$(head -n 1 "$PENDING")
+  tail -n +2 "$PENDING" > "$PENDING.tmp" 2>/dev/null
+  mv -f "$PENDING.tmp" "$PENDING" 2>/dev/null
+  [ -s "$PENDING" ] || rm -f "$PENDING"
+  parse_queue_line "$_dn_line"
+  return 0
 }
 
 # A pass died. Give the event exactly one more life, then drop it loudly.

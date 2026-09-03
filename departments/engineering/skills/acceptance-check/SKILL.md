@@ -77,7 +77,9 @@ proposed multi-ticket sequence — usually a section titled something like
 in one ticket (`ENG-006` set the precedent: five items, and this was item
 one).
 
-File the next item now, in this same pass, only if **both** of these hold:
+Start filing the next item now, in this pass — starting it here is what's
+required; finishing it here is not, see below — only if **both** of these
+hold:
 
 1. The PRD names a next item and gives it enough shape to draft from — a
    single line is enough, since the new PRD will do the actual work.
@@ -97,9 +99,28 @@ item, shape it the same way a brand-new intake would: new ticket, problem
 statement, PRD, acceptance criteria, non-goals, a recommendation — the
 complete `skills/prd-writer/SKILL.md` process, with no shortcut just because
 the shape already existed on paper — then raise its own G1 to `inbox/` like
-any other ticket. The WIP limit applies exactly as `eng_build_loop.md`
-specifies; if it's in the way, say so in the ticket log and leave it for
-the next pass rather than working around it.
+any other ticket.
+
+**Complete, not necessarily in one hop.** Run `prd-writer` step 1b first so
+the new ticket exists on the board; from then on it is a normal
+machine-owned ticket and chains exactly like one (`eng_build_loop.md` step
+6/9): finish the numbered `prd-writer` step you are in, write what it
+produced to disk, log which step it stopped after, and fire
+`lib/eng-trigger.sh continue {TICKET-ID}` with `chained:` in the ticket log
+— where `{TICKET-ID}` is the **newly filed** ticket, never this one, which
+is terminal at `verified` and must not be chained. The next hop resumes from
+that checkpoint; `prd-writer` opens with how. Observed 2026-09-02
+(`ENG-007`'s ticket 3): this same filing, run as one atomic unit, hit the
+3600s ceiling in `lib/eng-trigger.sh` twice with nothing durable written
+either time and camped on the single-flight lock for over five hours across
+eight launches, starving two other answered decisions and every routine
+sweep behind it. Stopping at a step boundary with the checkpoint on disk is
+the design; pushing on toward a kill with nothing to show for it is the
+failure.
+
+The WIP limit applies exactly as `eng_build_loop.md` specifies; if it's in
+the way, say so in the ticket log and leave it for the next pass rather
+than working around it.
 
 None of this is the department commissioning itself
 (`docs/engineering-team.md`, "The department cannot commission itself") — the
