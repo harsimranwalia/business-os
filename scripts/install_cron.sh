@@ -21,6 +21,16 @@
 #
 # Prereqs: `claude` CLI on PATH, python3, repo-root .env populated
 # (Reddit read creds, Reddit write creds, TWENTY_*, TELEGRAM_*).
+#
+# Auth for the agent triage line: cron runs with none of your shell's env, so
+# unlike the Python steps above (each loads .env itself via load_env()) the
+# `claude` call below reads CLAUDE_CODE_OAUTH_TOKEN out of .env explicitly at
+# run time and exports it only when non-empty — same fallback as the
+# engineering department's lib/eng-env.sh. Set means it authenticates as
+# whichever account `claude setup-token` was run for, independent of any
+# account logged into `claude` interactively elsewhere on this host. Empty/
+# absent means it falls back to that stored interactive login, same as before
+# this var existed.
 
 set -euo pipefail
 
@@ -48,7 +58,7 @@ fi
 # --allowedTools keeps the blast radius small: it can read/write the repo
 # and run scripts, nothing else. Adjust model/flags to taste.
 AGENT_PROMPT="Use the reddit-community-builder agent to process unprocessed sweeps in inbox/listeners/reddit/ per its run procedure, then stop."
-AGENT_CMD="cd $BASE_DIR && $CLAUDE -p \"$AGENT_PROMPT\" --allowedTools \"Read,Write,Bash\" --max-turns 40"
+AGENT_CMD="cd $BASE_DIR && _tok=\$(sed -n 's/^CLAUDE_CODE_OAUTH_TOKEN=//p' .env 2>/dev/null); [ -n \"\$_tok\" ] && export CLAUDE_CODE_OAUTH_TOKEN=\"\$_tok\"; $CLAUDE -p \"$AGENT_PROMPT\" --allowedTools \"Read,Write,Bash\" --max-turns 40"
 
 BLOCK=$(cat <<CRON
 $MARK_BEGIN
