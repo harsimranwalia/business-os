@@ -1,11 +1,11 @@
 ---
 ticket: ENG-016
 project: config-site-builder
-status: awaiting-scope
+status: approved
 size: L
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-09-03T15:47:46.139489+00:00
 ---
 
 # Catering page — self-serve quote generator, with automatic stage update
@@ -184,7 +184,7 @@ repos this touches before proposing anything:
   the marketplace's catering path is genuinely separate code, supporting
   the "config-site-builder only" scoping above.
 
-## Problem
+## Problem (original scope, superseded — see "Approver's `changed` response" below)
 
 A restaurant's catering leads dead-end at "thanks, we'll be in touch" —
 the owner is notified and a CRM record is created, but every quote after
@@ -546,6 +546,14 @@ critic/agent.md` does not exist at department or instance level (open
 proposal `agents/eng-manager/proposals.md`, filed 2026-08-25, already
 covers this — not re-filed), same as `ENG-017`'s G1.
 
-- **The approver's answer:** —
-- **Date:** —
-- **Notes:** —
+- **The approver's answer:** approved
+- **Date:** 2026-09-03T15:47:46.139489+00:00
+- **Notes:** Full text: "Lets start with piece 1" (sic). Read plainly as
+  approving Piece 1 exactly as scoped — structured order capture, itemized
+  owner view, two automatic stages, no pricing shown — with no comment on
+  the two riders this G1 carried (the 3-vs-2 stage-count resolution, the
+  fulfillment-value remap question). Silence on a rider is not an
+  objection to it; both stand as proposed. Pieces 2 and 3 remain named,
+  not filed — "start with" reads as confirming the build order the
+  recommendation proposed, not as authorizing them now. Piece 2 still
+  waits on a named answer for who maintains each restaurant's price book.

@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P2
 priority: next
-state: awaiting-scope
-owner: approver
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
@@ -251,3 +251,87 @@ ready to raise the moment a WIP slot frees.
   `chained: none` — `awaiting-scope`, owned by the approver; the chaining
   guard doesn't fire on a ticket waiting on a human. Post-pass
   `lib/eng-gate-check.sh`, whole-board: see below.
+
+- `2026-09-03` **`awaiting-scope → designed`, `owner: approver → architect`**
+  (`decision` event pass, context
+  `inbox/2026-09-02-eng016-g1-rescope.md`). Reading map for `decision`:
+  steps 4 and 8c, plus step 6 (this answer advances the ticket into a
+  machine-owned state) and the not-negotiable set (step 1, 7, 8b, 9, 10;
+  *Enforced vs instructed*, *The four lanes*, *Guards*). Mode check clean
+  (repo-root `.env` → `MODE=active`; instance `config/config.yaml` →
+  `mode:` empty, falls back to the global switch). Pre-pass
+  `lib/eng-gate-check.sh`, scoped (`ENG-016`) and whole-board: both exit 0,
+  clean.
+
+  **The answer:** `approved` (`decided: 2026-09-03T15:47:46.139489+00:00`).
+  Full text: "Lets start with piece 1" (sic). No comment on either rider
+  this G1 carried (the 3-vs-2 stage-count resolution; the fulfillment-value
+  remap question) — read as silence, not objection, so both stand as
+  proposed. Read as confirming the recommended build order, not as
+  pre-authorizing Pieces 2 or 3 — neither is filed by this answer, and
+  Piece 2 still waits on a named answer for who maintains each
+  restaurant's price book.
+
+  PRD `status: approved`, `decided:` stamped
+  (`agents/product-manager/specs/ENG-016-catering-quote-generator.md`, `##
+  Decision` section filled in). Journal entry written
+  (`agents/eng-manager/config/decision-journal.md`). Gate item's own `##
+  Decision` footer filled in and the file moved
+  `inbox/2026-09-02-eng016-g1-rescope.md` →
+  `inbox/_handled/2026-09-02-eng016-g1-rescope.md`.
+
+  **Machine WIP re-checked fresh from every ticket's own frontmatter, not
+  the cached board header:** `1/1`, occupied by `ENG-024`
+  (`ready-to-ship`, not yet `shipped`). Irrelevant to this transition —
+  `designed` sits outside the counted `ready`..`ready-to-ship` range;
+  shaping/design work is backlog grooming regardless of who holds the
+  slot (`eng_build_loop.md` step 6). The architect's own tech-design pass
+  will hit that same cap if it reaches step 11's "otherwise → `ready`"
+  route before `ENG-024` ships — not pre-empted here, since the design
+  work itself (steps 1–10) isn't gated, only entry to `ready` is.
+
+  **1 transition** (`awaiting-scope → designed`), well under the cap of 4
+  — the actual design work is the architect's own next hop, not attempted
+  inline here, same precedent `ENG-015`'s identical G1-approved hand-off
+  already set. **Consequence:** ticket now owned by `architect`, outside
+  both the machine-WIP and approver-WIP counted ranges. Approver-facing
+  WIP uncapped (`wip.approver_limit: unlimited`); this G1 drops off the
+  "Waiting on the approver" list — same shape `ENG-013`'s question closing
+  already set.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched, per
+  this event's own narrower contract (act on the answered gate item,
+  advance only the ticket it belongs to).
+
+  **Notify sweep:** nothing raised this pass — no new gate item written
+  (Pieces 2/3 remain unfiled by the approver's own answer, Piece 2
+  explicitly held). Nothing else nudged — out of this event's own scope.
+
+  **Observations/proposals filed:** two observations (`observations.md`).
+  First — the board index's cached priority column disagrees with several
+  other tickets' own frontmatter (`ENG-019`/`ENG-020`/`ENG-021`/`ENG-026`/
+  `ENG-027`, all actually `priority: now` on disk), noticed while
+  re-checking dispatch order for this ticket. Same root cause the open
+  2026-09-01 proposal on this file already names (the In-flight table
+  needs regenerating from each ticket's own frontmatter, not hand-kept);
+  not re-filed as a new proposal, and not corrected in `_index.md` by this
+  pass — out of this event's own "advance only the ticket it belongs to"
+  contract. Second — firing this pass's own `continue ENG-016` chain (see
+  below) found `traces/.pending` 16 events deep; not investigated, queue
+  depth is reference territory, not a normal pass's job, full detail on
+  the observation itself.
+
+  Post-pass `lib/eng-gate-check.sh`, scoped (`ENG-016`) and whole-board:
+  both exit 0, clean.
+
+  `chained: ENG-016` — `designed` is agent-owned (`architect`, via
+  `tech-design/SKILL.md`, triggered by this exact state); not the
+  approver, not blocked, not terminal, not held by a cap (design work is
+  backlog grooming, exempt from the machine-WIP slot `ENG-024` still
+  occupies). Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-016`
+  before this pass exits.
+
+  business-os itself left uncommitted — same standing default every pass
+  has used; the commit-convention question remains open, not re-decided
+  here.
