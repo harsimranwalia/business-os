@@ -50,3 +50,14 @@ gate the approver answers.
 ## Decision
 
 **rejected** — 2026-09-01T16:38:16.887004+00:00
+
+**Re-confirmed 2026-09-02** (`watch` event pass, context `launchd`, ~22:20)
+— this decision was recorded via a different host/checkout and only reached
+this Mac's copy through tonight's `1b72b26` merge, so no local pass had
+actually read it before now. Not re-derived from scratch: the file's own
+prior investigation already names a fixed root cause, and every pre-/
+post-pass `lib/eng-gate-check.sh` run logged on this board since (dozens,
+through tonight's own passes) has stayed exit 0, clean, no `WAIVED:` lines —
+still true, nothing to add. Closing on the strength of that already-done
+investigation, per `eng_build_loop.md`'s own guidance not to re-investigate
+a file that already carries a finished one.

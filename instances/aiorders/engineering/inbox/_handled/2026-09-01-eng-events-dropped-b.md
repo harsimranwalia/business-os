@@ -42,3 +42,32 @@ Raised by ENG-005's event-lifecycle guard. Before it existed, this event would h
 ## Decision
 
 **rejected** — 2026-09-03T02:18:09.271126+00:00
+
+**Investigated 2026-09-02** (`watch` event pass, context `launchd`, ~22:35)
+— decided 3 seconds before this same date's `2026-09-02-eng-events-dropped.md`
+rejection, part of the same batch. Two entries: a routine `scheduled` poll
+drop (self-healing, nothing unique lost), and a dropped notification for
+`decision 2026-08-30-eng-events-dropped.md` — moot now regardless of that
+notification's own fate, since this same pass independently found and
+fully processed `2026-08-30-eng-events-dropped.md` itself earlier tonight
+(the ordinary per-file sweep catching what the failed notification
+couldn't). Nothing lost. Rejection read the same as this evening's other
+two: declines further investigation into an already-fixed failure class.
+
+**Filename note, added correcting an in-session mistake:** this file
+shares its base name (`2026-09-01-eng-events-dropped.md`) with an earlier,
+wholly separate incident report from the same calendar date (raised
+`00:05:55`, decided `2026-09-01T16:23:42Z` **approved**, already properly
+closed in `inbox/_handled/2026-09-01-eng-events-dropped.md`) — the
+date-based naming convention collided because two distinct events-dropped
+incidents both landed on 2026-09-01. This pass's own `mv` briefly
+overwrote that earlier, already-closed file with this one; caught
+immediately via an unexpected `git status` " M" (modified-tracked) instead
+of the expected "??" (new) on the destination path, and fixed by
+restoring the original from `git show HEAD:...` and giving this one the
+`-b` suffix instead. Filed as an observation
+(`agents/eng-manager/observations.md`) rather than a proposal — a real
+near-miss, but this pass's own recovery is the fix for this occurrence;
+whether the naming convention itself needs a counter or timestamp suffix
+to prevent a next collision is a judgment call for whoever reviews the
+pattern, not urgent enough to block on.

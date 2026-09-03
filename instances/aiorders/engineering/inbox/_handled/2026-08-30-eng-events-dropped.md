@@ -725,3 +725,35 @@ instance surfaces to the approver proactively for.
 ## Decision
 
 **rejected** — 2026-09-01T16:37:56.836389+00:00
+
+**Investigated 2026-09-02** (`watch` event pass, context `launchd`, ~22:20)
+— this decision was recorded on a different host/checkout and only reached
+this Mac's copy via tonight's `1b72b26` merge; no local pass had read it
+before now, so checked properly rather than rubber-stamped.
+
+**Scale, stated plainly rather than glossed over:** this file logs **69**
+drop entries spanning `2026-08-30T01:56` through `18:39` — a sustained,
+near-continuous Windows-host (`schtasks`) failure window of roughly 16-17
+hours, not an occasional blip. 66 of the 69 are plain `watch`/`scheduled`
+poll drops, self-healing by design (the next successful poll re-derives the
+same state fresh; nothing unique lives only in a poll). The 3 that aren't:
+`continue ENG-009` (01:56), `continue ENG-013` (02:11), `continue ENG-023`
+(13:00) — each a real ticket-chain drop, checked individually rather than
+assumed self-healed:
+- `ENG-009` — now `blocked`/`ready-to-ship` with its own open merge request.
+  This is in fact `eng_build_loop.md`'s own named example of this exact
+  drop (Sonnet's own text: "the ticket then sat at `building` for three
+  days because nothing re-fired it" before a later sweep found and resumed
+  it) — already documented, not re-discovered here.
+- `ENG-013` — now `blocked`/`ready-to-ship` with its own merge request
+  (separately being processed this same pass, see that item).
+- `ENG-023` — now `designed`, past the point this drop occurred.
+
+**Nothing silently lost.** All three recovered via later sweeps, matching
+the pattern this procedure document already names for `ENG-009`
+specifically. Approver's bare rejection read the same way as the other two
+from this same ~90-second batch reply window (16:37–16:39): declines
+further investigation into a failure class (Windows-host `schtasks`
+reliability) that's since had its actual root cause found and fixed
+tonight anyway (`469e548`'s lock-staleness fix — see the loop-stalled
+incident closed earlier this same pass).

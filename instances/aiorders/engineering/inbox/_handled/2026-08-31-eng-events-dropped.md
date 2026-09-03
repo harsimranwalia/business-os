@@ -548,3 +548,17 @@ tracked (`proposals.md`, 2026-09-01 row).
 ## Decision
 
 **rejected** — 2026-09-01T16:38:59.834633+00:00
+
+**Investigated 2026-09-02** (`watch` event pass, context `launchd`, ~22:20)
+— same batch-reply window as `2026-08-30-eng-events-dropped.md`'s own
+rejection (seconds apart), and reached this Mac only via tonight's `1b72b26`
+merge. **All 48 entries are plain `watch`/`scheduled` `schtasks` polls —
+zero `decision`/`continue`/`intake`/`finding` drops.** Spans
+`2026-08-31T00:11` through `23:50`, the same sustained Windows-host outage
+window as the 08-30 file (continuous, not intermittent), now understood to
+share the same root cause: the lock-staleness bug `469e548` fixed tonight.
+Nothing unique to a routine poll is ever lost by a drop — the next
+successful poll re-derives the same state fresh — so nothing here needed
+individual-ticket recovery the way the 08-30 file's three `continue` drops
+did. Rejection read the same way: declines further investigation into an
+already-fixed failure class.

@@ -33,7 +33,16 @@ wip:
                         # end to end (through `shipped`), before the next
                         # starts. See departments/engineering/agents/eng-manager/config.yaml
                         # → wip.machine_limit for the full rationale.
-  approver_limit: 2    # items awaiting the approver at once — does not scale with plan tier, protects the approver's own attention
+  approver_limit: unlimited   # was 2. Raised to no-cap 2026-09-02 by the approver: the
+  # anti-burnout intent (don't bury Harry in finished-but-unapproved work) is
+  # explicitly waived by the one person it protects, because the department
+  # stalling dispatch of new work while old work sits waiting on him is a worse
+  # outcome than the pile itself. Read as no limit at all — never withhold a
+  # new ticket for this reason, no matter how many are already blocked_on:
+  # approver. Everything else about the approver gates is unchanged: still
+  # notified immediately, still nudged once after 24h, still needs an explicit
+  # decision — only the "don't start new work while old work waits on me"
+  # dispatch guard is lifted.
   # approval_cap removed 2026-08-29 by the approver — a life-os holdover; business-os has no cap on decisions queued for the approver
 
 # Business knowledge the PM and architect read before any scope conversation.
