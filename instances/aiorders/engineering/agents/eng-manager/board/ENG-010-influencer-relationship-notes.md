@@ -1706,3 +1706,25 @@ Append-only. One line per state transition, newest last.
   already set at this identical state. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-010`) and
   whole-board: see board index.
+
+- `2026-09-03` **informational cross-reference only — no state change, this
+  ticket's own code not touched** (eng-manager, `scheduled` event pass,
+  context `auto-drain` — whole-board sweep). `ENG-009`'s branch (this
+  ticket's own base) is stale against `ENG-008`'s round-3 fix — full
+  finding on `ENG-009`'s own board file, same date. Checked whether this
+  ticket adds anything of its own to the conflict: `git diff` of this
+  ticket's tip against `ENG-009`'s tip, both repos, for
+  `accepts_barter`/`barter_visit` — empty on both. This ticket inherits the
+  conflict wholesale rather than contributing to it.
+
+  `inbox/2026-09-02-eng010-merge-request.md` corrected with a short pointer
+  to `ENG-009`'s own (corrected) merge request rather than duplicating the
+  full finding — this ticket's own `recommendation:` left as `merge`
+  unchanged, since merging this PR into `ENG-009`'s branch (not `main`,
+  per this item's own Sequencing section) is unaffected either way; only
+  the eventual `main`-ward path is where `ENG-009`'s fix has to land
+  first. Not re-notified, same reasoning as `ENG-009`'s own entry
+  (one-raise-one-nudge budget already spent, not yet 24h old, correction
+  lives in the file itself).
+
+  `chained: none` — `blocked`, `blocked_on: approver`, unchanged.

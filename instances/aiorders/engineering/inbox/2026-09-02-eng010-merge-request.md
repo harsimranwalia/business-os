@@ -12,7 +12,7 @@ pr_urls:
     url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/7
 raised: 2026-09-02
 notified: 2026-09-02T17:45:02
-nudged:
+nudged: 2026-09-03T17:46:05
 decision:
 ---
 
@@ -62,6 +62,21 @@ open and unanswered. Two ways to sequence:
 
 No functional dependency forces one order — this is purely a review-surface
 choice already made at build time, not a new constraint from this pass.
+
+**Update, 2026-09-03 (`scheduled auto-drain` sweep) — read `ENG-009`'s own
+merge request before acting on this one.** `ENG-009`'s `aiorders-admin-hub`
+branch (this ticket's own base) is stale against `ENG-008`'s round-3 fix
+and will conflict on `src/pages/Influencers.tsx` once that sequencing plays
+out — full detail in `inbox/2026-09-02-eng009-merge-request.md`'s own
+"Update, 2026-09-03." This ticket's own diff is unaffected directly
+(confirmed fresh this pass: no `accepts_barter`/`barter_visit` lines
+anywhere in `ENG-010`'s own diff on either repo, on top of `ENG-009`'s
+tip) — but it inherits `ENG-009`'s branch wholesale, so once `ENG-009` is
+rebased to fix its own conflict, this branch will need the same
+rebase-onto-new-base treatment before it, in turn, is safe to merge toward
+`main`. Merging this PR into `ENG-009`'s branch directly (not `main`) is
+unaffected by any of this and can proceed independently of when `ENG-009`
+gets fixed.
 
 ## Gates passed
 
