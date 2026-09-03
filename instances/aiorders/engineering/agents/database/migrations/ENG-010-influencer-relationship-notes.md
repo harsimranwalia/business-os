@@ -147,3 +147,30 @@ since a new, isolated table with foreign keys into two already-live tables
 carries less risk than either prior ticket's `ALTER TABLE` on this same
 board, both of which already passed this gate on this identical
 unreachable-Postgres constraint.
+
+## Addendum — RLS added, round 2 code review fail
+
+This original verdict's "no change to any existing table, column, or RLS
+policy" was true but read as reassurance it didn't earn: this table is
+*new*, and new was never checked against needing a policy of its own,
+because every reader in this feature's own code path uses the service-role
+client (bypasses RLS by definition) — so nothing in this ticket's own tests
+would notice if RLS were simply absent. It was. Round 2 code review caught
+it (`ENG-010`'s own board file, 2026-09-02 round-2 entry) before any PR
+opened or merged: this admin panel already reaches the sibling `influencers`
+table directly from the browser with the anon key
+(`src/pages/Influencers.tsx:102`), and nothing at the database layer
+distinguished `influencer_notes` from it — an influencer's own session could
+have read staff notes about themselves via a direct PostgREST call, the
+exact risk this ticket's PRD names as the one thing it cannot get wrong.
+
+Fixed in the same migration file, same commit as this addendum: `alter table
+... enable row level security` plus a policy scoped to
+`profiles.role in ('admin', 'sub-admin')` — the identical boundary the
+handler already enforces in code, matching the existing `proxy_sessions`
+precedent (`20250926000000_proxy_sessions_audit_logs.sql`). Changes nothing
+about how the shipped feature behaves (the handler's service-role client
+still bypasses RLS regardless); it only closes the direct path this
+original verdict didn't consider. No live Postgres reachable from this host
+to execute the new statements against, same standing gap this doc already
+named above — not a new gap, not re-verified differently here.
