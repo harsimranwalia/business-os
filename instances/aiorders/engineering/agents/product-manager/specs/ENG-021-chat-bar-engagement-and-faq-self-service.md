@@ -1,11 +1,11 @@
 ---
 ticket: ENG-021
 project: restaurant-portal
-status: draft
+status: approved
 size: M
 author: product-manager
 created: 2026-08-29
-decided:
+decided: 2026-09-03T15:54:34.623417+00:00
 ---
 
 # Website chat-bar engagement visibility — customer questions and self-service FAQ editing on the brand portal
@@ -77,8 +77,6 @@ On the brand portal, a restaurant owner can:
 
 ## Decision
 
-Filled in after G1.
-
-- **The approver's answer:**
-- **Date:**
-- **Notes:**
+- **The approver's answer:** approved
+- **Date:** 2026-09-03T15:54:34.623417+00:00
+- **Notes:** Bare approval, no comment. Read as accepting the recommendation exactly as scoped — customer questions surfaced on the brand portal plus a self-service FAQ editor writing the same `restaurant_website.faqs` table the bot already reads from — and as accepting every item in the readback's "Assumed, worth correcting if wrong" list since none was corrected. PII in free-text queries, the unconfirmed RLS assumption on `restaurant_website`, and the unknown retention window/query volume all stay open, inherited by the architect at `designed`, not resolved by this approval.

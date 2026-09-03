@@ -8,15 +8,15 @@ time_estimate: a day to a day and a half
 time_spent:
 time_remaining:
 severity: P2
-priority:
-state: shaped
-owner: product-manager
+priority: now
+state: designed
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-09-03
 branch:
 depends_on: []
 blocks: []
@@ -124,3 +124,134 @@ this next:
   call. `chained: none` — held by the approver-facing WIP cap, not blocked
   or waiting on a human for this ticket specifically; re-check once a
   `decision`/`watch`/`scheduled` pass actually clears `ENG-014` or `ENG-015`.
+
+## 2026-09-03 — scheduled: G1 raised — `shaped → awaiting-scope`
+
+Same stale premise as `ENG-019`/`ENG-020` (see `ENG-019`'s own dated entry
+for the full derivation): the approver-facing WIP cap this ticket was held
+behind no longer exists — this instance's own `config/config.yaml` raised
+`approver_limit` to `unlimited` on 2026-09-02, by the approver's own
+explicit decision, never checked by any pass that held this ticket at
+`shaped`. Readback already converged (no material divergence), so straight
+to G1.
+
+Wrote `inbox/2026-09-03-eng021-g1-scope.md` (recommendation: build now,
+scoped to surfacing chat-bar questions plus a self-service FAQ editor,
+exactly as the PRD proposes). `lib/eng-notify.sh raise` called, exit 0
+(logged `sent: active`, the already-tracked `MODE`-clobber bug, not
+re-filed). Stamped `notified: 2026-09-03T11:56:44`.
+
+**1 transition** (`shaped → awaiting-scope`). **Consequence:** no
+machine-WIP change. Approver-facing WIP uncapped, so this adds to the queue
+without displacing anything — `owner` moves `product-manager → approver`.
+
+`chained: none` — `awaiting-scope` is one of the documented no-chain
+conditions (waiting on the approver).
+
+## 2026-09-03 — decision: G1 approved — `awaiting-scope → designed`
+
+`decision` event pass, context `inbox/2026-09-03-eng021-g1-scope.md`. Reading
+map for `decision`: steps 4 and 8c, plus step 6 (this answer advances the
+ticket into a machine-owned state) and the not-negotiable set (step 1, 7, 8b,
+9, 10; *Enforced vs instructed*, *The four lanes*, *Guards*). Mode check clean
+(repo-root `.env` → `MODE=active`). Pre-pass `lib/eng-gate-check.sh`, scoped
+(`ENG-021`) and whole-board: both exit 0, clean.
+
+**The answer:** `approved` (`decided: 2026-09-03T15:54:34.623417+00:00`). No
+additional comment. Read as accepting the recommendation exactly as scoped —
+customer questions surfaced on the brand portal plus a self-service FAQ editor
+writing the same `restaurant_website.faqs` table the bot already reads from;
+scoring answer quality, clustering questions, a staff-facing admin-hub mirror,
+and any change to the chat bar's own runtime behavior all named as later,
+separate work — and as accepting every item in the readback's "Assumed,
+correctable here" list since none was corrected. Full reasoning on `ENG-021`'s
+own PRD, not repeated here.
+
+`ENG-021` moved `awaiting-scope → designed`, `owner: approver → architect`.
+PRD `status: approved`
+(`agents/product-manager/specs/ENG-021-chat-bar-engagement-and-faq-self-service.md`).
+Journaled (`decision-journal.md`). Gate item's `## Decision` footer filled in
+and moved to `inbox/_handled/`.
+
+**Risks named in the PRD stay open, inherited by the architect at `designed`,
+not resolved by this approval:** PII in free-text customer questions (the
+owner is arguably the right custodian of their own customers' data, but the
+security gate should look at this plainly rather than it being an accident of
+shipping a log viewer); RLS on `restaurant_website` assumed from a sibling
+page's (`hiring`) behavior, not read literally — confirm the actual policy
+before relying on it; retention window and per-restaurant query volume both
+unknown, worth a quick check at design time rather than a guess here. Restated
+here so the `continue ENG-021` hop below doesn't have to re-derive them from
+the PRD alone.
+
+Machine WIP re-checked fresh from every ticket's own frontmatter, not the
+cached header: still `1/1`, occupied by `ENG-024` (`ready-to-ship`, not yet
+`shipped`) — irrelevant to this transition, since `designed` sits outside the
+counted `ready`..`ready-to-ship` range and shaping/design work is backlog
+grooming regardless of who holds the slot. Handed to the architect for the
+tech design itself (a `continue ENG-021` session) rather than attempted
+inline, same precedent `ENG-020`'s, `ENG-019`'s, `ENG-026`'s and `ENG-016`'s
+identical G1-approved hand-offs already set.
+
+**1 transition** (`awaiting-scope → designed`), well under the cap of 4.
+**Consequence:** approver-facing WIP drops by one item — this G1 drops off the
+"Waiting on the approver" list, same shape `ENG-013`'s, `ENG-016`'s,
+`ENG-026`'s, `ENG-019`'s and `ENG-020`'s closures already set. Machine WIP
+unaffected (`designed` sits outside the counted range).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched, per this
+event's own narrower contract (act on the answered gate item, advance only
+the ticket it belongs to). **Two things noticed while in `inbox/`, filed to
+`observations.md` rather than acted on here, since both belong to a different
+ticket than this event's own:** `ENG-027`'s own G1
+(`inbox/2026-09-03-eng027-g1-scope.md`) now carries `decision: changed`
+(`decided: 2026-09-03T16:00:32`) — a separate ticket's gate, not this event's
+to process. `inbox/2026-09-03-eng-loop-stalled.md` (incident, `ticket:
+ENG-024`) carries no `notified:` stamp at all and no `## Decision` section,
+timestamped 06:37 this morning — likely stale, since multiple passes have
+clearly run since (this one included), but not re-derived or closed here,
+out of this event's own scope.
+
+**Notify sweep:** nothing raised this pass — no new gate item written.
+Nothing nudged: `ENG-008` (~16h45m since `notified:`), `ENG-010` (~22h25m)
+and `ENG-022` (~14h43m) are all still under the 24h threshold; `ENG-015`
+(~6h6m) and the just-raised `ENG-028` are far under it; `ENG-009` already
+carries its one-ever nudge.
+
+**Observations/proposals filed:** the two items named in the dead-end sweep
+note above.
+
+**Board update** — In-flight table's `ENG-021` row (`state`, `owner`,
+`updated`); header's approver-facing bullet, "unanswered items" paragraph and
+count, "Waiting on the approver" section's `ENG-021` paragraph and item
+count. Rolled the oldest of the four now-live dated entries (`decision
+(ENG-026 G1)`) to `_index-archive.md` per the keep-three rule.
+
+Post-pass `lib/eng-gate-check.sh`, scoped (`ENG-021`) and whole-board: both
+exit 0, clean.
+
+`chained: ENG-021` — `designed` is agent-owned (`architect`, via
+`tech-design/SKILL.md`, triggered by this exact state); not the approver, not
+blocked, not terminal, not held by a cap. Fired
+`/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-021` before
+this pass exits.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+**Addendum, same date, resumed pass:** the paragraphs above were written by
+this event's first attempt, which hit the session's rate limit immediately
+after writing them (`traces/eng-loop-2026-09-03.log`, `pass FAILED (exit 1,
+379s)`, re-queued) — this ticket's own frontmatter/log update landed on disk,
+but nothing past it did: the gate item was still sitting unmoved in `inbox/`,
+no `decision-journal.md` row existed, the PRD's frontmatter/`## Decision`
+section were untouched, `_index.md` still showed `awaiting-scope`/`approver`,
+and no `.hops-2026-09-03-ENG-021` trace existed — meaning `continue ENG-021`
+had not actually been fired despite the paragraphs above already narrating it
+as done. This resumption verified every claim above against the underlying
+files before trusting it (all accurate), then completed what the crash
+skipped: gate item processed-note appended and moved to `inbox/_handled/`,
+`decision-journal.md` row added, PRD frontmatter/`## Decision` filled in,
+`_index.md` synced, and `lib/eng-trigger.sh continue ENG-021` fired for
+real. No re-derivation of the decision itself was needed — only completion of
+the mechanical steps the first attempt narrated but didn't reach.
