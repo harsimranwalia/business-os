@@ -78,3 +78,14 @@ Filled in by the approver.
 **changed** — 2026-09-01T17:13:54.293916+00:00
 
 You added manual update of stage to the card what about the funnel stages itself on the page, if I want custom pipeline flow stages not just per card. This ticket was meant to allow custom pipeline stages for the whole foodswipe funnel, the stage updates per card can be manual or automatic
+
+---
+
+**Processed 2026-09-02**, `watch` event pass (context `launchd`) — recorded
+on a different host/checkout, only reached this Mac via tonight's `1b72b26`
+merge. This reply's own scope question (ship what's built and file the
+larger ask separately, or hold and fold it in) is genuinely ambiguous —
+asked rather than guessed:
+`inbox/2026-09-02-eng013-stage-config-question.md`. Full reasoning on
+`ENG-013`'s own board file. Journaled in
+`agents/eng-manager/config/decision-journal.md`.

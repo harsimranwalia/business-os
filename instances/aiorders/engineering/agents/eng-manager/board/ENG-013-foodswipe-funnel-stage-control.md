@@ -20,7 +20,7 @@ blocked_on: approver
 blocked_from: ready-to-ship
 source: approver
 created: 2026-08-29
-updated: 2026-08-31
+updated: 2026-09-02
 branch: feat/ENG-013-foodswipe-funnel-stage-control (same name, both repos)
 depends_on: []
 blocks: []
@@ -1244,3 +1244,59 @@ Append-only. One line per state transition, newest last.
   by hand. First and only nudge. `chained: none` — still `blocked` on the
   approver; merging either PR on GitHub is the only thing that advances this
   ticket.
+
+- `2026-09-02` **merge request answered `changed` — a real ambiguity, asked
+  rather than guessed** (eng-manager, `watch` event pass, context
+  `launchd`). Decided `2026-09-01T17:13:54Z` on a different host/checkout,
+  only reached this Mac via tonight's `1b72b26` merge.
+
+  **The approver's own words:** "You added manual update of stage to the
+  card what about the funnel stages itself on the page, if I want custom
+  pipeline flow stages not just per card. This ticket was meant to allow
+  custom pipeline stages for the whole foodswipe funnel, the stage updates
+  per card can be manual or automatic."
+
+  **Checked against this ticket's own PRD before reacting** — this is not a
+  fresh ask, it's a named-and-flagged assumption landing wrong. The PRD's
+  own requirement 4 (`[proposed]`) explicitly kept the existing six-stage
+  set fixed and named "whether the stage *names* themselves are wrong" as a
+  standing question; its own Non-goals list "renaming, reordering, adding,
+  or removing stages" outright. The G1 carrying that PRD was answered with
+  a bare, uncommented "approved" — read at the time (correctly, per this
+  department's own convention: `ENG-014`/`ENG-015`'s precedent that a bare
+  approval confirms named proposed defaults) as accepting the fixed
+  six-stage reading. This reply shows that reading was wrong in practice,
+  not that the readback process skipped a step — a bare approval cannot
+  force careful reading of every named assumption, and this is the sharper
+  edge of that limit.
+
+  **Genuine ambiguity, not resolved here.** What shipped (per-card manual
+  override against the fixed six-stage set) is real, independently useful,
+  and passed every gate against its own — now superseded — scope. Two
+  readings of what happens next, and nothing in the reply itself settles
+  which:
+  - **Reading A** — ship this PR as-is (it works, it's tested, it's not
+    wrong, just smaller than wanted); file custom-stage-definition as a new,
+    separate ticket built on top of it.
+  - **Reading B** — hold this merge; fold stage-taxonomy configuration into
+    *this* ticket before anything merges, since the approver's own framing
+    ("this ticket was meant to allow...") reads as "ship the whole thing
+    together, not in two pieces."
+
+  Asked rather than guessed: `inbox/2026-09-02-eng013-stage-config-question.md`.
+  Not merged either way pending the answer.
+
+  **0 transitions** — ticket stays `blocked`/`blocked_on: approver`; only
+  the reason evolves (from "awaiting a merge decision" to "awaiting which
+  reading"). No cap consequence: this ticket was already off both machine
+  WIP and counted correctly in the approver-facing recount this same pass
+  already did (see `_index.md`).
+
+  Journaled in `agents/eng-manager/config/decision-journal.md`. Original
+  merge-request item moved to `inbox/_handled/` with a processed footer —
+  its own question is answered; the new one is a distinct gate item.
+
+  `chained: none` — waiting on the approver; the chaining guard never fires
+  on a ticket in this state. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-013`) and
+  whole-board: see board index.
