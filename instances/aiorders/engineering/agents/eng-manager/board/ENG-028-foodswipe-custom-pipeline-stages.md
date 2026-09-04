@@ -8,7 +8,7 @@ time_estimate: several days to a week+
 time_spent:
 time_remaining:
 severity: P2
-priority:
+priority: now
 state: awaiting-scope
 owner: approver
 lane: full
