@@ -16,14 +16,14 @@ time_remaining: 0 machine time owed right now — a fresh merge request is
   review and merge two PRs (aiorders-api #6, aiorders-admin-hub #5).
 severity: P3
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-02
+updated: 2026-09-04
 branch: feat/ENG-008-influencer-admin-management (aiorders-api@7c6e4b8, aiorders-admin-hub@141f2eb)
 depends_on: []
 blocks: []
@@ -35,7 +35,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-008.md
   test_plan: agents/qa/test-plans/ENG-008.md
   security_review: agents/security/reviews/ENG-008.md
-  release:
+  release: agents/devops/releases/2026-09-04-ENG-008-aiorders-api-and-admin-hub.md
   pr:
     - repo: aiorders-api
       url: https://github.com/harsimranwalia/aiorders-api/pull/6
@@ -1742,3 +1742,168 @@ Append-only. One line per state transition, newest last.
   business-os itself left uncommitted — same standing default this whole
   chain of passes tonight has used; the underlying commit-convention
   question remains open, not re-decided here.
+
+- `2026-09-04` **merge detection: partial merge found — `aiorders-admin-hub`
+  side in, `aiorders-api` side still open — stays `blocked`** (eng-manager,
+  `scheduled` event pass, context `launchd`). Whole-board sweep per this
+  event's own reading-map entry (never narrowed). Mode check clean
+  (`MODE=active`). Pre-pass `lib/eng-gate-check.sh`, whole-board: exit 0,
+  clean.
+
+  **Step 5, re-run fresh rather than trusted from the prior sweep nine
+  minutes earlier** (which had reported both repos not-merged): `git fetch
+  origin` on both worktrees, then `git merge-base --is-ancestor` for
+  `feat/ENG-008-influencer-admin-management` against `origin/main` on each
+  repo this ticket touches. `aiorders-admin-hub` — **MERGED**
+  (`141f2eb`, 2026-09-02T22:48:15-07:00, "Drop redundant accepts_barter,
+  edit barter_visit directly (ENG-008)"). `aiorders-api` — **not merged**,
+  branch `feat/ENG-008-influencer-admin-management` still open, PR #6 per
+  this ticket's own `pr_urls`.
+
+  **Per step 5's own partial-merge clause: stays `blocked`, does not
+  advance.** A multi-repo ticket ships only once every repo's branch has
+  merged — one repo merging is not enough, since `aiorders-api` PR #6
+  (schema + endpoint) and `aiorders-admin-hub` PR #5 (edit form) are only
+  coherent together; the edit form calls an endpoint that doesn't exist on
+  `main` until PR #6 also lands. Named here so the next pass doesn't
+  re-derive it: **`aiorders-api` PR #6 is the sole outstanding repo.**
+  Merging it is the only remaining step — no written reply needed, same as
+  every other silent-GitHub-merge ticket on this board.
+
+  **0 transitions.** `state`/`owner` unchanged (`blocked`/`approver`).
+  `blocked_from` unchanged (`ready-to-ship`, still correct — this is not a
+  new block, the ticket never left the one it was already in).
+  `machine_wip`/approver-facing WIP both unaffected — `ENG-008` was never
+  inside the counted `ready`..`ready-to-ship` range while `blocked`.
+
+  **Dead-end sweep:** the open merge-request item
+  (`inbox/2026-09-02-eng008-merge-request.md`) already anticipates this
+  exact shape ("the next build-loop pass detects each merge itself... and
+  advances the ticket once both are in") — nothing to write there, no reply
+  needed, no change to its `decision:`/`notified:`/`nudged:` fields.
+  **Notify sweep:** nothing raised or nudged for this ticket this pass — a
+  partial-merge finding isn't a new gate and the existing item's `nudged:`
+  is already stamped (one nudge, ever, already spent). **Observations/
+  proposals:** none filed for this finding — step 5 already names exactly
+  where partial-merge bookkeeping belongs (the ticket's own log), so this
+  isn't a gap to flag elsewhere.
+
+  `chained: none` — still `blocked`, `blocked_on: approver`. Firing
+  `continue ENG-008` would only queue against a ticket with nothing left for
+  a machine to do; the one remaining step (merging `aiorders-api` PR #6) is
+  detected by the next pass's own merge-detection step, not by a chained
+  hop. Post-pass `lib/eng-gate-check.sh`, scoped (`ENG-008`) and
+  whole-board: see board index.
+
+  business-os itself left uncommitted — same standing default every pass has
+  used; the commit-convention question remains open, not re-decided here.
+
+- `2026-09-04` **both repos found merged — `aiorders-api` PR #6 caught this
+  pass, `aiorders-admin-hub` PR #5 reconfirmed — carried `blocked → shipped →
+  verified`; a real ~3.5h detection gap explained and fixed by checking the
+  right commit instead of the branch tip** (eng-manager, `scheduled` event
+  pass, context `ENG-028` — whole-board sweep per this event's own reading-map
+  entry, never narrowed). Mode check clean (`MODE=active`). Pre-pass
+  `lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+  **Step 5, re-run fresh rather than trusted from the prior sweep 5 minutes
+  earlier** (which had reported `aiorders-admin-hub` merged, `aiorders-api`
+  not). `git fetch origin` on both worktrees, then the naive check the last
+  three sweeps all used —
+  `git merge-base --is-ancestor origin/feat/ENG-008-influencer-admin-management
+  origin/main` — **still returns false on both repos, right now.** That
+  looked like "nothing changed," but it's checking the wrong thing: this
+  branch name is also `ENG-009`'s and `ENG-010`'s stacked base, and both of
+  their PRs merged *into it* — after this ticket's own PR had already merged
+  separately, straight to `main` — so the branch tip has moved past what
+  shipped. Re-ran the check against this ticket's own recorded commits
+  instead (`branch:` frontmatter — `7c6e4b8` on `aiorders-api`, `141f2eb` on
+  `aiorders-admin-hub`) and cross-checked with `gh pr view` given the
+  multi-hour discrepancy:
+
+  ```
+  $ git merge-base --is-ancestor 7c6e4b8 origin/main      # aiorders-api
+  YES ancestor
+  $ gh pr view 6 --repo harsimranwalia/aiorders-api --json state,mergedAt,baseRefName
+  {"baseRefName":"main","state":"MERGED","mergedAt":"2026-09-04T06:04:41Z"}
+
+  $ git merge-base --is-ancestor 141f2eb origin/main      # aiorders-admin-hub
+  YES ancestor
+  $ gh pr view 5 --repo harsimranwalia/aiorders-admin-hub --json state,mergedAt,baseRefName
+  {"baseRefName":"main","state":"MERGED","mergedAt":"2026-09-04T06:07:37Z"}
+  ```
+
+  Both merge commits (`bd67e86`, `39f6918`) confirmed directly in each
+  repo's `origin/main` first-parent log — clean `base: main` merges, not
+  stacked. **`aiorders-api` PR #6 merged at 06:04:41Z — roughly 3.5 hours
+  before the 09:37Z sweep that first reported it "not merged,"** and every
+  sweep since repeated that same wrong reading because all three re-ran the
+  identical branch-tip check rather than re-deriving it. Root cause named
+  precisely, not just patched around: **once a branch has a downstream
+  ticket stacked on it that keeps merging into the same branch name after
+  the branch's own PR already shipped, "is the branch tip an ancestor of
+  main" stops answering "did this ticket ship" and starts answering a
+  question about whichever sibling merged into it most recently instead.**
+  Checking the ticket's own recorded commit (already in frontmatter, already
+  known) or `gh pr view` directly sidesteps this entirely — worth doing
+  either whenever a blocked ticket's branch is also a named stacking base
+  for another ticket.
+
+  **Gate receipts re-verified fresh before advancing** (step 5's own "a
+  merge is not a gate" clause): `agents/principal-engineer/reviews/ENG-008.md`
+  (round 3, `pass`, 2026-09-02), `agents/qa/test-plans/ENG-008.md`
+  (`last_result`: 19/19 `deno test`, clean build, `pass`), and
+  `agents/security/reviews/ENG-008.md` (`pass`, 2026-09-02) — all three
+  gated the exact round-3 diff (`7c6e4b8`/`141f2eb`) that's now on `main`
+  on both repos, no drift. Migration additive only (two nullable/defaulted
+  columns), nothing destructive to roll back live.
+
+  **Checked whether the specific regression the round-3 review warned about
+  actually happened** — it flagged that `ENG-009`, stacked on this branch's
+  pre-fix tip, risked reintroducing the just-rejected `accepts_barter`
+  column if merged as-is. `git grep accepts_barter` against both `origin/main`
+  and the still-open `feat/ENG-008-influencer-admin-management` branch tip
+  (which now also carries `ENG-009`'s and `ENG-010`'s merged-in commits):
+  **zero hits on either.** `git show` on `Influencers.tsx` at both refs
+  confirms the dirty-tracked, non-coalescing `accepts_paid` handling this
+  ticket's round-2 fix wrote is intact and identical at both refs (only
+  line numbers shift, from `ENG-009`/`ENG-010`'s own insertions above it).
+  The warned-about content regression did not materialize. **A different,
+  real problem did**: neither `ENG-009`'s nor `ENG-010`'s own code has
+  reached `main` at all, despite both of their PRs also showing `MERGED` —
+  they merged into this ticket's branch, which had already shipped
+  separately by the time they landed, so their commits are stranded on a
+  branch nothing further merges. Full finding on their own tickets: see
+  `ENG-009`'s and `ENG-010`'s own board-file logs, written this same pass.
+
+  **Release record written**:
+  `agents/devops/releases/2026-09-04-ENG-008-aiorders-api-and-admin-hub.md`.
+  **Moved** `inbox/2026-09-02-eng008-merge-request.md` → `inbox/_handled/`
+  with a processed footer. **Journaled**
+  (`agents/eng-manager/config/decision-journal.md`) as a silent-GitHub-merge
+  row, occurrences 13/14 in this instance's running count. **Filed a new
+  proposal** (`proposals.md`) naming the general failure shape — a stacked
+  PR's merge can satisfy GitHub's UI without the code ever reaching the
+  default branch — distinct from, but adjacent to, the existing
+  sibling-branch-staleness proposal (2026-09-02, principal-engineer) that
+  this same episode also corroborates a second time.
+
+  **2 transitions** (`blocked → shipped → verified`), well under the cap of
+  4. **Consequence:** `machine_wip` unaffected — `ENG-008` was never inside
+  the counted `ready`..`ready-to-ship` range while `blocked`, same as every
+  other silent-merge ticket this board has carried to `verified`.
+  Approver-facing WIP: this item drops off the "waiting on the approver"
+  list (five items remain, from six).
+
+  **Dead-end sweep:** the open merge-request item already anticipated
+  exactly this shape; nothing else on this ticket's own lineage to resume —
+  terminal now. **Notify sweep:** nothing to raise or nudge for a terminal
+  ticket. **Observations/proposals filed:** see above — one proposal, cross-
+  referenced rather than duplicated.
+
+  `chained: none` — `verified` is terminal. Post-pass
+  `lib/eng-gate-check.sh`, scoped (`ENG-008`) and whole-board: see board
+  index.
+
+  business-os itself left uncommitted — same standing default every pass has
+  used; the commit-convention question remains open, not re-decided here.
