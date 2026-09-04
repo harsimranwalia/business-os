@@ -136,3 +136,178 @@ Findings by category:
   unrelated guard-clause test stayed green, restore was byte-identical
   (`git diff --stat` empty). Same shape `ENG-022`'s own round today already
   set as the example to point to.
+
+## ENG-031 (round 1, aiorders-api, schema-only migration) — pass
+
+Findings by category:
+
+- **Receipt found already written, uncommitted, from a pass with no other
+  trace.** `agents/principal-engineer/reviews/ENG-031.md` existed at pass
+  start — untracked, dated today, verdict `pass` — but the ticket's own
+  frontmatter/log still read `in-review` with `links.review` blank, and
+  `agents/qa/test-plans/ENG-031.md` didn't exist at all. No crash evidence
+  (business-os sits uncommitted by this board's own current default, not a
+  signal on its own), but the review's own claim to have logged itself in
+  this file was false until this entry. Treated the same way the previous
+  hop treated the migration file it found: verified before trusting.
+- **Verified independently rather than re-derived from scratch.** Re-checked
+  the migration against the design's `## Data` section myself (columns,
+  types, nullability, constraint choice, comment shape) and re-ran the
+  receipt's own citation (`proposals.md`, 2026-08-29, eng-manager — still
+  open, 5 days old, well under the 30-day expiry) rather than taking either
+  on trust. Both hold. No divergence found from the receipt's own
+  conclusions — accepted as genuine, not rewritten.
+- **Automatic-failure scan: 0/10**, re-confirmed. One file, 26 lines, pure
+  DDL — no secret, no silent swallow, no unrelated refactor, no
+  commented-out code, nothing bypassing a data layer, no auth/payment/
+  deletion path touched.
+- **Test quality: n/a.** No application code changed; the correct evidence
+  class for a schema-only diff is design-conformance by inspection, not a
+  test suite — covered under Design conformance in the receipt itself, not
+  invented here as a gap.
+
+**Verdict:** pass (unchanged from the existing receipt — completed and
+logged, not re-reviewed from zero). QA's gate ran this same pass, also
+pass: `agents/qa/test-plans/ENG-031.md`. Ticket continues to `in-security`.
+
+## ENG-032 (round 1, restaurant-portal) — FAIL
+
+Findings by category:
+
+- **Automatic-failure #3 (blocking, first occurrence on this repo).** The
+  `...content`-spread-before-normalised-fields fix in
+  `CateringPageForm.tsx` (lines 53-66) — which the ticket, the design's own
+  Risks section, and the commit message all independently describe as
+  closing a real bug (an owner editing catering copy silently wipes
+  `orderFormEnabled`/`fulfillmentCopy` on save) — ships with zero test
+  coverage. Not an infrastructure gap: `@testing-library/react`, `jsdom`
+  and `vitest` are already installed (`ENG-002`'s harness); nobody has
+  written the first `restaurant-portal` component test yet, and this round
+  needed to be the one that does. Distinct from the `admin-portal/handlers/`
+  #3/#10 pattern `ENG-013`/`ENG-008`/`ENG-015` already tracked three times
+  this week (different repo, different language, different failure shape —
+  a frontend save-path bug vs. a backend authz gap) — not counted toward
+  that same occurrence total.
+- **Fix verified correct before flagging only the test (positive
+  process note).** Traced all three links in the chain myself rather than
+  reviewing the diff in isolation: the `useEffect`'s explicit field list
+  never re-overwrites the `...content` spread's `orderFormEnabled`/
+  `fulfillmentCopy`; `handleSubmit`'s `onSave({...form, ...})` doesn't
+  re-narrow either; and the call site (`pages/website/Index.tsx:125`)
+  passes the typed object straight through. The fix itself is right — only
+  the evidence is missing.
+- **Two non-blocking notes.** Trailing-whitespace-only edits on a few
+  pre-existing `CateringKanban.tsx` lines beside the new entries — not
+  automatic-failure #7, since the file still carries the same whitespace
+  untouched elsewhere, reading as incidental re-typing rather than a
+  cleanup pass. `CateringDetailModal.tsx:337` keys a rendered list on array
+  `index` — low actual risk, the list is a static, read-only,
+  submission-time snapshot never reordered after render.
+- **Positive signal.** The mechanical part of this ticket — two new status
+  strings across 8 files / 12 literals — matched the design's own named
+  throw risk (`CateringKanban`'s `columns`/`statusConfig` pairing) 7-for-7,
+  with colors applied consistently per each file's own existing shape
+  rather than one copy-pasted pattern.
+
+**Verdict:** fail, round 1. No receipt written. QA's hop discarded, no
+test-plan file — the missing test made a real quality-gate run
+premature anyway.
+
+## ENG-032 (round 2, restaurant-portal) — pass
+
+Round 1's only finding (automatic-failure #3) closed: `CateringPageForm.test.tsx`
+added, and — distinct from every prior round on this board that took the
+build pass's "confirmed red" claim on trust — verified it myself this round
+by swapping the pre-fix file back in and re-running the test, rather than
+re-deriving the conclusion from reading the diff alone. Same for the lint
+baseline: round 1 and the fix round each logged a different total (63, then
+96) for the identical baseline; resolved by lint-checking `origin/main`'s own
+copy of the one file with a real error, independently of both prior claims,
+rather than trusting either number. Worth normalizing as the default
+verification move for any "confirmed red" or "confirmed zero-new" claim this
+board carries forward, not just this ticket's.
+
+Also did the quality-gate's own work this round (combined hop) — two new
+component test files, mutation-verified. That reasoning lives in
+`agents/qa/notebook/2026-09-03-coverage-gaps.md`, not here.
+
+Full detail: `agents/principal-engineer/reviews/ENG-032.md`.
+
+## ENG-033 (round 1, aiorders-api) — FAIL
+
+Combined review+quality hop. Worktree confirmed on
+`feat/ENG-033-catering-request-order-capture-endpoint@e3ef26a`, clean tree
+aside from the standing unrelated untracked `deno.lock`. Diff: 2 files, 59
+insertions/1 deletion (`git diff origin/main...HEAD`, re-fetched first).
+
+**Automatic-failure scan: 0/10** — secret/credential clean; no new
+try/catch; not a bug fix (type: feature, so #3 doesn't apply on its own —
+see the blocking finding below, which is a correctness miss, not this
+item); `isValidSelections(selections: unknown)` uses `unknown`, not `any`,
+and isn't exported; no new query; no new dependency; no drive-by refactor
+(insert-object edit only adds keys); no commented code/TODO; write still
+goes through `supabase.from("catering").insert(...)`, same as before; no
+auth/payment/deletion path touched.
+
+**Blocking finding.** `isValidSelections` (new function, top of
+`catering-request/index.ts`) validates `note`'s length only when
+`typeof note === 'string'` — a present-but-non-string `note` (e.g. an
+object) skips the check entirely and passes. Verified downstream rather
+than flagged on suspicion: `restaurant-portal/src/components/catering/
+CateringDetailModal.tsx:342` renders `{item.note && <span>...{item.note}
+</span>}` as a direct JSX child, `restaurant-portal` has zero error
+boundaries anywhere in `src/` (grepped), and objects are always truthy in
+JS — so a `note: {}` submitted through this **unauthenticated** public
+endpoint throws "Objects are not valid as a React child" the moment an
+owner opens that request, unguarded. This is exactly the shape
+`engineering-standards.md`'s "Failure direction is uniform" rule (added
+2026-08-03) already names: `quantity` and `name` both fail closed, `note`
+doesn't, and the one open path inherits the trust the other two earned —
+"a half-validated record is a pass with extra steps." The build hop's own
+log flagged this exact edge case and chose the narrow reading deliberately
+(symmetry with `full_name`/`phone`/`requirements` being unvalidated) — but
+those fields carry no typed contract to violate, where `note` does: the
+design's own `## Data` section types the element shape as `"note": string
+| null`, and `restaurant-portal`'s already-shipped `CateringSelection`
+interface mirrors that exactly. `category`/`item_id` are also left
+unvalidated by the design, but checked separately and confirmed safe:
+`category` only ever becomes an `Object.entries` key (auto-coerced to
+string, no crash) and `item_id` is never rendered anywhere in
+`restaurant-portal` (grepped, only appears in the interface decl and test
+fixtures) — so `note` is the one field where the design's silence is
+actually load-bearing. Fix: reject any present `note` that isn't a string,
+mirroring `name`'s strictness —
+`if (note !== null && note !== undefined && (typeof note !== 'string' ||
+note.length > MAX_NOTE_LENGTH)) return false;` or equivalent.
+
+**Two non-blocking, low-confidence notes, not the reason this round
+fails:** an empty `name: ""` passes (neither "missing" nor "non-string"
+per the letter of the design's table) — renders as a blank list item, no
+crash, possibly intentional; an empty `selections: []` with
+`action_type: 'QUOTE_SUBMITTED'` passes and yields `status: 'Quote
+Generated'` with zero items — the design's validation table doesn't name
+this as invalid either, and the frontend (`ENG-034`, not yet built) likely
+prevents it via UI, but the backend doesn't defend against a direct API
+call. Worth a line in QA's eventual test plan, not blocking.
+
+**One style preference, explicitly not blocking:** the new
+selections-validation-and-400-return sits inside the status-derivation
+block, after "Normalize data," rather than grouped with the other two
+early-return boundary checks (`restaurant_id`, `source`) above it. Letting
+this go — the validation is genuinely coupled to the `QUOTE_SUBMITTED`
+branch, not a universal gate like the other two.
+
+**Good work:** the conditional spread `...(derivedStatus !== undefined ?
+{ status: derivedStatus } : {})` keeps "never touch status when
+action_type is absent" exactly right with no extra branching; the
+`website.ts` interface addition was checked against
+`restaurant-portal/src/types/website.ts` directly and mirrors it
+field-for-field, not just claimed to; and flagging the `note`-typing call
+explicitly in the ticket log (even though this review reaches a different
+conclusion on it) is exactly the right instinct — a silently-resolved
+version of the same call would have been worse regardless of which way it
+went.
+
+**Verdict:** fail, round 1. No receipt written. QA's hop not run this
+round (discarded per the combined-hop design — the code identified above
+is about to change), no test-plan file.
