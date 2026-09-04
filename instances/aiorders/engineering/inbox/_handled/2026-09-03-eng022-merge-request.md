@@ -9,7 +9,7 @@ time_estimate: half a day to a day
 pr_url: https://github.com/harsimranwalia/aiorders-api/pull/9
 raised: 2026-09-03
 notified: 2026-09-03T01:26:47
-nudged:
+nudged: 2026-09-04T01:52:01
 decision:
 ---
 

@@ -9,11 +9,11 @@ time_spent: build, code review, QA, security, and release-readiness (PR opened, 
 time_remaining: nothing left for the department — waiting on the approver to merge the PR; already inside the original half-day-to-a-day band, not separately re-banded
 severity: P0
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: product-manager
 created: 2026-08-29
 updated: 2026-09-03
@@ -28,7 +28,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-022.md
   test_plan: agents/qa/test-plans/ENG-022.md
   security_review: agents/security/reviews/ENG-022.md
-  release:
+  release: agents/devops/releases/2026-09-03-aiorders-api-ENG-022.md
   pr: https://github.com/harsimranwalia/aiorders-api/pull/9
 ---
 
@@ -806,3 +806,54 @@ not need this ticket to ship first, only to not repeat its bug.
   this identical state. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-022`) and
   whole-board: see below.
+
+- `2026-09-03` `blocked → shipped → verified` (eng-manager, `scheduled`
+  event pass — whole-board sweep, step 5 merge detection). `git fetch
+  origin` in `~/Documents/projects/_eng/aiorders-api` (clean, no drift),
+  then `git merge-base --is-ancestor d5078c5 origin/main`: **YES** — PR #9
+  merged. Given the severity (P0, cross-tenant PII/write exposure),
+  cross-checked beyond the local-git-only floor with `gh pr view 9 --repo
+  harsimranwalia/aiorders-api`: `state: MERGED`, `mergedAt:
+  2026-09-04T02:03:48Z`, merge commit `78194da8` — exactly `origin/main`'s
+  current tip. `git diff` between the branch tip and `origin/main` over the
+  changed files: empty — the merged tree is byte-identical to what passed
+  all three gates, no drift. `decision:` on
+  `inbox/2026-09-03-eng022-merge-request.md` stayed blank — merged directly
+  on GitHub, same shape `ENG-007`/`ENG-011`/`ENG-024`/`ENG-031` already
+  established for this approver.
+
+  **Not advanced past a state that owes gates** (step 5's own "a merge is
+  not a gate" clause): re-read all three receipts directly before writing
+  `shipped` — `agents/principal-engineer/reviews/ENG-022.md` (`verdict:
+  pass`), `agents/qa/test-plans/ENG-022.md` (`last_result: pass`),
+  `agents/security/reviews/ENG-022.md` (`verdict: pass`); no migration
+  applies (confirmed no `*.sql` in the diff). Independently re-verified the
+  fix on the merged tree itself rather than trusting the receipts' word
+  alone: `grep`'d all 5 fixed files on `origin/main` (`feedback.ts`,
+  `offers.ts`, `customers.ts`, `hiring.ts`, `website.ts`) — all 19 call
+  sites call `requireRestaurantAccess`/corrected `verifyRestaurantAccess`,
+  and `utils.ts` exports the promoted `requireRestaurantAccess`. All 4
+  acceptance criteria re-confirmed against `origin/main`. Release record
+  written: `agents/devops/releases/2026-09-03-aiorders-api-ENG-022.md`,
+  `links.release` set in the same edit. `state: blocked → verified`,
+  `owner: approver → eng-manager`, `blocked_on`/`blocked_from` cleared.
+
+  Merge-request item moved to `inbox/_handled/`. Journal entry added
+  (`decision-journal.md`) — silent GitHub merge, no written reply, same
+  shape as `ENG-007`/`ENG-011`/`ENG-024`/`ENG-031`'s own rows.
+
+  **2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+  the cap of 4 — pure receipt-confirmation and bookkeeping, no new
+  implementation work, same precedent `ENG-024`'s identical scheduled-sweep
+  discovery already set. **Consequence:** ticket leaves the board's
+  in-flight table entirely (terminal); does not affect machine WIP (already
+  outside the counted `ready..ready-to-ship` range since its own
+  `ready-to-ship → blocked` hop); drops off the approver-facing "Waiting on
+  the approver" count (no open inbox item remains for it).
+
+  `chained: none` — `verified` is terminal; the chaining guard never fires
+  on a terminal ticket.
+
+  business-os itself left uncommitted — same standing default every pass
+  has used; the commit-convention question remains open, not re-decided
+  here.
