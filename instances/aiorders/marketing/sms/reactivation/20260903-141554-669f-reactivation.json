@@ -1,0 +1,19 @@
+{
+  "id": "20260903-141554-669f-reactivation",
+  "kind": "reactivation",
+  "instance": "aiorders",
+  "created_by": "businesspilot.care@gmail.com",
+  "created_at": "2026-09-03T21:15:54Z",
+  "segment": "quiet_90d",
+  "candidates": 0,
+  "skipped_cooldown": 0,
+  "considered": 0,
+  "status": "no-one",
+  "messages": [],
+  "results": {
+    "sent": 0,
+    "failed": 0,
+    "errors": []
+  },
+  "error": ""
+}

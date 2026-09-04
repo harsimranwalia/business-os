@@ -33,11 +33,12 @@ STATE lives with the business, not with this server:
   instances/<id>/marketing/sms/reactivation/<id>.json
 """
 
+import base64
 import json
 import os
 import re
 import subprocess
-import urllib.parse
+import urllib.error
 import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -141,14 +142,18 @@ def segments_for(cfg):
     return []
 
 
-def _twenty_people(limit=500):
+def _twenty_people(cfg, limit=500):
     """Twenty's people, straight over GraphQL. A trimmed copy of server.py's
     _twenty_gql rather than an import of it — server.py imports this module,
-    and a cycle to save nine lines is a bad trade."""
-    base = (os.environ.get("TWENTY_BASE_URL") or "").rstrip("/")
-    key = os.environ.get("TWENTY_API_KEY") or ""
+    and a cycle to save nine lines is a bad trade.
+
+    Connection comes from the partner's own Config-page fields first — a
+    partner can point at their own Twenty workspace — and falls back to the
+    repo-wide .env pair other, non-SMS CRM reads already use."""
+    base = ((cfg or {}).get("crm_url") or os.environ.get("TWENTY_BASE_URL") or "").rstrip("/")
+    key = (cfg or {}).get("crm_api_key") or os.environ.get("TWENTY_API_KEY") or ""
     if not base or not key:
-        raise RuntimeError("TWENTY_BASE_URL / TWENTY_API_KEY are not set in .env")
+        raise RuntimeError("Twenty URL / API key are not set — add them in Config")
     query = """query($l: Int) {
       people(first: $l, orderBy: {createdAt: DescNullsLast}) {
         edges { node { id name { firstName lastName } phones { primaryPhoneNumber
@@ -165,10 +170,10 @@ def _twenty_people(limit=500):
     return [e["node"] for e in payload["data"]["people"]["edges"]]
 
 
-def _crm_customers(segment):
+def _crm_customers(cfg, segment):
     now = datetime.now(timezone.utc)
     out = []
-    for p in _twenty_people():
+    for p in _twenty_people(cfg):
         phones = p.get("phones") or {}
         number = (phones.get("primaryPhoneNumber") or "").strip()
         if not number:
@@ -222,13 +227,36 @@ def _aiorders_customers(cfg, segment):
     return rows
 
 
+def test_db_connection(cfg):
+    """A one-off connect-and-ping, triggered by a human clicking Test — proof
+    the saved DSN actually reaches a database, not a query for customer data.
+    Returns (result, error): result is {"ok", "detail"} on any answer from
+    the attempt itself; error is only set for something that means we never
+    got to try (no DSN, driver missing)."""
+    dsn = (cfg.get("pg_dsn") or "").strip()
+    if not dsn:
+        return None, "a database connection string is required"
+    try:
+        import psycopg
+    except ImportError:
+        return None, ("the AIOrders source needs the psycopg driver — "
+                      "`pip install \"psycopg[binary]\"` on the machine running the control center")
+    try:
+        with psycopg.connect(dsn, connect_timeout=10) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+        return {"ok": True, "detail": "connected"}, None
+    except Exception as e:
+        return {"ok": False, "detail": str(e)}, None
+
+
 def load_customers(cfg, segment):
     """(customers, error). Never raises — every caller here is an HTTP handler
     that wants the reason on screen, not a 500."""
     src = (cfg or {}).get("customer_source") or ""
     try:
         if src == "crm":
-            return _crm_customers(segment), None
+            return _crm_customers(cfg, segment), None
         if src == "aiorders":
             return _aiorders_customers(cfg, segment), None
         return [], "no customer database source configured"
@@ -237,47 +265,76 @@ def load_customers(cfg, segment):
 
 
 # ── The HTTP SMS gateway ─────────────────────────────────────────────────────
+# The gateway this repo actually talks to (a local HTTP-to-SMS relay) takes
+# HTTP Basic Auth and a JSON body, and one call can carry many numbers at
+# once when they all get the same text:
+#   POST <sms_url>   Authorization: Basic base64(username:password)
+#   {"textMessage": {"text": "..."}, "phoneNumbers": ["+1...", "+1...", ...]}
+# The URL itself is always the partner's own, from config — never hardcoded.
 
-def send_one(cfg, to, message):
-    """POST to the partner's SMS server, form-encoded, with the username and
-    password as fields — the shape almost every self-hosted HTTP SMS gateway
-    (Kannel, playSMS, SMSEagle) accepts. If yours wants a different body, this
-    function is the only place that decides it.
-
-    Returns (ok, detail)."""
+def _post_gateway(cfg, phone_numbers, message):
+    """Returns (ok, detail)."""
     url = (cfg.get("sms_url") or "").strip()
     if not url:
         return False, "no SMS server URL configured"
-    data = urllib.parse.urlencode({
-        "username": cfg.get("sms_username") or "",
-        "password": cfg.get("sms_password") or "",
-        "to": to,
-        "message": message,
-    }).encode()
-    req = urllib.request.Request(url, data=data, headers={
-        "Content-Type": "application/x-www-form-urlencoded"})
+    body = json.dumps({"textMessage": {"text": message},
+                       "phoneNumbers": phone_numbers}).encode()
+    # api.sms-gate.app sits behind Cloudflare, which 403s urllib's default
+    # "Python-urllib/x.y" User-Agent as a bot signature (error code 1010) —
+    # same credentials, same body, only the UA differs from a working curl.
+    req = urllib.request.Request(url, data=body,
+                                 headers={"Content-Type": "application/json",
+                                          "User-Agent": "business-os-sms/1.0"})
+    token = base64.b64encode(
+        f'{cfg.get("sms_username") or ""}:{cfg.get("sms_password") or ""}'.encode()).decode()
+    req.add_header("Authorization", f"Basic {token}")
     try:
         with urllib.request.urlopen(req, timeout=SMS_TIMEOUT_SECONDS) as r:
-            body = r.read(2000).decode("utf-8", "replace").strip()
-            return (200 <= r.status < 300), f"{r.status} {body[:200]}"
+            resp = r.read(2000).decode("utf-8", "replace").strip()
+            return (200 <= r.status < 300), f"{r.status} {resp[:200]}"
+    except urllib.error.HTTPError as e:
+        return False, f"{e.code} {e.read(200).decode('utf-8', 'replace')}"
     except Exception as e:
         return False, str(e)
 
 
+def send_one(cfg, to, message):
+    """Returns (ok, detail)."""
+    return _post_gateway(cfg, [to], message)
+
+
 def send_batch(cfg, recipients):
-    """recipients: [{"phone", "message", ...}]. Sends serially and reports per
-    recipient — a gateway that rate-limits should slow the batch down, not
-    lose the tail of it to a parallel burst."""
+    """recipients: [{"phone", "message"}]. Recipients that share identical
+    message text go out together in one gateway call — the API accepts a
+    phoneNumbers array — so a same-body campaign to N customers is one
+    request, not N."""
     sent, failed, errors = 0, 0, []
+    groups = {}
     for r in recipients:
-        ok, detail = send_one(cfg, r["phone"], r["message"])
+        groups.setdefault(r["message"], []).append(r["phone"])
+    for message, phones in groups.items():
+        ok, detail = _post_gateway(cfg, phones, message)
         if ok:
-            sent += 1
+            sent += len(phones)
         else:
-            failed += 1
-            if len(errors) < 20:
-                errors.append({"phone": r["phone"][-4:], "error": detail})
+            failed += len(phones)
+            for p in phones:
+                if len(errors) < 20:
+                    errors.append({"phone": p[-4:], "error": detail})
     return {"sent": sent, "failed": failed, "errors": errors}
+
+
+def send_test(cfg, phone):
+    """A one-off send to prove the gateway config actually works, triggered by
+    a human clicking a button — not a campaign, so nothing is stored."""
+    if quiet_mode():
+        return None, f"MODE={os.environ.get('MODE')} — everything is paused"
+    phone = (phone or "").strip()
+    if not phone:
+        return None, "a phone number is required"
+    ok, detail = send_one(cfg, phone,
+                          "Test message from Business OS — your SMS configuration works.")
+    return {"ok": ok, "detail": detail}, None
 
 
 # ── Campaign store ───────────────────────────────────────────────────────────
@@ -431,10 +488,16 @@ def send_campaign(instance_id, campaign_id, cfg):
 # ── Smart reactivation ───────────────────────────────────────────────────────
 
 REACTIVATION_PROMPT = """\
-You are drafting one-to-one reactivation SMS messages for {business}, a \
-restaurant business. These go out automatically — no human reviews them \
-before they send — so every message must be one you would be comfortable \
-sending unreviewed.
+You are drafting one-to-one reactivation SMS messages. These go out \
+automatically — no human reviews them before they send — so every message \
+must be one you would be comfortable sending unreviewed.
+
+About the business:
+{business_blurb}
+
+The offer to use for this run — mention it only where it genuinely fits, \
+never invent a different one:
+{offer}
 
 Below is a JSON array of lapsed customers. Each has an opaque `ref`, a first \
 name (possibly empty), and `days_since_order`. Phone numbers are deliberately \
@@ -449,11 +512,11 @@ is a valid answer.
 
 Rules for every message:
 - Under 160 characters, including any sign-off.
-- Plain text. No links, no emoji, no ALL CAPS, no fake urgency, no invented \
-discount, offer, price or menu item — you have not been given any, so you \
-cannot mention one.
+- Plain text. No links, no emoji, no ALL CAPS, no fake urgency. The offer \
+above is the only discount, price, or menu item you may mention — never \
+invent another.
 - Use the person's first name only if it is present and looks like a real name.
-- One clear, honest reason to come back, in {business}'s own voice: warm, \
+- One clear, honest reason to come back, in the business's own voice: warm, \
 short, not salesy.
 - Never claim anything about their past orders beyond how long it has been.
 
@@ -520,19 +583,27 @@ def _parse_messages(raw):
     return msgs, None
 
 
-def run_reactivation(instance_id, cfg, actor_email):
+def run_reactivation(instance_id, cfg, actor_email, offer):
     """Pick lapsed customers, have Claude decide who and what, and send.
 
     Auto-send, so the guardrails are here rather than in a human: quiet mode
     stops it, the cooldown keeps anyone from being texted twice in a month, and
     the cap bounds the blast radius of a bad pass. Every decision is written to
-    the run record whether or not anything sent."""
+    the run record whether or not anything sent.
+
+    `offer` is asked fresh each run — reactivation has no standing campaign
+    copy, so without it the model has nothing concrete to write about and
+    could only invent one, which the prompt explicitly forbids. The business
+    blurb, by contrast, is standing context and comes from cfg."""
     if quiet_mode():
         return None, f"MODE={os.environ.get('MODE')} — everything is paused"
     if not cfg.get("claude_oauth_token"):
         return None, "no Claude OAuth token in your configuration"
     if not cfg.get("sms_url"):
         return None, "no SMS server configured"
+    offer = (offer or "").strip()
+    if not offer:
+        return None, "an offer is required to run reactivation"
 
     segment = "quiet_90d" if cfg.get("customer_source") == "crm" else "lapsed_60d"
     customers, err = load_customers(cfg, segment)
@@ -550,6 +621,7 @@ def run_reactivation(instance_id, cfg, actor_email):
         "instance": instance_id,
         "created_by": actor_email,
         "created_at": _now(),
+        "offer": offer,
         "segment": segment,
         "candidates": len(customers),
         "skipped_cooldown": len(customers) - len([c for c in customers
@@ -575,8 +647,9 @@ def run_reactivation(instance_id, cfg, actor_email):
                         "first_name": (c.get("name") or "").split(" ")[0],
                         "days_since_order": c.get("days_since_order")})
 
+    blurb = (cfg.get("business_blurb") or "").strip() or f"({instance_id} — no business description on file)"
     prompt = REACTIVATION_PROMPT.format(
-        business=instance_id, customers=json.dumps(payload, indent=2))
+        business_blurb=blurb, offer=offer, customers=json.dumps(payload, indent=2))
     raw, err = _run_claude(prompt, cfg["claude_oauth_token"])
     if err:
         run.update({"status": "failed", "error": err})

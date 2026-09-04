@@ -2287,7 +2287,7 @@ def read_log(name):
 # customer database their segments read from. See control-center/sms.py.
 
 
-def list_sms(instance_id=None, email=None):
+def list_sms(instance_id=None, email=None, config_owner=None):
     """Everything the SMS view renders, in one request.
 
     Deliberately does NOT go through mkt_instance(): SMS works whether or not
@@ -2295,12 +2295,19 @@ def list_sms(instance_id=None, email=None):
     way the Reddit view does. Its instance roster is the plain business list.
     """
     inst_id = _resolve_instance_id(instance_id)
-    cfg = accounts.read_config(email)
-    missing = accounts.config_missing(email)
+    # Config is per-person, but an admin looking at someone else's business
+    # has no credentials of their own that mean anything here — the business's
+    # own partner does, or, if the admin picked one from the workspace
+    # dropdown, whichever partner they picked. See config_email_for_instance().
+    cfg_email = accounts.config_email_for_instance(inst_id, email, config_owner)
+    cfg = accounts.read_config(cfg_email)
+    missing = accounts.config_missing(cfg_email)
     if not inst_id:
         return {"instance": None, "instances": [], "segments": [],
                 "campaigns": [], "reactivations": [], "config_missing": missing,
                 "empty": "No business instance yet."}
+    actor = accounts.get_user(email)
+    is_admin_viewer = bool(actor and actor.get("role") == "admin")
     return {
         "instance": inst_id,
         "instances": business_instances(),
@@ -2309,6 +2316,14 @@ def list_sms(instance_id=None, email=None):
         "campaigns": sms.list_campaigns(inst_id),
         "reactivations": sms.list_reactivations(inst_id),
         "config_missing": missing,
+        "config_owner": cfg_email,
+        "config_owner_is_self": cfg_email == (email or "").strip().lower(),
+        # The workspace picker's options — every partner assigned to this
+        # business. Empty for a partner (nothing to pick; it's always them)
+        # and whenever there's only one, same as the existing Config-page
+        # picker's own "hide when there's no real choice" rule.
+        "config_owners": ([u["email"] for u in accounts.partners_for_instance(inst_id)]
+                          if is_admin_viewer else []),
         "quiet_mode": sms.quiet_mode(),
         "max_chars": sms.MAX_SMS_CHARS,
         "reactivation": {
@@ -2326,9 +2341,18 @@ def sms_action(path, body, email):
     inst_id = _resolve_instance_id(body.get("instance"))
     if not inst_id:
         return None, "no business instance"
-    cfg = accounts.read_config(email)
+    # The credentials come from whoever owns this business's config (see
+    # list_sms above); who did the clicking — stamped on campaigns as
+    # created_by/approved_by — stays the acting user, `email`, unchanged.
+    cfg_email = accounts.config_email_for_instance(inst_id, email, body.get("config_owner"))
+    cfg = accounts.read_config(cfg_email)
     campaign_id = body.get("id")
+    whose = "your" if cfg_email == (email or "").strip().lower() else f"{cfg_email}'s"
 
+    if path == "/api/sms/test":
+        if not cfg.get("sms_url"):
+            return None, f"add {whose} SMS server in Config first"
+        return sms.send_test(cfg, body.get("phone"))
     if path == "/api/sms/campaign":
         return sms.create_campaign(inst_id, cfg, body, email)
     if path == "/api/sms/campaign/update":
@@ -2342,13 +2366,13 @@ def sms_action(path, body, email):
         # partner with no Claude token can still run campaigns — refusing
         # them for a credential this path never touches would be theatre.
         if not cfg.get("sms_url"):
-            return None, "add your SMS server in Config first"
+            return None, f"add {whose} SMS server in Config first"
         return sms.send_campaign(inst_id, campaign_id, cfg)
     if path == "/api/sms/reactivate":
-        missing = accounts.config_missing(email)
+        missing = accounts.config_missing(cfg_email)
         if missing:
-            return None, "finish your configuration first — missing: " + ", ".join(missing)
-        return sms.run_reactivation(inst_id, cfg, email)
+            return None, f"finish {whose} configuration first — missing: " + ", ".join(missing)
+        return sms.run_reactivation(inst_id, cfg, email, body.get("offer"))
     return None, "unknown SMS action"
 
 
@@ -2436,6 +2460,21 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def _config_target(self, body):
+        """Whose config a /api/config/* write applies to: your own, or an
+        admin's explicit pick — the same rule /api/config itself uses.
+        Returns None, having already sent the error response, when the
+        caller isn't allowed to act on the email they named."""
+        who = (body.get("email") or "").strip().lower()
+        if who and who != self.current_email():
+            if not self.require_admin():
+                return None
+            if not accounts.get_user(who):
+                self.send_json(404, {"error": "no such user"})
+                return None
+            return who
+        return self.current_email()
+
     def handle_login(self):
         body = self.read_body()
         ip = _client_ip(self)
@@ -2477,6 +2516,7 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
         self.send_json(200, {
             "email": user["email"],
             "name": user.get("name", ""),
+            "phone": user.get("phone", ""),
             "role": user.get("role", "partner"),
             "instances": list(user.get("instances", [])),
             "config_ready": accounts.config_ready(user["email"]),
@@ -2579,7 +2619,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             inst_id = qs.get("instance", [None])[0]
             if not self.require_instance(inst_id):
                 return
-            self.send_json(200, list_sms(inst_id, self.current_email()))
+            self.send_json(200, list_sms(inst_id, self.current_email(),
+                                         qs.get("config_owner", [None])[0]))
             return
 
         if parsed.path == "/api/logs":
@@ -2664,6 +2705,43 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
                 who = self.current_email()
             result, err = accounts.write_config(who, self._body)
             self.send_json(400 if err else 200, {"error": err} if err else result)
+            return
+
+        if parsed.path == "/api/config/test-sms":
+            # Lives on the Config page, not Marketing — this proves a
+            # person's saved gateway config works, with no business instance
+            # in the picture at all.
+            who = self._config_target(self._body)
+            if who is None:
+                return
+            cfg = accounts.read_config(who)
+            if not cfg.get("sms_url"):
+                self.send_json(400, {"error": "add the SMS server URL first"})
+                return
+            result, err = sms.send_test(cfg, self._body.get("phone"))
+            if err:
+                self.send_json(400, {"error": err})
+                return
+            # A pass here is a real, human-triggered send that reached the
+            # gateway — mark it so the page can show "working" on the next
+            # visit without sending another text just to prove it again.
+            if result.get("ok"):
+                accounts.set_tested_ok(who, "sms")
+            self.send_json(200, result)
+            return
+
+        if parsed.path == "/api/config/test-db":
+            who = self._config_target(self._body)
+            if who is None:
+                return
+            cfg = accounts.read_config(who)
+            result, err = sms.test_db_connection(cfg)
+            if err:
+                self.send_json(400, {"error": err})
+                return
+            if result.get("ok"):
+                accounts.set_tested_ok(who, "pg_dsn")
+            self.send_json(200, result)
             return
 
         if parsed.path.startswith("/api/sms/"):

@@ -350,21 +350,80 @@ def filter_instance_dirs(dirs, user=None):
     return [d for d in dirs if d.name in allowed]
 
 
+def partner_for_instance(instance_id):
+    """The partner responsible for a business, for resolving whose SMS/Claude
+    credentials govern it. First by store order when more than one partner is
+    assigned; there is no finer ownership concept than that today."""
+    if not instance_id:
+        return None
+    for u in _load()["users"]:
+        if u.get("role") == "partner" and instance_id in (u.get("instances") or []):
+            return u
+    return None
+
+
+def partners_for_instance(instance_id):
+    """Every partner assigned to a business, for the admin's workspace picker
+    on the Marketing tab. partner_for_instance() picks the default (the
+    first); this is the full list a dropdown offers instead of one."""
+    if not instance_id:
+        return []
+    return [u for u in _load()["users"]
+            if u.get("role") == "partner" and instance_id in (u.get("instances") or [])]
+
+
+def config_email_for_instance(instance_id, acting_email=None, requested_owner=None):
+    """Whose partner-config.json entry governs SMS work on this business.
+
+    Config is keyed by person, not business (see the module docstring) — a
+    partner only ever sees their own instances, so this is always their own
+    email for them. An admin can open any business, but has no SMS/Claude
+    credentials of their own that mean anything for someone else's business;
+    the business's own partner does. Resolve to that partner's config instead
+    of the admin's, so an admin looking at a fully-configured business does
+    not see it as unconfigured just because the admin's own account is bare.
+    Falls back to the acting user's own email when no partner is assigned yet
+    — the same behaviour as before this existed.
+
+    `requested_owner` is the admin's explicit pick from that workspace
+    dropdown, honoured only when it actually names a partner assigned to this
+    instance — an admin cannot borrow a stranger's config by guessing an
+    email. Ignored entirely for a partner acting on their own instance.
+    """
+    acting = get_user(acting_email) if acting_email else current()
+    if acting and acting.get("role") == "admin":
+        requested_owner = (requested_owner or "").strip().lower()
+        if requested_owner:
+            picked = get_user(requested_owner)
+            if (picked and picked.get("role") == "partner"
+                    and instance_id in (picked.get("instances") or [])):
+                return picked["email"]
+        owner = partner_for_instance(instance_id)
+        if owner:
+            return owner["email"]
+    return (acting_email or "").strip().lower()
+
+
 # ── Per-partner configuration ────────────────────────────────────────────────
 # Claude OAuth token, the HTTP SMS gateway, and where this partner's customers
 # come from. Keyed by email, so it follows the account rather than the instance
 # — the token is the person's, not the business's.
 
-SECRET_FIELDS = ("claude_oauth_token", "sms_password", "pg_dsn")
+SECRET_FIELDS = ("claude_oauth_token", "sms_password", "pg_dsn", "crm_api_key")
 
 DEFAULT_CONFIG = {
     "claude_oauth_token": "",
+    "business_blurb": "",      # context for anything a model drafts — reactivation today
     "sms_url": "",
     "sms_username": "",
     "sms_password": "",
+    "sms_tested_ok": False,    # set by a successful /api/config/test-sms; cleared on edit
     "customer_source": "",     # "aiorders" | "crm"
     "brand_id": "",            # aiorders only
     "pg_dsn": "",              # aiorders only
+    "pg_dsn_tested_ok": False,  # set by a successful /api/config/test-db; cleared on edit
+    "crm_url": "",             # crm only — Twenty workspace base URL
+    "crm_api_key": "",         # crm only
     "updated_at": "",
 }
 
@@ -421,29 +480,70 @@ def write_config(email, fields):
     if url and not url.startswith(("http://", "https://")):
         return None, "SMS server URL must start with http:// or https://"
 
+    crm_url = (fields.get("crm_url") or "").strip()
+    if crm_url and not crm_url.startswith(("http://", "https://")):
+        return None, "Twenty URL must start with http:// or https://"
+
     with _LOCK:
         data = _load_configs()
         cfg = dict(DEFAULT_CONFIG)
         cfg.update(data["configs"].get(email) or {})
+        clear = set(fields.get("clear") or [])
 
-        for key in ("sms_url", "sms_username", "customer_source", "brand_id"):
+        # A passed test only means something about the exact values it ran
+        # against — so any actual change to the tested fields invalidates it.
+        # A blank secret field means "unchanged" (see docstring), so only a
+        # non-blank value or an explicit clear counts as a change.
+        sms_changed = False
+        for key in ("sms_url", "sms_username"):
+            if key in fields and (fields.get(key) or "").strip() != cfg[key]:
+                sms_changed = True
+        if (fields.get("sms_password") or "").strip() or "sms_password" in clear:
+            sms_changed = True
+        pg_changed = bool((fields.get("pg_dsn") or "").strip()) or "pg_dsn" in clear
+
+        for key in ("business_blurb", "sms_url", "sms_username",
+                   "customer_source", "brand_id", "crm_url"):
             if key in fields:
                 cfg[key] = (fields.get(key) or "").strip()
         for key in SECRET_FIELDS:
             val = (fields.get(key) or "").strip()
             if val:
                 cfg[key] = val
-        for key in fields.get("clear") or []:
+        for key in clear:
             if key in SECRET_FIELDS:
                 cfg[key] = ""
 
         if cfg["customer_source"] == "aiorders" and not cfg["brand_id"]:
             return None, "the AIOrders source needs a brand id"
+        if cfg["customer_source"] == "crm" and not cfg["crm_url"]:
+            return None, "the CRM source needs the Twenty workspace URL"
+
+        if sms_changed:
+            cfg["sms_tested_ok"] = False
+        if pg_changed:
+            cfg["pg_dsn_tested_ok"] = False
 
         cfg["updated_at"] = _now()
         data["configs"][email] = cfg
         _write_json(CONFIG_FILE, data)
     return read_config_public(email), None
+
+
+def set_tested_ok(email, which):
+    """Records a successful connection test so the Config page can show
+    'working' without re-testing on every visit. `which` is 'sms' or
+    'pg_dsn'. write_config() clears the matching flag the moment the tested
+    fields actually change, so this never goes stale silently."""
+    email = (email or "").strip().lower()
+    key = "sms_tested_ok" if which == "sms" else "pg_dsn_tested_ok"
+    with _LOCK:
+        data = _load_configs()
+        cfg = dict(DEFAULT_CONFIG)
+        cfg.update(data["configs"].get(email) or {})
+        cfg[key] = True
+        data["configs"][email] = cfg
+        _write_json(CONFIG_FILE, data)
 
 
 def delete_config(email):
@@ -471,6 +571,11 @@ def config_missing(email):
             missing.append("AIOrders brand id")
         if not cfg["pg_dsn"]:
             missing.append("AIOrders database connection string")
+    elif cfg["customer_source"] == "crm":
+        if not cfg["crm_url"]:
+            missing.append("Twenty URL")
+        if not cfg["crm_api_key"]:
+            missing.append("Twenty API key")
     return missing
 
 

@@ -50,6 +50,28 @@
     .tab-btn:hover { color: var(--muted-mid); }
     .tab-btn.active { color: var(--text); border-bottom-color: var(--agent); }
 
+    /* Hidden at full width — the row of tabs already fits, so a toggle for it
+       would be a control that does nothing. See the media query below for the
+       collapsed state this switches to. */
+    .nav-toggle { display: none; width: 30px; height: 30px; flex-shrink: 0; align-items: center;
+      justify-content: center; background: none; border: 1px solid var(--border-light);
+      border-radius: 6px; color: var(--text); font-size: 15px; cursor: pointer; }
+    .nav-toggle:hover { background: var(--card); }
+
+    @media (max-width: 720px) {
+      .nav-toggle { display: inline-flex; }
+      .header-title span { display: none; }
+      /* Collapsed into a dropdown under the header rather than wrapping onto
+         a second row — a wrapped row of five-plus tabs at this width reads as
+         two unrelated bars, not one nav. */
+      .tab-nav { flex-direction: column; align-items: stretch; gap: 0; padding: 0 12px;
+        max-height: 0; overflow: hidden; transition: max-height .18s ease; }
+      .tab-nav.open { max-height: 70vh; overflow-y: auto; padding: 6px 12px; }
+      .tab-btn { width: 100%; text-align: left; padding: 11px 8px; margin-bottom: 0;
+        border-bottom: 1px solid var(--border); border-left: 3px solid transparent; }
+      .tab-btn.active { border-bottom-color: var(--border); border-left-color: var(--agent); }
+    }
+
     .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
     .view.active { display: flex; }
 
@@ -341,6 +363,10 @@
 
 <div class="header">
   <div class="header-left">
+    <!-- Only ever visible below the tab-nav breakpoint (see the media query) —
+         at full width the tabs already fit in one row and a toggle for them
+         would be a control that does nothing. -->
+    <button class="nav-toggle" id="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="logo">⚙</div>
     <div class="header-title">Business OS <span>/ Control Center</span></div>
   </div>
@@ -352,7 +378,7 @@
   </div>
 </div>
 
-<div class="tab-nav">
+<div class="tab-nav" id="tab-nav">
   <button class="tab-btn active" id="tab-marketing" onclick="switchTab('marketing')">Marketing</button>
   <button class="tab-btn" id="tab-sales" onclick="switchTab('sales')">Sales</button>
   <button class="tab-btn" id="tab-eng" onclick="switchTab('eng')">Engineering</button>
@@ -369,23 +395,18 @@
   <div class="toolbar">
     <select class="instance-select" id="mkt-instance" onchange="setMktInstance(this.value)"
             title="Which business's marketing department"></select>
-    <!-- Channel is the marketing analogue of the Engineering tab's instance
-         selector, and it scopes the whole tab — deciding on a channel and
-         looking at that channel should not be two acts of remembering. -->
+    <!-- Channel picks which of Content / Reddit / SMS is even on offer below —
+         those three are one channel's view apiece, never several at once, so
+         the dropdown decides which one exists rather than which one is lit up
+         among five identical-looking buttons. Decide and Settings aren't part
+         of that choice; they stay put and just get filtered by it. -->
     <select class="instance-select" id="mkt-channel" onchange="setMktChannel(this.value)"
-            title="Which channel"></select>
-    <button class="filter-btn active" data-mview="decide" onclick="setMktView('decide')">Decide</button>
-    <button class="filter-btn" data-mview="content" onclick="setMktView('content')">Content</button>
-    <!-- The Reddit pipeline. Its own system of record (Twenty), so its own
-         view — but under Marketing, because it is one channel and not the
-         department. -->
-    <button class="filter-btn" data-mview="reddit" onclick="setMktView('reddit')">Reddit</button>
-    <!-- SMS. Another channel with its own system of record (the partner's own
-         customer database and gateway), so another view rather than a tab. -->
-    <button class="filter-btn" data-mview="sms" onclick="setMktView('sms')">SMS</button>
-    <!-- Marketing's own configuration, not the system's. Everything in it is
-         a channel setting, so the channel dropdown above scopes it too. -->
-    <button class="filter-btn" data-mview="settings" onclick="setMktView('settings')">Settings</button>
+            title="Which channel — a content channel, Reddit, or SMS"></select>
+    <button class="filter-btn active" id="mkt-decide-btn" data-mview="decide" onclick="setMktView('decide')">Decide</button>
+    <!-- Content (LinkedIn/X), Reddit, or SMS's own two tabs — whichever the
+         dropdown above just picked. Rebuilt by renderChannelTabs(). -->
+    <span id="mkt-channel-tabs" style="display:contents"></span>
+    <button class="filter-btn" id="mkt-settings-btn" data-mview="settings" onclick="setMktView('settings')">Settings</button>
     <!-- Status filters belong to the Content view only. Shown with it, hidden
          with it — a filter that does nothing on the visible view is worse
          than no filter. The Reddit view brings its own, for the same reason:
@@ -404,10 +425,6 @@
       <button class="filter-btn" data-mf="DISCARDED" onclick="setRedditFilter('DISCARDED')">Discarded</button>
       <button class="filter-btn" data-mf="FAILED" onclick="setRedditFilter('FAILED')">Failed</button>
       <button class="filter-btn" data-mf="" onclick="setRedditFilter('')">All</button>
-    </span>
-    <span id="mkt-sms-filters" style="display:none">
-      <button class="filter-btn active" data-sf="campaigns" onclick="setSmsView('campaigns')">Campaigns</button>
-      <button class="filter-btn" data-sf="reactivation" onclick="setSmsView('reactivation')">Smart reactivation</button>
     </span>
     <div class="toolbar-spacer"></div>
     <button class="refresh-btn" onclick="mktRefresh()" title="Refresh">↻</button>
@@ -814,6 +831,10 @@ function updateDate() {
 updateDate();
 setInterval(updateDate, 60000);
 
+function toggleNav() {
+  document.getElementById('tab-nav').classList.toggle('open');
+}
+
 let activeTab = 'marketing';
 const TABS = ['marketing', 'sales', 'eng', 'cost', 'logs', 'partners', 'config'];
 function switchTab(tab) {
@@ -822,6 +843,9 @@ function switchTab(tab) {
     document.getElementById('tab-' + t).classList.toggle('active', tab === t));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(tab + '-view').classList.add('active');
+  // The collapsed nav is a dropdown, not a persistent sidebar — picking a tab
+  // is the signal to get out of the way of the view it just opened.
+  document.getElementById('tab-nav').classList.remove('open');
   if (tab === 'marketing') loadMarketing();
   if (tab === 'sales') loadSales();
   if (tab === 'eng') loadEng();
@@ -859,23 +883,113 @@ const MKT_PHASE_LABEL = {
 function setMktInstance(id) {
   mktInstance = id;
   localStorage.setItem('mkt-instance', id);
-  // Every view is scoped to the instance, so all of them are now stale.
+  // Every view is scoped to the instance, so all of them are now stale. The
+  // workspace pick is scoped to the old instance's partners and may not even
+  // be assigned to the new one — the server would fall back safely, but
+  // resetting here means the picker itself doesn't show a stale selection.
   contentItems = []; settingsData = null; smsData = null;
+  smsOwner = ''; localStorage.removeItem('sms-owner');
   mktRefresh();
+}
+
+// 'reddit' and 'sms' sit in the same dropdown as the real content channels
+// (LinkedIn, X, …) so one control drives all three, but they are stand-ins
+// for a whole view rather than something a piece or a settings row ever
+// carries as its channel — so anywhere that means "no filter", not "filter
+// down to nothing".
+function isRealChannel(id) { return !!id && id !== 'reddit' && id !== 'sms'; }
+
+// Decide is the content-approval gate; nothing SMS-shaped is ever in it —
+// SMS has its own approval inside Campaigns — so its tab only earns a place
+// when something with channel 'sms' genuinely turns up there. That never
+// happens today (SMS isn't part of the content pipeline at all), but this
+// stays a real check on the data rather than a hardcoded "SMS has no
+// Decide" special case.
+function smsHasDecideItems() {
+  if (!mktData || mktData.empty) return false;
+  return (mktData.due || []).some(x => x.channel === 'sms') ||
+         (mktData.queued || []).some(x => x.channel === 'sms');
+}
+
+function decideAppliesToChannel() { return !(mktChannel === 'sms' && !smsHasDecideItems()); }
+
+// Toggles the Decide button for the current channel, and — if it just
+// disappeared out from under the view you were on — sends you to the SMS
+// tab that actually has something in it. Only safe to call once the page is
+// past its initial auth check (it can fetch, via gotoSms -> loadSms), so
+// bootstrap sets the button directly instead of going through this.
+function applyDecideVisibility() {
+  const show = decideAppliesToChannel();
+  document.getElementById('mkt-decide-btn').style.display = show ? '' : 'none';
+  if (!show && mktView === 'decide') gotoSms(smsView);
+  return show;
+}
+
+// Settings holds content-channel config (LinkedIn/X posting rules) — SMS has
+// no equivalent there; its own configuration lives on the Config page, where
+// the gateway credentials already are. So the tab has no place in the SMS
+// channel, same reasoning as Decide above.
+function settingsAppliesToChannel() { return mktChannel !== 'sms'; }
+
+function applySettingsVisibility() {
+  const show = settingsAppliesToChannel();
+  document.getElementById('mkt-settings-btn').style.display = show ? '' : 'none';
+  if (!show && mktView === 'settings') gotoSms(smsView);
+  return show;
 }
 
 function setMktChannel(id) {
   mktChannel = id;
   localStorage.setItem('mkt-channel', id);
+  renderChannelTabs();
+  if (mktView === 'content' || mktView === 'reddit' || mktView === 'sms') {
+    // These are mutually exclusive with the channel choice — whichever tab
+    // was up may not exist under the new selection, so follow it there.
+    if (id === 'reddit') { setMktView('reddit'); applyDecideVisibility(); applySettingsVisibility(); return; }
+    if (id === 'sms') { gotoSms(smsView); applyDecideVisibility(); applySettingsVisibility(); return; }
+    // A specific channel (LinkedIn/X, …) has Content; "All channels" has no
+    // exclusive tab of its own — Decide already covers every channel.
+    setMktView(isRealChannel(id) ? 'content' : 'decide');
+    applyDecideVisibility();
+    applySettingsVisibility();
+    return;
+  }
+  // Decide and Settings stay put; only their channel filter changes — unless
+  // one of them just stopped applying (switched to/from SMS).
+  applyDecideVisibility();
+  applySettingsVisibility();
   if (mktData) renderMarketing();
-  if (contentItems.length) renderContent();
-  // The dropdown scopes the whole tab, settings included — picking one channel
-  // and reading another's cadence underneath it is the mismatch this filter
-  // exists to prevent.
   if (settingsData) renderSettings();
 }
 
-function inChannel(x) { return !mktChannel || x.channel === mktChannel; }
+function inChannel(x) { return !isRealChannel(mktChannel) || x.channel === mktChannel; }
+
+// The one tab that depends on the channel dropdown: a specific content
+// channel (LinkedIn/X, …) shows Content, Reddit shows Reddit, SMS shows its
+// own two tabs. "All channels" shows none of these — Content is specific to
+// one real channel, not a stand-in for every channel at once. Rebuilt on
+// every dropdown change; stays up across Decide/Settings visits so there's
+// always a way back without touching the dropdown again.
+function channelTabsHTML() {
+  if (mktChannel === 'reddit') {
+    return '<button class="filter-btn" data-mview="reddit" onclick="setMktView(\'reddit\')">Reddit</button>';
+  }
+  if (mktChannel === 'sms') {
+    return '<button class="filter-btn" data-sf="campaigns" onclick="gotoSms(\'campaigns\')">Campaigns</button>' +
+           '<button class="filter-btn" data-sf="reactivation" onclick="gotoSms(\'reactivation\')">Smart reactivation</button>';
+  }
+  if (isRealChannel(mktChannel)) {
+    return '<button class="filter-btn" data-mview="content" onclick="setMktView(\'content\')">Content</button>';
+  }
+  return '';
+}
+function renderChannelTabs() {
+  document.getElementById('mkt-channel-tabs').innerHTML = channelTabsHTML();
+  document.querySelectorAll('[data-mview]').forEach(b =>
+    b.classList.toggle('active', b.dataset.mview === mktView));
+  document.querySelectorAll('[data-sf]').forEach(b =>
+    b.classList.toggle('active', b.dataset.sf === smsView));
+}
 
 function setMktView(v) {
   mktView = v;
@@ -888,14 +1002,6 @@ function setMktView(v) {
   document.getElementById('sms-scroll').style.display = v === 'sms' ? '' : 'none';
   document.getElementById('mkt-phase-filters').style.display = v === 'content' ? 'contents' : 'none';
   document.getElementById('mkt-reddit-filters').style.display = v === 'reddit' ? 'contents' : 'none';
-  document.getElementById('mkt-sms-filters').style.display = v === 'sms' ? 'contents' : 'none';
-  // The channel dropdown scopes the department's own views. Reddit's records
-  // live in Twenty and carry no department channel, so it would filter them
-  // all away — hide it there rather than leave a control that empties the view.
-  // Same reason SMS hides it: its records are the partner's own customer
-  // database and gateway, not the department's channel config.
-  document.getElementById('mkt-channel').style.display =
-    (v === 'reddit' || v === 'sms') ? 'none' : '';
   if (v === 'decide' && mktData) renderMarketing();
   // Loaded on first visit rather than with the tab: these are the views opened
   // least often, and reading the library or the config on every Marketing open
@@ -936,11 +1042,19 @@ function renderMktChannels(list) {
   const sel = document.getElementById('mkt-channel');
   const opts = ['<option value="">All channels</option>'].concat((list || []).map(c =>
     `<option value="${escAttr(c.id)}"${c.id === mktChannel ? ' selected' : ''}>` +
-    `${esc(c.label)}${c.enabled ? '' : ' (off)'}</option>`));
+    `${esc(c.label)}${c.enabled ? '' : ' (off)'}</option>`
+  )).concat([
+    `<option value="reddit"${mktChannel === 'reddit' ? ' selected' : ''}>Reddit</option>`,
+    `<option value="sms"${mktChannel === 'sms' ? ' selected' : ''}>SMS</option>`,
+  ]);
   sel.innerHTML = opts.join('');
   // A channel since removed from config must not strand the tab on a filter
-  // that matches nothing forever.
-  if (mktChannel && !(list || []).some(c => c.id === mktChannel)) setMktChannel('');
+  // that matches nothing forever. 'reddit' and 'sms' are always valid.
+  const known = new Set((list || []).map(c => c.id).concat(['', 'reddit', 'sms']));
+  if (!known.has(mktChannel)) setMktChannel('');
+  else renderChannelTabs();
+  applyDecideVisibility();
+  applySettingsVisibility();
 }
 
 async function loadMarketing() {
@@ -1004,7 +1118,7 @@ function renderMarketing() {
        `<span class="count">${due.length}</span></div>`;
   if (!due.length) {
     h += '<div class="card"><div class="body-text">Nothing needs you' +
-         (mktChannel ? ' on this channel' : '') + '. Anything else written is ' +
+         (isRealChannel(mktChannel) ? ' on this channel' : '') + '. Anything else written is ' +
          'dated further out — approve those when they come due, not now.</div></div>';
   }
   due.forEach(p => {
@@ -1021,7 +1135,7 @@ function renderMarketing() {
   // anyone's problem yet; the point of the window is that they stay that way.
   // Only shown unfiltered — the count is across all channels, and captioning
   // it with one channel's name would be a small lie.
-  if (!mktChannel && d.later_count) {
+  if (!isRealChannel(mktChannel) && d.later_count) {
     h += `<div class="quiet">${d.later_count} more written and dated beyond the ` +
          `next ${d.window_days} days` +
          (d.later_first ? `, starting ${esc(d.later_first)}` : '') +
@@ -1241,7 +1355,7 @@ function renderSettings() {
     if (sec.id !== 'channels') return;   // the only renderer that exists yet
     // Keyed on `id`, not `channel` — a settings row IS a channel rather than a
     // piece that belongs to one, so inChannel() is the wrong shape here.
-    const shown = (sec.channels || []).filter(c => !mktChannel || c.id === mktChannel);
+    const shown = (sec.channels || []).filter(c => !isRealChannel(mktChannel) || c.id === mktChannel);
     h += '<div class="section">' +
       `<div class="h">${esc(sec.label)}</div>` +
       `<div class="note-text">${esc(sec.note)}</div>` +
@@ -2317,6 +2431,19 @@ function renderConfig() {
 
   el.innerHTML = missing + `
     <div class="section">
+      <div class="h">Business</div>
+      <div class="note-text" style="margin-bottom:12px">Context for anything a model
+        drafts on your behalf — right now, that's Smart reactivation's messages.</div>
+      <div class="cfg-grid">
+        <label for="cfg-business_blurb">About this business</label>
+        <div>
+          <textarea id="cfg-business_blurb" rows="3" style="width:100%"
+            placeholder="What you sell, the tone you write in, anything worth knowing before someone drafts a message in your voice.">${esc(d.business_blurb || '')}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="h">Claude</div>
       <div class="note-text" style="margin-bottom:12px">Agent work runs on your own
         account, not the host's. Generate a token with <code>claude setup-token</code>
@@ -2330,8 +2457,9 @@ function renderConfig() {
     <div class="section">
       <div class="h">SMS server</div>
       <div class="note-text" style="margin-bottom:12px">An HTTP gateway. The control
-        center POSTs <code>username</code>, <code>password</code>, <code>to</code> and
-        <code>message</code> as form fields.</div>
+        center authenticates with HTTP Basic Auth using this username and password, and
+        POSTs JSON: <code>{"textMessage":{"text":…},"phoneNumbers":[…]}</code> — one
+        request can carry many numbers when they all get the same text.</div>
       <div class="cfg-grid">
         <label for="cfg-sms_url">Server URL</label>
         <div>
@@ -2343,6 +2471,7 @@ function renderConfig() {
         <div><input type="text" id="cfg-sms_username" autocomplete="off"
                     value="${escAttr(d.sms_username || '')}" /></div>
         ${secretField('sms_password', 'Password', 'Stored server-side; never sent back to this page.')}
+        ${configSmsTestRow(d)}
       </div>
     </div>
 
@@ -2370,6 +2499,17 @@ function renderConfig() {
           ${secretField('pg_dsn', 'Database connection',
             'Postgres/Supabase connection string, e.g. postgresql://user:pass@host:5432/db. ' +
             'Needs the psycopg driver installed on the machine running this server.')}
+          ${configDbTestRow(d)}
+        </div>
+        <div id="cfg-crm" style="display:${source === 'crm' ? 'contents' : 'none'}">
+          <label for="cfg-crm_url">Twenty URL</label>
+          <div><input type="text" id="cfg-crm_url" autocomplete="off"
+                      value="${escAttr(d.crm_url || '')}" placeholder="https://crm.example.com" />
+            <div class="cfg-hint">Your Twenty workspace's base URL — the GraphQL
+              endpoint is derived from it.</div>
+          </div>
+          ${secretField('crm_api_key', 'API key',
+            'From Twenty: Settings → APIs & Webhooks → generate a key.')}
         </div>
       </div>
     </div>
@@ -2386,12 +2526,14 @@ function renderConfig() {
 function onSourceChange() {
   const v = document.getElementById('cfg-source').value;
   document.getElementById('cfg-aiorders').style.display = v === 'aiorders' ? 'contents' : 'none';
+  document.getElementById('cfg-crm').style.display = v === 'crm' ? 'contents' : 'none';
 }
 
 function configPayload(extra) {
   const val = id => (document.getElementById('cfg-' + id)?.value || '').trim();
   return Object.assign({
     email: configWho || me.email,
+    business_blurb: val('business_blurb'),
     sms_url: val('sms_url'),
     sms_username: val('sms_username'),
     sms_password: val('sms_password'),
@@ -2399,7 +2541,95 @@ function configPayload(extra) {
     customer_source: val('source'),
     brand_id: val('brand_id'),
     pg_dsn: val('pg_dsn'),
+    crm_url: val('crm_url'),
+    crm_api_key: val('crm_api_key'),
   }, extra || {});
+}
+
+// A real send, to the gateway, from a human clicking a button — proof the
+// saved configuration actually works rather than trusting that it looks
+// complete. Only once, here, not duplicated on the Marketing SMS view. A
+// pass persists (the ✓ badge) until write_config sees the tested fields
+// actually change — no need to re-send a text just to re-confirm it.
+function configSmsTestRow(d) {
+  if (!d.sms_url) return '';
+  return `<label for="cfg-sms-test-phone">Test server</label>
+    <div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="cfg-sms-test-phone" placeholder="+15551234567" style="max-width:170px" />
+        <button class="btn" onclick="sendConfigTestSms()">Send test</button>
+        ${me.phone ? '<button class="btn" onclick="sendConfigTestSms(me.phone)">Send to me</button>' : ''}
+        <span class="cfg-set" id="cfg-sms-test-badge">${d.sms_tested_ok ? '✓ Working' : ''}</span>
+      </div>
+      <div class="cfg-hint" id="cfg-sms-test-out">Tests the saved configuration above, not unsaved edits.</div>
+    </div>`;
+}
+
+async function sendConfigTestSms(toOverride) {
+  const input = document.getElementById('cfg-sms-test-phone');
+  const out = document.getElementById('cfg-sms-test-out');
+  const badge = document.getElementById('cfg-sms-test-badge');
+  const phone = (toOverride || input.value || '').trim();
+  if (!phone) { input.focus(); return; }
+  out.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/config/test-sms', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: configWho || me.email, phone }),
+    });
+    const d = await r.json();
+    if (!r.ok) { out.textContent = d.error || 'Failed'; return; }
+    if (d.ok) {
+      out.textContent = 'Sent — check the phone.';
+      badge.textContent = '✓ Working';
+      if (configData) configData.sms_tested_ok = true;
+    } else {
+      out.textContent = 'Gateway said: ' + (d.detail || 'failed');
+    }
+  } catch (e) {
+    out.textContent = String(e);
+  }
+}
+
+// Same "persists until config changes" behavior as the SMS test above, for
+// the AIOrders Postgres/Supabase connection string.
+function configDbTestRow(d) {
+  if (!d.pg_dsn_set) return '';
+  return `<label for="cfg-db-test-btn">Test connection</label>
+    <div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="cfg-db-test-btn" onclick="sendConfigTestDb()">Test connection</button>
+        <span class="cfg-set" id="cfg-db-test-badge">${d.pg_dsn_tested_ok ? '✓ Working' : ''}</span>
+      </div>
+      <div class="cfg-hint" id="cfg-db-test-out">Tests the saved connection string above, not unsaved edits.</div>
+    </div>`;
+}
+
+async function sendConfigTestDb() {
+  const btn = document.getElementById('cfg-db-test-btn');
+  const out = document.getElementById('cfg-db-test-out');
+  const badge = document.getElementById('cfg-db-test-badge');
+  btn.disabled = true;
+  out.textContent = 'Testing…';
+  try {
+    const r = await fetch('/api/config/test-db', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: configWho || me.email }),
+    });
+    const d = await r.json();
+    btn.disabled = false;
+    if (!r.ok) { out.textContent = d.error || 'Failed'; return; }
+    if (d.ok) {
+      out.textContent = 'Connected.';
+      badge.textContent = '✓ Working';
+      if (configData) configData.pg_dsn_tested_ok = true;
+    } else {
+      out.textContent = d.detail || 'Connection failed';
+    }
+  } catch (e) {
+    btn.disabled = false;
+    out.textContent = String(e);
+  }
 }
 
 async function postConfig(payload) {
@@ -2444,6 +2674,10 @@ function clearSecret(field) {
 let smsData = null;
 let smsView = localStorage.getItem('sms-view') || 'campaigns';
 let editingCampaign = null;
+// Admin only: which partner's config (Claude token, SMS gateway, customer
+// database) this business's SMS work runs on. '' means the server's own
+// default (the business's assigned partner) rather than a forced choice.
+let smsOwner = localStorage.getItem('sms-owner') || '';
 
 function setSmsView(v) {
   smsView = v;
@@ -2453,10 +2687,18 @@ function setSmsView(v) {
   renderSms();
 }
 
+// The Campaigns / Smart reactivation tabs double as navigation: clicking one
+// from Decide or Settings has to land on the SMS view AND the right half of
+// it in one click, not switch tabs and leave the sub-view stale.
+function gotoSms(v) {
+  setSmsView(v);
+  setMktView('sms');
+}
+
 async function loadSms() {
   const el = document.getElementById('sms-scroll');
   try {
-    const r = await fetch('/api/sms' + mktQ());
+    const r = await fetch('/api/sms' + mktQ(smsOwner ? { config_owner: smsOwner } : {}));
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || r.status);
     smsData = d;
@@ -2468,6 +2710,38 @@ async function loadSms() {
   }
 }
 
+// Admin-only: which of this business's assigned partners' config actually
+// governs SMS work. Only rendered when there is a real choice to make — one
+// partner is no different from the server's own default.
+function setSmsOwner(email) {
+  smsOwner = email;
+  localStorage.setItem('sms-owner', email);
+  smsData = null;
+  loadSms();
+}
+
+function smsOwnerPicker() {
+  const owners = smsData.config_owners || [];
+  if (owners.length < 2) return '';
+  return `<div class="sms-bar">
+    <span class="note-text">Workspace</span>
+    <select class="instance-select" id="sms-owner-select" onchange="setSmsOwner(this.value)">
+      ${owners.map(o => `<option value="${escAttr(o)}"${o === smsData.config_owner ? ' selected' : ''}>` +
+        `${esc(o)}</option>`).join('')}
+    </select>
+  </div>`;
+}
+
+function openSmsConfig() {
+  switchTab('config');
+  // An admin's own Config is almost never the one that's incomplete here —
+  // it's the business's partner's. Jump straight to theirs instead of
+  // dropping the admin on their own (irrelevant) blank form.
+  if (me.role === 'admin' && smsData && smsData.config_owner && !smsData.config_owner_is_self) {
+    loadConfig(smsData.config_owner);
+  }
+}
+
 function smsBanner() {
   let h = '';
   if (smsData.quiet_mode) {
@@ -2476,9 +2750,11 @@ function smsBanner() {
   }
   const missing = smsData.config_missing || [];
   if (missing.length) {
+    const owner = !smsData.config_owner_is_self && smsData.config_owner
+      ? ` This channel runs on <strong>${esc(smsData.config_owner)}</strong>'s configuration.` : '';
     h += `<div class="missing"><b>Configuration incomplete</b>Missing:
-      ${esc(missing.join(', '))}. <a class="mkt-link" href="#"
-      onclick="switchTab('config');return false">Open Config →</a></div>`;
+      ${esc(missing.join(', '))}.${owner} <a class="mkt-link" href="#"
+      onclick="openSmsConfig();return false">Open Config →</a></div>`;
   }
   return h;
 }
@@ -2487,7 +2763,7 @@ function renderSms() {
   const el = document.getElementById('sms-scroll');
   if (!smsData) return;
   if (smsData.empty) { el.innerHTML = `<div class="empty">${esc(smsData.empty)}</div>`; return; }
-  el.innerHTML = smsBanner() +
+  el.innerHTML = smsOwnerPicker() + smsBanner() +
     (smsView === 'reactivation' ? renderReactivation() : renderCampaigns());
 }
 
@@ -2545,18 +2821,30 @@ function renderCampaigns() {
 
 function renderReactivation() {
   const r = smsData.reactivation || {};
-  const blocked = (smsData.config_missing || []).length || smsData.quiet_mode;
+  const blocked = !!((smsData.config_missing || []).length || smsData.quiet_mode);
   const bar = `<div class="auto-note">
-    Smart reactivation takes no copy and no segment. It reads the lapsed end of your
-    customer database, runs a pass on <b>your</b> Claude OAuth token to choose who is
-    worth reaching and what to say to each of them, and sends — with no approval step.
-    Guardrails, since nobody is reviewing: at most <b>${r.cap}</b> people per run,
-    nobody texted twice within <b>${r.cooldown_days} days</b>, and the run stops
-    entirely while the global pause switch is set. Phone numbers are never sent to
-    the model — it sees a first name and how long it has been, nothing else.
+    Smart reactivation takes no segment — it reads the lapsed end of your customer
+    database itself. It still needs an offer each run: the one piece of copy a human
+    provides. From your business blurb (Config) and that offer, it runs a pass on
+    <b>your</b> Claude OAuth token to choose who is worth reaching and write to each
+    of them, and sends — with no approval step. Guardrails, since nobody is
+    reviewing: at most <b>${r.cap}</b> people per run, nobody texted twice within
+    <b>${r.cooldown_days} days</b>, and the run stops entirely while the global pause
+    switch is set. Phone numbers are never sent to the model — it sees a first name
+    and how long it has been, nothing else.
+  </div>
+  <div class="sms-bar" style="align-items:flex-start">
+    <div style="flex:1;min-width:220px">
+      <label for="react-offer" class="cfg-hint" style="display:block;margin-bottom:4px">
+        Offer for this run</label>
+      <textarea id="react-offer" rows="2" style="width:100%"
+        placeholder="e.g. 20% off any order over $30, this weekend only"
+        oninput="document.getElementById('react-btn').disabled = ${blocked} || !this.value.trim()"
+      ></textarea>
+    </div>
   </div>
   <div class="sms-bar">
-    <button class="btn yes" id="react-btn" onclick="runReactivation()"${blocked ? ' disabled' : ''}>
+    <button class="btn yes" id="react-btn" onclick="runReactivation()" disabled>
       Run reactivation now</button>
     <span class="note-text" id="react-status"></span>
   </div>`;
@@ -2570,6 +2858,7 @@ function renderReactivation() {
         <div class="mkt-title">Run ${esc(fmtWhen(run.created_at))}</div>
         <div class="mkt-sub">${run.candidates} lapsed · ${run.skipped_cooldown || 0} in cooldown ·
           ${run.considered} considered · ${run.chosen == null ? 0 : run.chosen} chosen</div>
+        ${run.offer ? `<div class="mkt-sub">Offer: ${esc(run.offer)}</div>` : ''}
       </div>
       <span class="status-pill ${esc(run.status)}">${esc(run.status)}</span>
     </div>
@@ -2633,6 +2922,7 @@ async function saveCampaign() {
     name: document.getElementById('cm-name').value.trim(),
     body: document.getElementById('cm-body').value.trim(),
     segment: document.getElementById('cm-segment').value,
+    config_owner: smsOwner || undefined,
   };
   const url = editingCampaign ? '/api/sms/campaign/update' : '/api/sms/campaign';
   const r = await fetch(url, {
@@ -2649,7 +2939,7 @@ async function saveCampaign() {
 async function campAction(action, id) {
   const r = await fetch('/api/sms/campaign/' + action, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instance: mktInstance, id }),
+    body: JSON.stringify({ instance: mktInstance, id, config_owner: smsOwner || undefined }),
   });
   const d = await r.json();
   if (!r.ok) { alert(d.error || 'Failed'); return; }
@@ -2664,6 +2954,8 @@ async function sendCampaign(id) {
 }
 
 async function runReactivation() {
+  const offer = (document.getElementById('react-offer').value || '').trim();
+  if (!offer) return;
   if (!confirm('Run smart reactivation now? Messages send automatically — nobody ' +
                'reviews them first.')) return;
   const btn = document.getElementById('react-btn');
@@ -2673,7 +2965,7 @@ async function runReactivation() {
   try {
     const r = await fetch('/api/sms/reactivate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instance: mktInstance }),
+      body: JSON.stringify({ instance: mktInstance, offer, config_owner: smsOwner || undefined }),
     });
     const d = await r.json();
     if (!r.ok) { status.textContent = ''; alert(d.error || 'Failed'); btn.disabled = false; return; }
@@ -2690,6 +2982,12 @@ async function runReactivation() {
 // ── Init ─────────────────────────────────────────────────────────────────
 // Tabs before data: a partner must not see the Partners tab flicker into view
 // for the length of one round trip.
+renderChannelTabs();   // reflects the remembered channel before the first fetch lands
+// Button visibility only here, never the redirect — nothing may fetch before
+// loadMe() has confirmed the session. loadMarketing() re-applies the full
+// check (redirect included) once there's data and the page is past that.
+document.getElementById('mkt-decide-btn').style.display = decideAppliesToChannel() ? '' : 'none';
+document.getElementById('mkt-settings-btn').style.display = settingsAppliesToChannel() ? '' : 'none';
 loadMe().then(loadMarketing);
 </script>
 </body>
