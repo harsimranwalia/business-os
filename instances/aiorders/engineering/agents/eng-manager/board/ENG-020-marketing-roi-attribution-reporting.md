@@ -23,13 +23,15 @@ blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-020-marketing-roi-attribution-reporting.md
-  design:
-  adrs: []
+  design: agents/architect/designs/ENG-020-marketing-roi-attribution-reporting.md
+  adrs: [ADR-011, ADR-012]
   review:
   test_plan:
   security_review:
   release:
   pr:
+touches_data: true
+touches_models: false
 ---
 
 ## Problem
@@ -252,6 +254,133 @@ exit 0, clean.
 not blocked, not terminal, not held by a cap. Fired
 `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-020`
 before this pass exits.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-03 — continue: design pass — held at `designed` (machine WIP occupied)
+
+`continue` event pass. Reading map: steps 6 and 6b, plus the not-negotiable
+set (steps 1, 7, 8b, 9, 10; *Enforced vs instructed*, *The four lanes*,
+*Guards*). Mode check clean (repo-root `.env` → `MODE=active`; instance
+`config/config.yaml` → `mode:` empty). Pre-pass `lib/eng-gate-check.sh`,
+whole-board and scoped `ENG-020`: both exit 0, clean.
+
+**Design work dispatched to an `opus` subagent** (`tech-design/SKILL.md`'s
+own model designation, same precedent `ENG-016`'s design pass set), handed
+the PRD, this ticket's own evidence packet, `projects.md`,
+`engineering-standards.md`, `decision-journal.md`, `observations.md`, and
+`ADR-006`/`ADR-010` as the two directly-on-point priors — with the explicit
+instruction to verify the handed-over packet against `origin/main` rather
+than trust it, same instruction `ENG-016`'s pass gave.
+
+**Independently re-verified the three most load-bearing claims before
+trusting them** (same discipline `ENG-016`'s pass applied to its own two):
+read `analytics/index.ts` directly off `origin/main` and confirmed it
+performs no authentication or authorization of any kind — no
+`Authorization` header read anywhere in the file — and confirmed
+`supabase/functions/README.md` names `analytics` in neither its consolidated
+"no auth check at all" list nor its own per-function Notes; read
+`crm/customers.ts` directly and confirmed the seven columns it actually
+persists (`first_touch_at/_source/_medium/_campaign`, `first_referrer`,
+`last_touch_at/_source`) and confirmed zero references to
+`utm_source`/`utm_medium`/`utm_campaign`/`utm_data` anywhere in the file, contra
+the PRD, this ticket's own Notes, and `observations.md`'s row 100, all three
+of which name those as the persisted columns; read
+`_shared/restaurantAccess.ts` and `brand-portal/utils.ts` and confirmed
+`verifyRestaurantAccess`'s real signature and its return-an-object (never
+throws) behaviour, then spot-checked `customers.ts`/`offers.ts`/`feedback.ts`/
+`menus.ts`'s actual call sites and confirmed the design's claim exactly:
+`customers.ts` discards the result at 5 sites, `offers.ts`/`feedback.ts`
+call it with arguments in the wrong order at 13 sites combined, and both
+defects are already inside `ENG-022`'s own fix scope (confirmed by reading
+that ticket's own design `Components` table) — not a second, undiscovered
+instance of the same bug class, so nothing new to file there. All three
+verifications confirmed the design's claims exactly; nothing sent back for
+rework.
+
+**Shape:** a new `brand-portal` action (`get_acquisition_report`) plus one
+new read-only aggregate RPC, not an extension of the `analytics` function
+the PRD named — `analytics/index.ts` has no access check to build AC5 on,
+and guarding either the new path alone (a half-guarded function, the
+standards' own *failure direction is uniform* defect) or the whole function
+(a P0 fix bundled into a P2 ticket, against "no drive-by refactors") were
+both wrong. `ADR-011`. Channel classification (an uncontrolled-vocabulary
+precedence chain, not a lookup) runs post-query in TypeScript; SQL only
+aggregates — `ADR-012`, applying `ADR-010`'s precedent. Full reasoning,
+every AC walked individually, and failure-mode table: the design itself.
+Process notes, dead ends, and the corrections that didn't change the
+design: `agents/architect/notebook/2026-09-03-eng020-design.md`.
+
+**One-way doors: none.** Both `ADR-011` and `ADR-012` are reversible
+decisions, decided here rather than escalated — no G2, no `awaiting-decision`.
+
+**`touches_data: true`, `touches_models: false`.** No table/column/row
+change, but the one new `SECURITY DEFINER` RPC is a migration, so `database`
+is in the work-breakdown chain once this starts building. Confirmed
+`touches_models: false` independently — deterministic aggregation and a
+pure string/host classifier, no model call anywhere; AI-SEO output is one
+attributed channel among others, never generated. `ai-architecture-standards.md`
+not read.
+
+**Byproduct P0 finding, filed separately, not absorbed here:** the same
+`analytics/index.ts` read that motivated `ADR-011` is a live, unauthenticated
+cross-tenant data exposure in its own right — any caller holding the
+committed publishable key and a restaurant UUID can read that restaurant's
+yearly revenue/orders/customers, no session or ownership check anywhere.
+Same bug class as `ENG-022` and `ENG-029`, different function, invisible to
+`supabase/functions/README.md`'s own "no auth check at all" list. Per
+`eng_build_loop.md` step 3's P0 carve-out (`aiorders-api` is L1, not
+internal-lane) and today's own `ENG-029` precedent (an identical
+byproduct-of-design-research P0), filed immediately as **`ENG-030`** — see
+that ticket's own log — rather than a proposal or absorbed into this
+ticket's diff. `ENG-020` does not depend on `ENG-030`; the new report never
+touches `analytics`.
+
+**Routing (step 11): would be `ready` — held at `designed` instead.**
+Neither an L0 project nor a one-way door, so the skill's own routing reads
+`ready`, `owner: eng-manager`. **Machine WIP re-checked fresh from every
+ticket's own frontmatter, not the cached board header: `1/1`, occupied by
+`ENG-016`** (`state: ready`, not yet `shipped`). Per this board's own
+standing precedent for exactly this situation (`ENG-014`, `ENG-017`,
+`ENG-019`, `ENG-023`, `ENG-025`, `ENG-026` are all sitting at `designed`
+with completed designs for the same reason), `ENG-020` is **held at
+`designed`, owner staying `architect`**, rather than writing `state: ready`
+into frontmatter while the one slot is occupied — entering `ready` is what
+claims the slot, not being designed. Joins that same held-for-slot pool;
+whichever of these the machine WIP slot's own priority order (`now` first,
+then `next`, then unset, lowest id among ties) selects next gets it when
+`ENG-016` ships.
+
+**Two observations filed** (`agents/eng-manager/observations.md`): (1) a
+correction to `observations.md`'s own row 100/101-adjacent claims about
+`utm_source`-as-column and the mock "Analytics" page being live-in-nav, both
+found wrong this pass; (2) `ENG-019` and `ENG-020` will ship two independent
+revenue-attribution surfaces on the same portal the same evening — worth
+someone's attention before both ship, not a blocker for either. Neither
+rises to a proposal — nothing to decide, nothing anyone would be
+disappointed to see unactioned.
+
+**Notify sweep:** no new gate item written for `ENG-020` itself (no
+one-way door). Swept `inbox/` for the 24h-no-nudge-no-decision nudge
+check: nothing crosses it — closest is `eng008` at ~23h (under 24h);
+`eng009`/`eng010` already carry their one-ever nudge. (`ENG-030`'s own
+incident item is raised and notified separately — see its own log.)
+
+**Dead-end sweep:** out of scope for a `continue` event (narrower contract:
+resume the named ticket, don't sweep the board) — not attempted.
+
+**Board update** — `ENG-020`'s In-flight row (`state` stays `designed`,
+`links` populated); `ENG-030` added as a new row; header/counts adjusted for
+the new ticket and the still-occupied machine-WIP slot.
+
+Post-pass `lib/eng-gate-check.sh`, whole-board and scoped `ENG-020` and
+`ENG-030`: see pass notes in `agents/eng-manager/board/_index.md`.
+
+`chained: none` — held by the machine-WIP cap (`1/1`, `ENG-016`, `ready`),
+one of the documented no-chain conditions. Re-check via a `decision`/
+`watch`/`scheduled` pass once `ENG-016` reaches `shipped`, or via a
+dedicated `continue ENG-020`.
 
 business-os itself left uncommitted — same standing default every pass has
 used; the commit-convention question remains open, not re-decided here.
