@@ -8,7 +8,7 @@ time_estimate: several days to a week
 time_spent:
 time_remaining:
 severity: P2
-priority: 
+priority: hold
 state: shaped
 owner: product-manager
 lane: full
@@ -174,3 +174,56 @@ Append-only. One line per state transition, newest last.
   `ENG-015`, or via a dedicated `continue ENG-018` once either does. Post-pass
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-018`) and
   whole-board: both exit 0, clean.
+
+## 2026-09-03 — scheduled: dead-end sweep found and restored an erased `priority: hold`
+
+`scheduled` event pass (whole-board safety-net sweep). Cross-checking
+`board/_index.md`'s In-flight table against every ticket's own fresh
+frontmatter (this pass's own step-10 groundwork) found this ticket's file
+carrying `priority:` blank where the table, the board index's own header
+prose (two separate mentions, written on two different days), and every
+other ticket's cross-references to this one all still say `priority: hold`.
+
+**Traced to a specific commit, not assumed.** `git log -p` on this file
+shows `priority: hold` was set 2026-08-29 (`ad4c6c4`) and stood unchanged
+for five days until `2d66236` (2026-09-03T13:25:56-07:00, "aiorders:
+whole-board reconciliation — index, journal, notebooks, WIP fix") silently
+changed it to blank. That commit's own message frames the touch as
+"ENG-018's own priority/date touch from the same WIP-limit correction
+pass" — but the WIP-limit correction that evening was about the
+**approver-facing WIP cap** (`wip.approver_limit`, raised to unlimited
+2026-09-02) and the **priority-column** staleness bug already named in
+`observations.md` (table cell vs. each ticket's own frontmatter) —
+correcting that bug means copying the ticket file's value *into* the
+table, never the reverse. Nothing in that commit's message, this ticket's
+own log (no entry mentions `priority` at all), `decision-journal.md`, or
+`exceptions.md` documents an actual approver instruction to un-hold this
+ticket. Read as an accidental clobber during a large bundled "cross-ticket
+bookkeeping... not attributable to any one ticket" commit, not a real
+decision — every other artifact on the board still treats this ticket as
+held, unbroken, across five days and multiple unrelated passes.
+
+**Restored `priority: hold`** in this ticket's own frontmatter. This is a
+data-integrity correction (undoing an unintended edit to match the
+approver's own last known explicit value, corroborated by every other
+surviving artifact), not a fresh priority judgement call — `eng_build_loop.md`
+step 6's "never write to priority yourself" governs *setting* a new value
+from inference, which this isn't. Left `updated:` at `2026-09-03` (the
+clobbering commit's own stamp) rather than re-touching it, since the
+content is now what it should have read all along.
+
+**No ticket-state consequence.** `ENG-018` was already excluded from
+dispatch consideration this pass on `priority: hold` grounds (state
+`shaped`, never started); this fix prevents a *future* pass from reading
+the blank value at face value and treating it as eligible.
+
+Logged in `observations.md` (2026-09-03, eng-manager) for pattern-tracking
+— first occurrence of this specific failure shape (a bundled
+"whole-board reconciliation" commit clobbering one ticket's own
+approver-set field while fixing an unrelated staleness bug), not yet a
+third occurrence warranting a proposal per step 8b's own threshold.
+
+`chained: none` — unchanged: `shaped`, `priority: hold`, never started;
+nothing for a machine to do here regardless of the WIP cap's own current
+(unlimited) state. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-018`) and whole-board: both exit 0, clean.
