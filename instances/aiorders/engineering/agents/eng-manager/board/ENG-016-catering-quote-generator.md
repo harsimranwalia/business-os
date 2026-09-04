@@ -9,8 +9,8 @@ time_spent:
 time_remaining:
 severity: P2
 priority: next
-state: designed
-owner: architect
+state: building
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
@@ -23,8 +23,8 @@ blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-016-catering-quote-generator.md
-  design:
-  adrs: []
+  design: agents/architect/designs/ENG-016-catering-quote-generator.md
+  adrs: [ADR-008, ADR-009]
   review:
   test_plan:
   security_review:
@@ -68,6 +68,29 @@ small addition to the already-shipped `CateringDetailModal`).
 Deliberately held at `shaped` rather than advanced to `awaiting-scope` —
 see Log. Not a scope gap; the G1 content is fully drafted in the PRD and
 ready to raise the moment a WIP slot frees.
+
+## Breakdown
+
+Decomposed 2026-09-03 (`work-breakdown/SKILL.md`) into four sub-tickets, one
+per surface, sequenced by the design's own Rollout order (deploy order is a
+correctness requirement there, not a preference):
+
+| Sub-ticket | Surface | Repo | Depends on | State |
+|---|---|---|---|---|
+| `ENG-031` | database | `aiorders-api` | — | `building` |
+| `ENG-032` | frontend | `restaurant-portal` | `ENG-031` | `ready` |
+| `ENG-033` | backend | `aiorders-api` | `ENG-031`, `ENG-032` | `ready` |
+| `ENG-034` | frontend | `config-site-builder` | `ENG-033` | `ready` |
+
+This parent carries no diff of its own from here on — its evidence is its
+children's (ADR-003-class exemption; this instance's own `ADR-003` is a
+different, unrelated decision, see notebook). It moves directly to `shipped`
+once every child reaches `shipped`/`verified`/`dropped` with at least one
+`shipped`/`verified`, without itself passing through `in-review`/`in-qa`/
+`in-security`. Full reasoning — the surface split, the dependency chain, the
+machine-WIP reading that let this dispatch at all, and every field decided
+without an explicit rule — is in
+`agents/eng-manager/notebook/2026-09-03-eng016-work-breakdown.md`.
 
 ## Log
 
@@ -335,3 +358,77 @@ ready to raise the moment a WIP slot frees.
   business-os itself left uncommitted — same standing default every pass
   has used; the commit-convention question remains open, not re-decided
   here.
+
+- `2026-09-03` **`designed → ready`, `owner: architect → eng-manager`**
+  (architect, `continue` event pass, `tech-design/SKILL.md`). Reading
+  map: steps 6, 6b, plus not-negotiable set. Mode/pre-pass gate-check
+  both clean.
+
+  Design: `agents/architect/designs/ENG-016-catering-quote-generator.md`.
+  Built by an `opus` subagent (skill's own model designation) from
+  `origin/main` evidence gathered across all 3 repos this pass;
+  independently re-verified its 2 most load-bearing claims (a live
+  `restaurant_website.catering` owner editor in restaurant-portal;
+  `catering.status`'s undocumented default) before trusting them.
+  **No one-way door** — additive nullable columns only, zero new authz
+  code (existing RLS + `verifyRestaurantAccess` already cover the new
+  columns), no new vendor/datastore/recurring cost. Two ADRs
+  (`decided_by: architect`, both reversible, both reversing this pass's
+  own initial recommendation once checked against the literal ACs/live
+  code): `ADR-008` (fulfillment stays on `delivery_method`, configurable
+  copy, not a remap or new field) and `ADR-009` (order-form gate is
+  owner opt-in, default off). Full reasoning/risks in the design;
+  process notes `agents/architect/notebook/2026-09-03-eng016-piece1-design.md`.
+
+  **Machine WIP re-checked fresh from every ticket's own frontmatter**
+  (not the cached board header, and not this pass's own launch
+  checkpoint, which was already stale): genuinely `0/1`, free —
+  `ENG-024` left `ready-to-ship` for `blocked` in the intervening
+  `continue ENG-024` pass. **1 transition.** Consequence: machine WIP
+  `0/1 → 1/1`, occupied by this ticket.
+
+  No gate raised this pass (no one-way door), nothing to notify/nudge
+  in this event's own scope. No new observations — nothing surfaced
+  without a home already in the design/ADRs. Post-pass gate-check clean.
+
+  `chained: ENG-016` — `ready` is agent-owned (`eng-manager`,
+  work-breakdown next); not approver, not blocked, not terminal, and no
+  longer cap-held (this ticket now holds the freed slot). Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-016`
+  before this pass exits.
+
+  business-os itself left uncommitted — same standing default; the
+  commit-convention question remains open, not re-decided here.
+
+- `2026-09-03` **`ready → building`, work-breakdown run** (eng-manager,
+  `continue` event pass, `work-breakdown/SKILL.md`). Reading map: steps 6,
+  6b, plus not-negotiable set. Mode/pre-pass gate-check (scoped + whole-board)
+  both clean.
+
+  Split into four sub-tickets by surface, sequenced per the design's own
+  Rollout order: `ENG-031` (database, no dep, dispatched to `building`),
+  `ENG-032` (frontend/restaurant-portal, depends_on `ENG-031`), `ENG-033`
+  (backend, depends_on `ENG-031`+`ENG-032`), `ENG-034`
+  (frontend/config-site-builder, depends_on `ENG-033`) — all held at `ready`
+  except `ENG-031`. See `## Breakdown` above; full reasoning, including the
+  first-precedent machine-WIP reading (the ticket *family* holds the one
+  slot, not each row separately) in
+  `agents/eng-manager/notebook/2026-09-03-eng016-work-breakdown.md`.
+
+  **1 transition** on this ticket (`ready → building`). Machine WIP: still
+  `1/1`, same family (`ENG-016` + `ENG-031`..`034`), not 5/1 — see notebook.
+  One observation filed (`observations.md`): the WIP-family reading itself,
+  flagged for review since it's a first-precedent call. No gate raised, no
+  G1/G2/G3, no one-way door. Post-pass gate-check (scoped + whole-board)
+  clean.
+
+  `chained: ENG-031` — the only child with a met dependency and something
+  agent-actionable now. Fired
+  `/bin/zsh departments/engineering/lib/eng-trigger.sh continue ENG-031`
+  before this pass exits. `chained: none` on `ENG-016` itself (parent has no
+  action until a child reports back) and on `ENG-032`/`ENG-033`/`ENG-034`
+  (each waiting on an unmet sibling dependency) — recorded on each ticket's
+  own log.
+
+  business-os itself left uncommitted — same standing default; the
+  commit-convention question remains open, not re-decided here.
