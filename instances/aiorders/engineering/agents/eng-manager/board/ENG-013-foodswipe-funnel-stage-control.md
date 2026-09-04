@@ -8,19 +8,17 @@ time_estimate: half a day to a couple of days
 time_spent: ~3h build, two code-review rounds (round 1 fail, round 2 pass),
   the QA quality gate, the security gate, and release-readiness (two PRs
   opened) — all machine time; see log
-time_remaining: none for the department. Waiting on the approver's own
-  merge of both PRs, on their own schedule (L1). No approver time_impact
-  beyond that merge.
+time_remaining: none — shipped and verified.
 severity: P2
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-03
+updated: 2026-09-04
 branch: feat/ENG-013-foodswipe-funnel-stage-control (same name, both repos)
 depends_on: []
 blocks: []
@@ -32,7 +30,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-013.md
   test_plan: agents/qa/test-plans/ENG-013.md
   security_review: agents/security/reviews/ENG-013.md
-  release:
+  release: agents/devops/releases/2026-09-04-ENG-013-aiorders-api-and-admin-hub.md
   pr:
     aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/5
     aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/4
@@ -1367,3 +1365,71 @@ Append-only. One line per state transition, newest last.
   is the approver's own GitHub merge, which no `continue` fire can do.
   Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
   (`ENG-013`) and whole-board: both exit 0, clean.
+
+- `2026-09-04` `blocked → shipped → verified` (eng-manager, `scheduled`
+  event pass — whole-board sweep, step 5 merge detection). No merge-request
+  item was open for this ticket any more (closed 2026-09-03 once the
+  stage-config question resolved "Reading A" — ship as-is; merging either
+  PR on GitHub was the only remaining step, same shape `ENG-009`/`ENG-010`
+  already carried). `git fetch origin` on both worktrees
+  (`~/Documents/projects/_eng/{aiorders-api,aiorders-admin-hub}`, both
+  clean), then `git merge-base --is-ancestor` on
+  `feat/ENG-013-foodswipe-funnel-stage-control` against `origin/main`:
+  **YES on both repos** — confirmed independently on each, not inferred
+  from one. Cross-checked with `gh pr view`: `aiorders-api#5` — `MERGED`,
+  merge commit `1b0c504`, `mergedAt: 2026-09-04T06:45:54Z`;
+  `aiorders-admin-hub#4` — `MERGED`, merge commit `0583962`, `mergedAt:
+  2026-09-04T06:45:37Z` — both land within roughly 90 seconds of `ENG-015`'s
+  own two PRs, one batch merge session.
+
+  **Not advanced past a state that owes gates.** Re-read all four receipts
+  directly: `agents/database/migrations/ENG-013-foodswipe-funnel-stage-control.md`
+  (**pass**), `agents/principal-engineer/reviews/ENG-013.md` (**pass**,
+  round 2), `agents/qa/test-plans/ENG-013.md` (**pass**),
+  `agents/security/reviews/ENG-013.md` (**pass**). Branch tips match this
+  ticket's own frontmatter exactly (`aiorders-api@c95b25b`,
+  `aiorders-admin-hub@a1c3bdf`), no drift between what was reviewed and
+  what merged. Independently re-verified on the merged tree itself, not
+  taken from the receipts' word alone: `git show
+  origin/main:supabase/functions/admin-portal/handlers/foodswipe.ts`
+  confirms both `setStageOverride`/`resetStageOverride` present, both still
+  scoped `.eq('source', 'foodswipe')`; `git show
+  origin/main:src/pages/FoodswipeListings.tsx` confirms the dropdown/dialog
+  and "Manually set" badge are present.
+
+  Release record written:
+  `agents/devops/releases/2026-09-04-ENG-013-aiorders-api-and-admin-hub.md`,
+  `links.release` set in the same edit. `state: blocked → verified`,
+  `owner: approver → eng-manager`, `blocked_on`/`blocked_from` cleared.
+
+  Journal entry added (`decision-journal.md`) — silent GitHub merge, no
+  written reply, same shape `ENG-007`/`ENG-011`/`ENG-022`/`ENG-024`/
+  `ENG-031`/`ENG-032` already established. No inbox item to move — this
+  ticket's own merge-request item already closed 2026-09-03 on the
+  stage-config answer.
+
+  **`ENG-028`'s sole dependency (`depends_on: [ENG-013]`) is now
+  satisfied** — noted on this release's own Follow-ups; `ENG-028` itself
+  stays at `awaiting-scope`, unaffected in state, since its own G1
+  (`inbox/2026-09-03-eng028-g1-scope.md`) is still unanswered — a satisfied
+  dependency doesn't skip its own gate.
+
+  **2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+  the cap of 4 — pure receipt-confirmation and bookkeeping, no new
+  implementation work, same precedent this instance's other silent-merge
+  discoveries already set. **Consequence:** ticket leaves the In-flight
+  table entirely (terminal); machine WIP unaffected (already outside the
+  counted `ready..ready-to-ship` range since its own `ready-to-ship →
+  blocked` hop); no open inbox item existed for it already, so nothing
+  changes in the approver-facing count.
+
+  **Dead-end sweep (whole-board, this pass):** covered in full at the
+  board-index entry for this pass. **Notify sweep:** nothing to raise or
+  nudge for this ticket — a shipped/verified ticket needs no gate.
+
+  `chained: none` — `verified` is terminal; the chaining guard never fires
+  on a terminal ticket.
+
+  business-os itself left uncommitted — same standing default every pass
+  has used; the commit-convention question remains open, not re-decided
+  here.
