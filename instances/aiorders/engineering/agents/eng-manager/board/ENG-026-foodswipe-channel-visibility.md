@@ -23,8 +23,8 @@ blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-026-foodswipe-channel-visibility.md
-  design:
-  adrs: []
+  design: agents/architect/designs/ENG-026-foodswipe-channel-visibility.md
+  adrs: [ADR-010]
   review:
   test_plan:
   security_review:
@@ -292,3 +292,124 @@ Append-only. One line per state transition, newest last.
   business-os itself left uncommitted — same standing default every pass
   has used; the commit-convention question remains open, not re-decided
   here.
+
+- `2026-09-03` no state change — **tech design written** (architect,
+  `continue` event pass, context `ENG-026`). Reading map for `continue`:
+  steps 6 and 6b (step 2's mid-PRD checkpoint doesn't apply — the PRD is
+  already complete/approved) plus the not-negotiable set (steps 1, 7, 8b, 9,
+  10; *Enforced vs instructed*, *The four lanes*, *Guards*). Mode check
+  clean (repo-root `.env` → `MODE=active`). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-026`) and
+  whole-board: both exit 0, clean.
+
+  **Read the live codebase across all three touched repos before designing**
+  (`aiorders-api`, `aiorders-admin-hub`, `restaurant-marketplace`) rather
+  than trusting the PRD's own framing — surfaced two facts the PRD couldn't
+  have known and one the ticket's own Notes flagged as needing exactly this
+  look:
+
+  1. `restaurant-marketplace`'s own `supabase/functions/*` was deleted
+     2026-08-23 (`f733e68`, "now owned by aiorders-api") — its 16-commits-
+     behind worktree (`eng/base`) still showed the old handler code, which
+     would have misdirected every backend change in this design had it not
+     been checked against `origin/master`/`origin/main` directly. The
+     discovery RPC (`get_restaurants_optimized`) and its handler live in
+     `aiorders-api` today; `restaurant-marketplace` is frontend-only for
+     this ticket.
+  2. `has_dine_in` collides with a real, pre-existing, currently-dead
+     `dine_in` column — staff-editable today from the exact admin surface
+     requirement 6 names, read by nothing on the consumer side, and absent
+     from `aiorders-admin-hub`'s own generated Supabase types (consistent
+     with either "real column, stale typegen" or "never real, dead form
+     field" — not resolvable from static analysis alone). Design hands
+     `database` a concrete, conditional instruction rather than guessing
+     either way (design doc, Data section).
+  3. **Requirement 7 (rollout/backfill), open since PRD stage, resolved as
+     far as static analysis permits:** `has_order_food` defaulting `true`
+     for every row reproduces today's actual behavior exactly (no existing
+     gate restricts that tab at all today). `has_catering` backfills from
+     `live_catering` — `NOT NULL`, already populated, already this
+     codebase's working stand-in for "does this restaurant do catering"
+     per `brand-portal/catering.ts`. `has_dine_in` is the one piece that
+     stays genuinely open, conditional on the live-schema check in (2) —
+     named plainly rather than defaulted silently, per the ticket's and
+     PRD's own explicit flag.
+
+  **Design written:**
+  `agents/architect/designs/ENG-026-foodswipe-channel-visibility.md`. Three
+  repos, `touches_data: true`, `touches_models: false`. Full template used
+  (M-sized but genuinely three-repo with a real schema collision to resolve
+  — sized to the change's actual complexity, not just its estimate band).
+
+  **One ADR, no G2.** `ADR-010` records evaluating "Open Now" post-query in
+  TypeScript (a ported, not re-derived, existing client-side parser) rather
+  than as a SQL predicate — reversible, no data migration either way, but a
+  real trade-off (approximate pagination under `open_now=true`) a future
+  engineer would otherwise have to re-derive from behavior alone. Consolidating
+  `get_restaurants_optimized`'s orphaned migration into `aiorders-api`
+  (finding 1, above) is **not** a new ADR — it completes `ADR-003`'s own
+  migration-ownership call rather than making a new one, cited in the design
+  instead.
+
+  **No one-way doors** — checked against all six criteria in the design's
+  own table, none apply. New columns, new RPC parameter (`DEFAULT NULL`,
+  backward-compatible), new shared util — all reversible, none change auth,
+  vendor, or public-contract shape.
+
+  **One proposal filed, not fixed inline:** `admin-portal/handlers/
+  restaurants.ts`'s `updateRestaurant()` has no field allow-list at all —
+  found while confirming how the new flags reach the database, distinct
+  from the already-tracked ownership-check finding on this same function
+  (`proposals.md`, 2026-08-29, corrected 2026-09-03 now that `ENG-015`
+  fixed the ownership half). This ticket's own three new fields ride the
+  already-open surface; not this ticket's to fix, per `eng_build_loop.md`
+  step 3 — filed to `proposals.md` instead of fixed as a drive-by.
+
+  **Step 6b (artifact-mention enumeration): not run, and here's why rather
+  than a silent skip.** Nothing in this design renames or introduces a rule
+  about a business-os-process artifact (a receipt path, a state name, a
+  config key, a file another agent is told to produce) — `links.design`/
+  `links.adrs` are filled per the existing, unchanged convention, and the
+  design/ADR file-path patterns are unchanged. Same reasoning `ENG-024`'s
+  own `building` hop already recorded for the identical question.
+
+  **Machine WIP re-checked fresh from every ticket's own frontmatter, not
+  cached:** `1/1`, occupied by `ENG-016` at `ready` (not yet `building`) —
+  every other ticket on the board sits at `designed`, `blocked`, `shaped`,
+  `awaiting-scope`, `verified`, or `dropped`; none in `building`..
+  `ready-to-ship`. **Ticket stays at `designed` regardless — held by the
+  machine WIP cap, not a gate.** `eng_build_loop.md`'s Guards section is
+  explicit: "nothing new enters `ready` until the one ticket in flight
+  reaches `shipped`" — `ENG-016` sitting at `ready` (not even started
+  building) is squarely "in flight" by that rule. Design work itself is
+  exempt from the cap (`designed` is in the cap-exempt set); entering
+  `ready` is not, so this pass does not attempt that transition — no
+  branch created in any of the three worktrees, no code written. Same
+  precedent `ENG-014`/`ENG-017`/`ENG-019`/`ENG-020`/`ENG-021`/`ENG-023`/
+  `ENG-025` already set, all currently parked at `designed` for the
+  identical reason.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched, per
+  this event's own narrower contract. **Notify sweep:** nothing raised
+  this pass — no G2, no gate item written, nothing to notify or nudge.
+  Approval cap and approver-facing WIP both unaffected.
+
+  **0 transitions** — `state`/`owner` unchanged (`designed`/`architect`);
+  the cap, not the hop budget, is what stopped it. Machine WIP unaffected
+  (still `1/1`, `ENG-026` was never inside the counted range and still
+  isn't). Approver-facing WIP and approval cap both unaffected — no gate
+  raised.
+
+  `chained: none` — held by the machine WIP cap (`1/1`: `ENG-016`
+  occupying), one of the documented no-chain conditions ("held by a cap
+  (WIP or approvals)"), not waiting on the approver and not blocked. The
+  next hop (`ready`, work-breakdown) fires once `ENG-016` reaches `shipped`
+  and a `scheduled`/`continue`-elsewhere pass finds the slot free and this
+  design already complete — nothing to re-derive at that point, only the
+  state/owner fields to flip. Post-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-026`) and
+  whole-board: both exit 0, clean.
+
+  business-os itself left uncommitted — same standing default every pass
+  today has used; the commit-convention question remains open, not
+  re-decided here.
