@@ -78,6 +78,18 @@ rebase-onto-new-base treatment before it, in turn, is safe to merge toward
 unaffected by any of this and can proceed independently of when `ENG-009`
 gets fixed.
 
+## Update, 2026-09-04 (`scheduled` sweep) — what actually happened when these merged
+
+Both PRs now show `MERGED` on GitHub. **Neither shipped** — both merged into
+`feat/ENG-009-influencer-engagement-info` (this ticket's own configured
+base, per Sequencing above), which itself still hasn't reached `main` (see
+`ENG-009`'s own merge-request item and board-file log — same date). This
+ticket's own content was never in question (round 3 passed clean, no hold
+recommendation), only the delivery path, which it inherits from `ENG-009`.
+No reply needed here — resolving `ENG-009`'s path to `main` resolves this
+ticket's too. Full mechanics: this ticket's own board-file log, 2026-09-04
+entry.
+
 ## Gates passed
 
 - Migration: **pass** — `agents/database/migrations/ENG-010-influencer-relationship-notes.md`.
@@ -138,6 +150,24 @@ gets fixed.
   (`proxy_sessions_audit_logs`, and the foundational RLS migration gating
   `restaurants`/`catering`).
 
+## Update, 2026-09-04 (`watch (launchd)` event pass) — resolved, shipped
+
+Same resolution as `ENG-009`'s own item, same action: a new PR on each
+repo, `merge/ENG-009-ENG-010-to-main` (`aiorders-api` #14,
+`aiorders-admin-hub` #9), base `main`, head the stacked branch's current
+tip, opened and merged directly on GitHub at `2026-09-04T15:39:16Z` /
+`15:40:31Z`, carrying this ticket's commits along with `ENG-009`'s (already
+stacked on each other). Confirmed via `git merge-base --is-ancestor` on
+this ticket's own recorded commits (`486eec0`, `8b90f0e`) against fresh
+`origin/main` on both repos. All three gate receipts re-read fresh, still
+`pass`; no migration owed. Ticket carried `blocked → shipped → verified`.
+Full detail: `ENG-010`'s own board-file log, 2026-09-04 entry, and
+`agents/devops/releases/2026-09-04-ENG-009-ENG-010-aiorders-api-and-admin-hub.md`.
+
+No reply was ever written to this item in the tracked channel — resolved
+entirely by direct action on GitHub.
+
 ## Decision
 
-Filled in by the approver.
+Filled in by the approver. (None given — resolved by direct GitHub action;
+see the update immediately above.)

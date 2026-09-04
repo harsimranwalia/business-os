@@ -99,6 +99,30 @@ today for an earlier ENG-008 fix. If you'd rather resolve the GitHub
 conflict by hand instead of waiting, do the same rename in ENG-009's
 added lines, not just accept whichever side the merge UI defaults to.
 
+## Update, 2026-09-04 (`scheduled` sweep) — what actually happened when these merged
+
+Both PRs now show `MERGED` on GitHub. **Neither shipped** — both merged into
+`feat/ENG-008-influencer-admin-management` (this ticket's own configured
+base, per Sequencing above), not `main`. `ENG-008`'s own separate PR (base
+`main`) had already merged to `main` minutes earlier; merging into a
+feature branch after that doesn't retroactively reach `main` on its own.
+Confirmed by content, not just ancestry: this ticket's own distinguishing
+code exists only on the stacked branch, not on either repo's `main`.
+
+**The specific risk this section warned about did not materialize** — the
+merged branch carries zero `accepts_barter` references and the correct
+`ENG-008` round-3 rename throughout, confirmed by direct inspection. Taking
+the "resolve by hand" path this section offered appears to be exactly what
+happened, and it came out clean.
+
+**Still open: how this actually reaches `main`.** There's no longer an open
+PR anywhere targeting `main` that carries this ticket's changes —
+`ENG-008`'s own main-bound PR already closed. This needs a real decision
+(fresh PR from the current stacked tip, or extracting this ticket's commits
+onto a clean branch off current `main`) by whoever next builds on this
+ticket — not a re-click. No reply needed here; full mechanics on this
+ticket's own board-file log, 2026-09-04 entry.
+
 ## Gates passed
 
 - Migration: **pass** — `agents/database/migrations/ENG-009-influencer-engagement-info.md`. Two nullable columns, no default, no backfill.
@@ -114,6 +138,28 @@ added lines, not just accept whichever side the merge UI defaults to.
 - Setting `social_stats_platform` alone (no `followers`/`engagement`) persists but doesn't render anywhere yet. P3, has a workaround (enter a number too).
 - No live Postgres reachable from the build host — verified instead via read-only Supabase MCP against the real production schema, same standing gap every prior migration on this board carries.
 
+## Update, 2026-09-04 (`watch (launchd)` event pass) — resolved, shipped
+
+The "still open: how this actually reaches `main`" question immediately
+above is now closed. A new PR on each repo, `merge/ENG-009-ENG-010-to-main`
+(`aiorders-api` #14, `aiorders-admin-hub` #9), base `main`, head the
+stacked branch's current tip, was opened and merged directly on GitHub at
+`2026-09-04T15:39:16Z` / `15:40:31Z` — the "fresh PR from the current
+stacked-branch tip" option named above, taken by hand. Both this ticket's
+and `ENG-010`'s commits landed together (they were already stacked on each
+other). Confirmed via `git merge-base --is-ancestor` on this ticket's own
+recorded commits (`d37e0c9`, `92bcacd`) against fresh `origin/main` on both
+repos, and cross-checked with `gh pr view` on both new PRs. All three gate
+receipts re-read fresh, still `pass`; no migration owed. Ticket carried
+`blocked → shipped → verified`. Full detail: `ENG-009`'s own board-file
+log, 2026-09-04 entry, and
+`agents/devops/releases/2026-09-04-ENG-009-ENG-010-aiorders-api-and-admin-hub.md`.
+
+No reply was ever written to this item in the tracked channel — resolved
+entirely by direct action on GitHub, same as every other silent-merge
+ticket on this board.
+
 ## Decision
 
-Filled in by the approver.
+Filled in by the approver. (None given — resolved by direct GitHub action;
+see the update immediately above.)

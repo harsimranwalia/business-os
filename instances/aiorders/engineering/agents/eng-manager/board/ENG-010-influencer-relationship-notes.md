@@ -6,17 +6,17 @@ type: feature
 size: S
 time_estimate: a few hours to half a day
 time_spent: ~1h build (ready → building, not itemized by that pass — a pre-existing gap named here rather than backfilled with an invented figure) + ~45m code review round 1 (fail) + ~20m fix hop (guarded both async callbacks with a ref) + ~45m code review round 2 (fail — missing RLS) + ~20m fix hop (enabled RLS + policy) + ~45m code review + quality round 3 (pass) + ~30m security gate (pass) + ~20m release-readiness (both PRs opened, stacked on ENG-009's branch)
-time_remaining: 0 machine time — release-readiness done, both PRs open. What's left is the approver's own merge, on their own schedule (L1).
+time_remaining: 0 machine time — shipped.
 severity: P3
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-02
+updated: 2026-09-04
 branch: feat/ENG-010-influencer-relationship-notes (aiorders-api@486eec0, aiorders-admin-hub@8b90f0e)
 depends_on: []
 blocks: []
@@ -28,12 +28,16 @@ links:
   review: agents/principal-engineer/reviews/ENG-010.md
   test_plan: agents/qa/test-plans/ENG-010.md
   security_review: agents/security/reviews/ENG-010.md
-  release:
+  release: agents/devops/releases/2026-09-04-ENG-009-ENG-010-aiorders-api-and-admin-hub.md
   pr:
     - repo: aiorders-api
       url: https://github.com/harsimranwalia/aiorders-api/pull/8
     - repo: aiorders-admin-hub
       url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/7
+    - repo: aiorders-api
+      url: https://github.com/harsimranwalia/aiorders-api/pull/14
+    - repo: aiorders-admin-hub
+      url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/9
 ---
 
 ## Input
@@ -1728,3 +1732,94 @@ Append-only. One line per state transition, newest last.
   lives in the file itself).
 
   `chained: none` — `blocked`, `blocked_on: approver`, unchanged.
+
+- `2026-09-04` **both PRs found `MERGED` on GitHub, into `ENG-009`'s stacked
+  branch, not `main` — nothing shipped, stays `blocked`** (eng-manager,
+  `scheduled` event pass, context `ENG-028` — whole-board sweep, never
+  narrowed). Mode check clean (`MODE=active`). Pre-pass
+  `lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+  **Full mechanics on `ENG-009`'s own board file, same date** — this entry
+  states only what's specific to this ticket rather than re-deriving the
+  shared finding. `gh pr view` on both PRs:
+
+  ```
+  $ gh pr view 8 --repo harsimranwalia/aiorders-api --json state,mergedAt,baseRefName
+  {"baseRefName":"feat/ENG-009-influencer-engagement-info","state":"MERGED","mergedAt":"2026-09-04T06:06:28Z"}
+  $ gh pr view 7 --repo harsimranwalia/aiorders-admin-hub --json state,mergedAt,baseRefName
+  {"baseRefName":"feat/ENG-009-influencer-engagement-info","state":"MERGED","mergedAt":"2026-09-04T06:10:05Z"}
+  ```
+
+  Base is `ENG-009`'s branch (as this ticket's own merge-request item's
+  Sequencing section always said it would be) — `ENG-009`'s branch, in
+  turn, still hasn't reached `main` (see its own log). `git grep` for this
+  ticket's own distinguishing content (`relationship_notes`,
+  `getInfluencerNotes`) on `origin/main`, both repos: no hits — confirms
+  nothing shipped. **Unlike `ENG-009`, this ticket's own gates passed clean
+  at round 3 with no `recommendation: hold`** — its content was never in
+  question, only the delivery path, which it inherits from `ENG-009`
+  wholesale (already established, prior entry above).
+
+  **Merge-request item amended in place**
+  (`inbox/2026-09-02-eng010-merge-request.md`) with the same
+  "What actually happened" note `ENG-009`'s item received, scoped to this
+  ticket. **Journaled as a combined row with `ENG-009`**
+  (`decision-journal.md`) — same underlying event, same batch, one entry
+  rather than two near-duplicates.
+
+  **0 transitions.** `state`/`owner` unchanged (`blocked`/`approver`).
+  `blocked_from` unchanged (`ready-to-ship`). No WIP impact — never inside
+  the counted `ready`..`ready-to-ship` range while `blocked`.
+
+  **Dead-end sweep:** nothing else on this ticket's own lineage to resume.
+  **Notify sweep:** nothing raised or nudged — one nudge already spent,
+  amending the item's body isn't a new gate.
+
+  `chained: none` — still `blocked`, `blocked_on: approver`; shipping this
+  ticket needs `ENG-009`'s own path-to-`main` resolved first (its sole
+  practical sequencing dependency, not a formal `depends_on`). Post-pass
+  `lib/eng-gate-check.sh`, scoped (`ENG-010`) and whole-board: see board
+  index.
+
+  business-os itself left uncommitted — same standing default every pass has
+  used; the commit-convention question remains open, not re-decided here.
+
+- `2026-09-04` `blocked → shipped → verified` (eng-manager, `watch (launchd)`
+  event pass — step 5). Same finding and same resolution as `ENG-009`'s own
+  log entry this pass, full detail there: `ENG-009`'s sequencing dependency
+  resolved in the same action. `git fetch origin` fresh, then
+  `git merge-base --is-ancestor` on this ticket's own **recorded** commits
+  (`486eec0` on `aiorders-api`, `8b90f0e` on `aiorders-admin-hub`): **YES on
+  both repos**, via the same new consolidating PRs (`aiorders-api` #14,
+  `aiorders-admin-hub` #9, `merge/ENG-009-ENG-010-to-main` → `main`, both
+  `MERGED` within the last few minutes) — not this ticket's own original
+  PRs (`aiorders-api` #8, `aiorders-admin-hub` #7), which remain merged into
+  the stacked `feat/ENG-009-influencer-engagement-info` base only.
+
+  **Not advanced past a state that owes gates.** Re-read all three receipts
+  directly: `agents/principal-engineer/reviews/ENG-010.md` (`verdict:
+  pass`), `agents/qa/test-plans/ENG-010.md` (`last_result: pass`),
+  `agents/security/reviews/ENG-010.md` (`verdict: pass`) — no migration
+  applies. Recorded commits confirmed present on `origin/main` by SHA.
+  Combined release record (covers both tickets, same merge commits ship
+  both): `agents/devops/releases/2026-09-04-ENG-009-ENG-010-aiorders-api-and-admin-hub.md`,
+  `links.release` set in the same edit; both consolidating PRs added to
+  `links.pr` alongside the original two. `state: blocked → verified`,
+  `owner: approver → eng-manager`, `blocked_on`/`blocked_from` cleared.
+
+  Merge-request item (`inbox/2026-09-02-eng010-merge-request.md`) closed
+  with a final note and moved to `inbox/_handled/`. Journal entry added
+  (`decision-journal.md`) as a combined row with `ENG-009` — same underlying
+  event, same two merge commits, one entry rather than two near-duplicates,
+  same convention this journal already used for the original finding.
+
+  **2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+  the cap of 4. **Consequence:** no machine-WIP change — never inside the
+  counted `ready..ready-to-ship` range while `blocked`, no `parent`/family
+  membership. Drops off the approver-facing "Waiting on the approver" list.
+  `blocks: []` — nothing downstream to unblock.
+
+  `chained: none` — `verified` is terminal.
+
+  business-os itself left uncommitted — same standing default every pass has
+  used; the commit-convention question remains open, not re-decided here.

@@ -6,17 +6,17 @@ type: feature
 size: S
 time_estimate: a few hours to half a day
 time_spent: ~2h build + ~1h rebase-and-refix (two-repo rebase onto ENG-008's fix commits; one real multi-hunk test conflict resolved by hand in aiorders-api, aiorders-admin-hub's flagged hunk auto-merged correctly; both re-verified and re-pushed) + ~30m review/quality round 2 + ~25m security gate (pass, one three-strike proposal filed) + ~15m release-readiness (two PRs opened, stacked on ENG-008's branch)
-time_remaining: 0 machine time — release-readiness done, both PRs open. What's left is the approver's own merge, on their own schedule (L1).
+time_remaining: 0 machine time — shipped.
 severity: P3
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-02
+updated: 2026-09-04
 branch: feat/ENG-009-influencer-engagement-info (aiorders-api@d37e0c9, aiorders-admin-hub@92bcacd)
 depends_on: []
 blocks: []
@@ -28,12 +28,16 @@ links:
   review: agents/principal-engineer/reviews/ENG-009.md
   test_plan: agents/qa/test-plans/ENG-009.md
   security_review: agents/security/reviews/ENG-009.md
-  release:
+  release: agents/devops/releases/2026-09-04-ENG-009-ENG-010-aiorders-api-and-admin-hub.md
   pr:
     - repo: aiorders-api
       url: https://github.com/harsimranwalia/aiorders-api/pull/7
     - repo: aiorders-admin-hub
       url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/6
+    - repo: aiorders-api
+      url: https://github.com/harsimranwalia/aiorders-api/pull/14
+    - repo: aiorders-admin-hub
+      url: https://github.com/harsimranwalia/aiorders-admin-hub/pull/9
 ---
 
 ## Input
@@ -1404,3 +1408,160 @@ Append-only. One line per state transition, newest last.
   doesn't advance a ticket; the next hop is still the approver's own
   merge/hold/rebase decision, or a future pass finding the rebase already
   done.
+
+- `2026-09-04` **both PRs found `MERGED` on GitHub — but into the stacked
+  base branch, not `main`; nothing shipped; stays `blocked`, content
+  independently confirmed correct despite the standing staleness warning**
+  (eng-manager, `scheduled` event pass, context `ENG-028` — whole-board
+  sweep per this event's own reading-map entry, never narrowed). Mode check
+  clean (`MODE=active`). Pre-pass `lib/eng-gate-check.sh`, whole-board: exit
+  0, clean.
+
+  **Step 5, re-run fresh.** `git fetch origin` on both worktrees, then `gh
+  pr view` on both PRs (this ticket's own merge-request item already named
+  a real, evidenced risk, so `gh` was checked directly rather than relying
+  on branch-ancestry alone):
+
+  ```
+  $ gh pr view 7 --repo harsimranwalia/aiorders-api --json state,mergedAt,baseRefName
+  {"baseRefName":"feat/ENG-008-influencer-admin-management","state":"MERGED","mergedAt":"2026-09-04T06:06:00Z"}
+  $ gh pr view 6 --repo harsimranwalia/aiorders-admin-hub --json state,mergedAt,baseRefName
+  {"baseRefName":"feat/ENG-008-influencer-admin-management","state":"MERGED","mergedAt":"2026-09-04T06:10:29Z"}
+  ```
+
+  **Both merged into `feat/ENG-008-influencer-admin-management` — this
+  ticket's own stacked base, exactly as both PRs were configured — not
+  `main`.** `ENG-008`'s own separate PR (base `main`) had already merged to
+  `main` minutes earlier (06:04:41Z/06:07:37Z, found this same pass — see
+  `ENG-008`'s own board-file log). Merging a PR into a feature branch does
+  not propagate to `main` on its own: confirmed directly, `git grep` for
+  this ticket's own distinguishing content (`social_stats_platform`,
+  `getInfluencerActivity`) on `origin/main` for both repos returns nothing;
+  it exists only on the stacked branch tip. **Neither PR shipped, despite
+  both reading `MERGED`.**
+
+  **Checked what this means for the specific risk the merge-request item's
+  own "Update, 2026-09-03" section warned about** (this branch's
+  `Influencers.tsx` still carrying the pre-round-3 `accepts_barter` UI,
+  inherited from a stale base, conflicting with `ENG-008`'s round-3 rename)
+  — **did not materialize.** `git show` on the post-merge branch tip
+  confirms zero `accepts_barter` references and the correct dirty-tracked
+  `accepts_paid` handling, byte-identical to `main` past line-number shifts
+  from this ticket's own insertions. Reasoned why, not just observed: this
+  was a `git merge` (not a rebase), so the merge commit's non-conflicting
+  side automatically took `ENG-008`'s newer version of the 11 lines this
+  ticket's own diff never touched — the staleness was real at the *review*
+  level (round 2 passed against a diff that didn't include this
+  reconciliation) but the *merged content* came out correct regardless,
+  because this ticket's own changes were orthogonal to the exact lines that
+  had gone stale. Lucky in this specific case, not a property to rely on
+  generally — a ticket whose own diff *did* touch the stale lines would have
+  produced a real conflict or a silent wrong-side resolution instead.
+
+  **Not read as the approver being misled** — this item's own
+  `recommendation: hold` and "Sequencing" section already named this exact
+  risk and explicitly offered "resolve the GitHub conflict by hand instead
+  of waiting" as a legitimate alternative to the recommended hold. Merging
+  directly is that second path, taken. What's still missing isn't
+  understanding, it's a delivery mechanism: there is no longer an open PR
+  anywhere with base `main` that carries this ticket's changes — `ENG-008`'s
+  own main-bound PR already closed. **Ticket stays `blocked`.** Whoever next
+  picks this ticket up (a `continue ENG-009` build/release hop, not this
+  sweep — new implementation work is out of a `scheduled` event's contract)
+  needs to decide the actual path to `main`: a fresh PR from the current
+  stacked-branch tip, or extracting this ticket's own commits onto a clean
+  branch off current `main`. Either is real work, not a re-click.
+
+  **Merge-request item amended in place**
+  (`inbox/2026-09-02-eng009-merge-request.md`) with a plain-language "What
+  actually happened" note, rather than rewritten or moved — the underlying
+  question ("how does this ship") is still open, so it stays in `inbox/`,
+  not `_handled/`. **Journaled**
+  (`agents/eng-manager/config/decision-journal.md`, combined row with
+  `ENG-010` below) as the first occurrence on this board of a merge click
+  that did not ship the ticket. **New proposal filed** (`proposals.md`,
+  written from `ENG-008`'s own board-file log this same pass) naming the
+  general mechanism gap.
+
+  **0 transitions.** `state`/`owner` unchanged (`blocked`/`approver`).
+  `blocked_from` unchanged (`ready-to-ship`). `machine_wip`/approver-facing
+  WIP both unaffected — this ticket was never inside the counted
+  `ready`..`ready-to-ship` range while `blocked`.
+
+  **Dead-end sweep:** the amended inbox item now correctly describes the
+  real remaining step; nothing else on this ticket's own lineage to resume.
+  **Notify sweep:** nothing raised or nudged this pass — this item's one
+  nudge is already spent and amending its body isn't a new gate. **Observations/
+  proposals filed:** see above.
+
+  `chained: none` — still `blocked`, `blocked_on: approver`. Firing
+  `continue ENG-009` would queue against a ticket with no machine-owned next
+  step; getting this ticket to `main` needs a real decision (rebase shape)
+  this sweep's own contract doesn't cover. Post-pass `lib/eng-gate-check.sh`,
+  scoped (`ENG-009`) and whole-board: see board index.
+
+  business-os itself left uncommitted — same standing default every pass has
+  used; the commit-convention question remains open, not re-decided here.
+
+- `2026-09-04` `blocked → shipped → verified` (eng-manager, `watch (launchd)`
+  event pass — step 5, run because open merge-request items exist for
+  every currently-`blocked` ticket, same reading this board's own prior
+  `watch` passes already established). `git fetch origin` fresh on both
+  worktrees, then `git merge-base --is-ancestor` on this ticket's own
+  **recorded** commits (`d37e0c9` on `aiorders-api`, `92bcacd` on
+  `aiorders-admin-hub` — the frontmatter `branch:` values, not a live
+  branch tip, per this board's own standing fix for the branch-tip-
+  contamination failure mode `ENG-008` hit): **YES on both repos.**
+
+  **What actually shipped it.** Not this ticket's own PRs (`aiorders-api`
+  #7, `aiorders-admin-hub` #6) — those remain merged into the stacked
+  `feat/ENG-008-influencer-admin-management` base, exactly as this ticket's
+  own prior log entry found and left unresolved. A **new** PR on each repo,
+  `merge/ENG-009-ENG-010-to-main` (`aiorders-api` #14, `aiorders-admin-hub`
+  #9), base `main`, head the stacked branch's current tip — `gh pr view`
+  confirms both `MERGED` (`aiorders-api` #14 at `2026-09-04T15:39:16Z`,
+  merge commit `5415ef0`; `aiorders-admin-hub` #9 at `15:40:31Z`, merge
+  commit `f5de339`), each carrying a single merge commit titled "Merge
+  ENG-009/ENG-010 (influencer engagement info + relationship notes) into
+  main" — one action, both tickets, matching how the two were always
+  packaged together. This is the "fresh PR from the current stacked-branch
+  tip" option this ticket's own prior entry named as one of two live paths
+  to `main`; the approver took it, by hand, within the last few minutes —
+  not something this pass built or requested. Re-fetched a second time
+  after first noticing this to rule out an in-flight read: identical result
+  both times.
+
+  **Not advanced past a state that owes gates.** Re-read all three receipts
+  directly: `agents/principal-engineer/reviews/ENG-009.md` (`verdict:
+  pass`), `agents/qa/test-plans/ENG-009.md` (`last_result: pass`),
+  `agents/security/reviews/ENG-009.md` (`verdict: pass`) — no migration
+  applies (no `*.sql` in either repo's diff for this ticket). Recorded
+  commits confirmed present on `origin/main` by SHA, not re-diffed against
+  a live branch tip that no longer exists in this shape. Combined release
+  record written covering both this ticket and `ENG-010` (same merge
+  commits ship both): `agents/devops/releases/2026-09-04-ENG-009-ENG-010-aiorders-api-and-admin-hub.md`,
+  `links.release` set in the same edit; both consolidating PRs added to
+  `links.pr` alongside the original two. `state: blocked → verified`,
+  `owner: approver → eng-manager`, `blocked_on`/`blocked_from` cleared.
+
+  Merge-request item (`inbox/2026-09-02-eng009-merge-request.md`) — already
+  amended once with a "what actually happened" note — closed with a second,
+  final note and moved to `inbox/_handled/`. Journal entry added
+  (`decision-journal.md`), a new row rather than an edit to the existing
+  "merged, but did not ship" row: that row was accurate when written and
+  stays as the historical record of the first finding; this is the
+  follow-up resolution, recorded separately.
+
+  **2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+  the cap of 4. **Consequence:** no machine-WIP change — this ticket was
+  never inside the counted `ready..ready-to-ship` range while `blocked`, and
+  it carries no `parent`/family membership. Drops off the approver-facing
+  "Waiting on the approver" list — no open inbox item remains for it.
+  `blocks: []` — nothing downstream to unblock.
+
+  `chained: none` — `verified` is terminal; the chaining guard never fires
+  on a terminal ticket. (`ENG-034`'s own dependency clears via `ENG-033`,
+  handled on that ticket's own log this same pass, not this one.)
+
+  business-os itself left uncommitted — same standing default every pass has
+  used; the commit-convention question remains open, not re-decided here.
