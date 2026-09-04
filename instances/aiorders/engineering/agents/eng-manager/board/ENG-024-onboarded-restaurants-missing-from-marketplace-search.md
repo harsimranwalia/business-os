@@ -6,14 +6,14 @@ type: bug
 size: XS
 time_estimate: under an hour (XS band, definition-of-done.md)
 time_spent: build, fast-lane combined review (review/suite/OWASP), and release-readiness (PR opened, merge request raised) complete this pass, not itemized against a pass-start clock (same pre-existing gap ENG-010's/ENG-022's own frontmatter already named rather than backfilled with an invented figure)
-time_remaining: nothing left for the department — waiting on the approver to merge the PR; already inside the original under-an-hour/XS band, not separately re-banded
+time_remaining: none — merged and verified; already inside the original under-an-hour/XS band, not separately re-banded
 severity: P1
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: fast
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
 updated: 2026-09-03
@@ -28,7 +28,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-024.md
   test_plan:
   security_review:
-  release:
+  release: agents/devops/releases/2026-09-03-aiorders-api-ENG-024.md
   pr: https://github.com/harsimranwalia/aiorders-api/pull/11
 ---
 
@@ -620,3 +620,45 @@ visible by a one-time backfill, not just new sign-ups going forward.
   (`ENG-022`'s own incident-adjacent entries included) — followed that
   live, consistent precedent rather than being the one hop that diverges
   from it.
+
+- `2026-09-03` `blocked → shipped → verified` (eng-manager, `scheduled`
+  event pass — whole-board sweep, step 5 merge detection). Local git only,
+  per `eng_build_loop.md` step 5 — no `gh` call made. `aiorders-api`
+  worktree: `git fetch origin main` (`origin/main@3cf5607`, fresh), then
+  `git fetch origin pull/11/head` and `git merge-base --is-ancestor` against
+  `origin/main`: **YES ancestor** — PR #11 merged (`b1265ac`, 2026-09-03
+  15:09:23 -0700 / 22:09:23Z), head `8c97bd3` matching this ticket's own
+  `ready-to-ship → blocked` log entry exactly, no drift. `decision:` on
+  `inbox/2026-09-03-eng024-merge-request.md` stayed blank — merged directly
+  on GitHub, same shape `ENG-007`'s and `ENG-011`'s own releases already
+  established for this approver.
+
+  **Not advanced past a state that owes gates** (step 5's own "a merge is
+  not a gate" clause): re-read `agents/principal-engineer/reviews/ENG-024.md`
+  directly — fast-lane combined review + suite + OWASP, verdict `pass`,
+  0/10 automatic failures, 3/3 PRD acceptance criteria — before writing
+  `shipped`. All three ACs re-confirmed against `origin/main` directly, not
+  just the review's account. Release record written:
+  `agents/devops/releases/2026-09-03-aiorders-api-ENG-024.md`, `links.release`
+  set in the same edit. `state: blocked → verified`, `owner: approver →
+  eng-manager`, `blocked_on`/`blocked_from` cleared.
+
+  Merge-request item moved to `inbox/_handled/`. Journal entry added
+  (`decision-journal.md`) — silent GitHub merge, no written reply, same
+  shape as `ENG-007`'s and `ENG-011`'s own rows.
+
+  **2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+  the cap of 4 — pure receipt-confirmation and bookkeeping, no new
+  implementation work, same precedent `ENG-007`'s identical scheduled-sweep
+  discovery already set. **Consequence:** ticket leaves the board's
+  in-flight table entirely (terminal); does not affect machine WIP (already
+  outside the counted `ready..ready-to-ship` range since its own
+  `ready-to-ship → blocked` hop); drops off the approver-facing "Waiting on
+  the approver" count (no open inbox item remains for it).
+
+  `chained: none` — `verified` is terminal; the chaining guard never fires
+  on a terminal ticket.
+
+  business-os itself left uncommitted — same standing default every pass
+  has used; the commit-convention question remains open, not re-decided
+  here.
