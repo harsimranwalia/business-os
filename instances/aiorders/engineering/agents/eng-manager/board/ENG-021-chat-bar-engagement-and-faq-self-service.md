@@ -18,18 +18,20 @@ source: approver
 created: 2026-08-29
 updated: 2026-09-03
 branch:
-depends_on: []
+depends_on: [ENG-022]
 blocks: []
 parent:
 links:
   prd: agents/product-manager/specs/ENG-021-chat-bar-engagement-and-faq-self-service.md
-  design:
-  adrs: []
+  design: agents/architect/designs/ENG-021-chat-bar-engagement-and-faq-self-service.md
+  adrs: [ADR-013, ADR-014]
   review:
   test_plan:
   security_review:
   release:
   pr:
+touches_data: true
+touches_models: false
 ---
 
 ## Problem
@@ -255,3 +257,83 @@ skipped: gate item processed-note appended and moved to `inbox/_handled/`,
 `_index.md` synced, and `lib/eng-trigger.sh continue ENG-021` fired for
 real. No re-derivation of the decision itself was needed — only completion of
 the mechanical steps the first attempt narrated but didn't reach.
+
+## 2026-09-03 — continue: design pass — stays `designed`, held by machine WIP + a new dependency
+
+`continue` event pass, context `ENG-021`. Reading map: steps 6 and 6b, plus the
+not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*, *The four
+lanes*, *Guards*). Mode check clean (`MODE=active`). Pre-pass
+`lib/eng-gate-check.sh`, scoped and whole-board: both exit 0.
+
+Ran `tech-design/SKILL.md`: gathered evidence across all four repos myself,
+then dispatched design judgment and write-up to an `opus` subagent per the
+skill's own model header, same split `ENG-016`'s/`ENG-020`'s passes used.
+
+**Design:** `agents/architect/designs/ENG-021-chat-bar-engagement-and-faq-self-service.md`.
+**Two ADRs** (`ADR-013`, `ADR-014`, both `decided_by: architect`, `_index.md`
+→ `ADR-015`). **No one-way doors.** `touches_data: true` (no schema change —
+`database` does a read-only live-project RLS check), `touches_models: false`.
+Corrects a wrong PRD assumption: the write goes through `brand-portal`'s
+existing `update_website_content` action (widen `EDITABLE_PAGES` by one), not
+a direct client write — so `restaurant_website`'s untracked RLS never becomes
+load-bearing. Full reasoning, alternatives, failure modes: the design itself;
+process notes and my own independent verification of the finding below:
+`agents/architect/notebook/2026-09-03-eng021-design.md`.
+
+**New finding, verified independently, not just taken from the subagent:**
+this design edits `brand-portal/website.ts`, whose ownership check is
+currently defeated (`ENG-022`, P0, `blocked`/`approver`, PR #9, confirmed via
+`git merge-base --is-ancestor` **not** merged into `origin/main`) — and that
+same branch rewrites the identical two call sites in `website.ts`. Set
+`depends_on: [ENG-022]` on this ticket's frontmatter myself (architect's own
+technical-sequencing call, not `priority`). One observation filed
+(`observations.md`): `ENG-014`'s `owner: eng-manager`/`state: designed`
+mismatch, found while confirming today's owner-stays-`architect` convention.
+
+**Routing:** would be `ready` — held at `designed`, `owner: architect`
+(unchanged), per today's `ENG-020` convention. Machine WIP re-checked fresh:
+`1/1`, `ENG-016` (`ready`). Even once that frees, `ENG-021` still can't enter
+`ready` until `ENG-022` merges — both reasons now govern this ticket's hold,
+not just the cap.
+
+**Dead-end sweep:** out of scope for `continue` (narrower contract). **Notify
+sweep:** nothing raised — no gate opened this pass.
+
+**Board update** — header's Machine-WIP paragraph (`ENG-021` added to the
+held-for-slot list, `depends_on: [ENG-022]` noted); In-flight row unchanged
+(state/owner didn't move). Rolled the oldest of the four live dated entries
+(`continue ENG-016`) to `_index-archive.md` per the keep-three rule.
+
+Post-pass `lib/eng-gate-check.sh`, scoped and whole-board: both exit 0.
+
+`chained: none` — held by the machine-WIP cap (`1/1`, `ENG-016`, `ready`) and,
+independently, by `depends_on: [ENG-022]` (unmerged P0); neither the approver
+nor blocked nor terminal, but two of the documented no-chain conditions apply
+at once. Re-check once `ENG-016` ships **and** `ENG-022` merges.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — scheduled (whole-board sweep): stays `designed` — `depends_on: [ENG-022]` now satisfied, machine WIP the sole remaining hold
+
+`scheduled` event pass, whole-board sweep. This ticket wasn't itself the
+source of new work this pass (no gate answered, no merge for its own
+branch — it has none yet), but the board index's own header paragraph
+about it had gone stale: it still read `ENG-022`'s branch as "unmerged,"
+when `ENG-022` shipped and reached `verified` in an earlier pass tonight.
+Checked fresh against `ENG-022`'s own board file (`state: verified`) before
+correcting the header text, rather than trusting either account on faith.
+
+**No frontmatter change** — `depends_on: [ENG-022]` stays recorded as
+history (the technical-sequencing call that was made, not undone now that
+it's satisfied), and `state`/`owner` are unchanged: the machine-WIP cap
+(`1/1`, held by the `ENG-016` family) was always this ticket's other,
+independent hold, and remains the sole one now. This ticket does not enter
+`ready` from this pass — that would be a fresh dispatch decision requiring
+a free slot, which step 6 confirmed doesn't exist this pass.
+
+`chained: none` — held by the machine-WIP cap alone now; re-check once the
+`ENG-016` family reaches `shipped`.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
