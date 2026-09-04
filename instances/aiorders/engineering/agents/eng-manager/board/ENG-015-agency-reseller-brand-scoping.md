@@ -8,19 +8,17 @@ time_estimate: half a day to a day
 time_spent: ~2h build, round-1 combined review/quality hop (fail), ~1h
   round-1-fix build hop, ~1h round-2 combined review/quality hop (pass),
   ~30m security gate (pass), ~30m release-readiness hop (two PRs opened)
-time_remaining: none for the department. Waiting on the approver's own
-  merge of both PRs, on their own schedule (L1). No approver time_impact
-  beyond that merge.
+time_remaining: none — shipped and verified.
 severity: P1
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-03
+updated: 2026-09-04
 branch: fix/ENG-015-agency-reseller-brand-scoping (same name, both repos)
 depends_on: []
 blocks: []
@@ -32,7 +30,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-015.md
   test_plan: agents/qa/test-plans/ENG-015.md
   security_review: agents/security/reviews/ENG-015.md
-  release:
+  release: agents/devops/releases/2026-09-04-ENG-015-aiorders-api-and-admin-hub.md
   pr:
     aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/10
     aiorders-admin-hub: https://github.com/harsimranwalia/aiorders-admin-hub/pull/8
@@ -1310,3 +1308,65 @@ Append-only. One line per state transition, newest last.
   pass has used; the commit-convention question
   (`[[project-buildloop-instance-repo-commit-gap]]`) remains open, not
   re-decided here.
+
+- `2026-09-04` `blocked → shipped → verified` (eng-manager, `scheduled`
+  event pass — whole-board sweep, step 5 merge detection). `git fetch
+  origin` on both worktrees (both clean, no drift), then `git merge-base
+  --is-ancestor` on `fix/ENG-015-agency-reseller-brand-scoping` against
+  `origin/main`: **YES on both repos**. Cross-checked with `gh pr view`,
+  given the severity (P1, live cross-tenant data exposure):
+  `aiorders-api#10` — `MERGED`, merge commit `d9e0c6d`, `mergedAt:
+  2026-09-04T06:44:33Z`; `aiorders-admin-hub#8` — `MERGED`, merge commit
+  `2389790`, `mergedAt: 2026-09-04T06:45:05Z` — 32 seconds apart, and within
+  the same batch-merge window as `ENG-013`'s own two PRs (all four within
+  about 90 seconds of each other).
+
+  **Not advanced past a state that owes gates.** Re-read all four receipts
+  directly: `agents/database/migrations/ENG-015-agency-reseller-brand-scoping.md`
+  (**pass**), `agents/principal-engineer/reviews/ENG-015.md` (**pass**,
+  round 2), `agents/qa/test-plans/ENG-015.md` (**pass**),
+  `agents/security/reviews/ENG-015.md` (**pass**, one non-blocking
+  RLS-activation finding, already folded into a staging smoke-test
+  recommendation rather than gating). Branch tips match this ticket's own
+  frontmatter exactly (`aiorders-api@99ea353`, `aiorders-admin-hub@8c0db46`),
+  no drift. Independently re-verified on the merged tree itself: `git show
+  origin/main:supabase/functions/admin-portal/handlers/restaurants.ts`
+  confirms `isStaff`/`getPartnerBrandIds`/`stripPartnerRestrictedFields`
+  all present and wired into all three functions; `git show
+  origin/main:src/components/AddRestaurantModal.tsx` confirms the
+  conditional `approved` field.
+
+  **Both PRs' own bodies said they must land together, and they did** —
+  confirmed both are present on the merged tree, not just opened together,
+  so AC3/AC5's paired-fix requirement (RLS INSERT policy + frontend
+  conditional) holds on `origin/main`, not half-landed.
+
+  Release record written:
+  `agents/devops/releases/2026-09-04-ENG-015-aiorders-api-and-admin-hub.md`,
+  `links.release` set in the same edit. `state: blocked → verified`,
+  `owner: approver → eng-manager`, `blocked_on`/`blocked_from` cleared.
+
+  Merge-request item (`inbox/2026-09-03-eng015-merge-request.md`) moved to
+  `inbox/_handled/` unchanged — `decision:` stays blank, same convention
+  this instance's other silent-merge closures already set (nothing was
+  ever written to fill in; the file itself is the record). Journal entry
+  added (`decision-journal.md`).
+
+  **2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+  the cap of 4 — pure receipt-confirmation and bookkeeping, no new
+  implementation work. **Consequence:** ticket leaves the In-flight table
+  entirely (terminal); machine WIP unaffected (already outside the counted
+  `ready..ready-to-ship` range since its own `ready-to-ship → blocked`
+  hop); drops off the approver-facing "Waiting on the approver" count and
+  its own open inbox item.
+
+  **Dead-end sweep (whole-board, this pass):** covered in full at the
+  board-index entry for this pass. **Notify sweep:** nothing to raise or
+  nudge for this ticket — a shipped/verified ticket needs no gate.
+
+  `chained: none` — `verified` is terminal; the chaining guard never fires
+  on a terminal ticket.
+
+  business-os itself left uncommitted — same standing default every pass
+  has used; the commit-convention question remains open, not re-decided
+  here.
