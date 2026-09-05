@@ -36,6 +36,23 @@ tell which parts of a file the team wrote.
   ask what wants to be its own module.
 - Public interfaces are the smallest thing that satisfies the caller. Export
   deliberately; internal by default.
+- **Decision logic does not live trapped inside a bare request handler
+  (`serve()`/`Deno.serve()` callback) or a non-exported function with no test
+  entry point.** Extract it into a small, pure, exported function — data in,
+  data out, no network/datastore client inside it — and leave the handler as
+  a thin adapter that calls it. The handler stays untested by construction;
+  the extracted function is then testable the same way any other pure
+  function is, without needing a mocked client this project has no precedent
+  for. Promoted 2026-09-04 after the third occurrence of this exact remedy:
+  `ENG-033`'s `deriveActionStatus` (status-derivation logic inline in
+  `catering-request/index.ts`'s handler), `ENG-038`'s `buildBroadcastSmsBody`/
+  `buildBroadcastEmailBody` (SMS/email body construction inline in
+  `sendBroadcastMessage`), and `ENG-038`'s own still-open findings on
+  `getBroadcastReport`'s redemption/revenue and delivery-by-channel logic and
+  `broadcast-unsubscribe/index.ts`'s response-selection logic (`agents/qa/
+  test-plans/ENG-038.md`, round 3). Each time, the untested logic was reachable
+  by automation and the fix was mechanical — the pattern is now a standard
+  instead of a per-ticket rediscovery.
 
 ## Errors and failure
 
