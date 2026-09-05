@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: architect
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-09-04
 branch:
 depends_on: []
 blocks: []
@@ -247,3 +247,79 @@ EM's or approver's attention as a pattern, not just three unrelated tickets
   `shipped`), one of the documented no-chain conditions; re-check once that
   family reaches `shipped`. Not blocked, not terminal, not waiting on the
   approver — only the cap.
+
+- 2026-09-04 `decision` event pass, context
+  `2026-09-03-eng030-p0-incident.md` (this ticket's own P0 incident notice,
+  answered). Reading map for `decision`: steps 4 and 8c, plus the
+  not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*, *The four
+  lanes*, *Guards*) — not an L1 merge request (step 5 n/a), and the answer
+  doesn't advance the ticket into a new machine-owned state (step 6 n/a, see
+  below), so neither applies here. Mode check clean (repo-root `.env` →
+  `MODE=active`). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+  scoped (`ENG-030`) and whole-board: both exit 0, clean.
+
+  Ticket file read directly rather than trusted from any cached index.
+  Machine WIP re-checked fresh off every `ENG-016` sibling's own
+  frontmatter, not assumed unchanged from this ticket's own prior entry:
+  `ENG-016` itself still `state: building`; `ENG-031`, `ENG-032`, `ENG-033`,
+  `ENG-034` all now `verified` (all four children have since shipped since
+  this ticket's own last log entry). `traces/.pending` checked directly:
+  `ENG-016`'s own `continue` fire is genuinely still queued, third behind
+  `scheduled launchd` and `watch launchd`, neither drained yet — not lost,
+  just not yet run. So the family still occupies the one machine-WIP slot,
+  now via `ENG-016` alone (its four children no longer inside the counted
+  `ready..ready-to-ship` range, being terminal). Conclusion unchanged from
+  the prior entry: still `designed`, `owner: architect`, still held, no
+  transition available. `ENG-030`'s own `priority:` stays empty — the one
+  lever the incident notice offered was not exercised, and the notice's
+  second option (asking for a dedicated cross-function sweep across the
+  `ENG-022`/`ENG-029`/`ENG-030` bug-class pattern) wasn't exercised either
+  — read as acknowledgement, not an instruction to start unscoped work, per
+  `eng_build_loop.md`'s own "never infer approval from silence" rule
+  applied to an unnamed option rather than an unnamed proposal.
+
+  Processed note appended to the incident item and moved to
+  `inbox/_handled/2026-09-03-eng030-p0-incident.md`, per `eng_build_loop.md`
+  step 4's Incident handling (act on the item's own `recommendation:`, then
+  archive — no further owner to hand off to). **Journal (step 8c):** row
+  added to `decision-journal.md` for this answered gate, noting explicitly
+  that the reply itself is a bare approve (same as `ENG-029`'s/`ENG-035`'s)
+  and not a second occurrence of `ENG-036`'s substantive-instruction shape
+  — only the notice offered something new, not the answer.
+
+  **Notify sweep (step 7):** swept `inbox/` fresh (`date -u`:
+  `2026-09-04T17:41:18Z`) — two open items besides this one, both G1s
+  (`ENG-027` rescope, `ENG-028` scope). Both already carry a one-time
+  `nudged:` (`2026-09-04T14:48:03`, `2026-09-04T09:13:37`) and no
+  `decision:` — past the 24h mark on `notified:` in both cases, but
+  "exactly one nudge, ever" is already spent on both, so nothing to nudge
+  again; they ride the weekly report from here. Nothing raised this pass.
+
+  **Step 8b:** nothing new to observe or except. No `exception-request:`
+  found in this or any other ticket log touched this pass. Not filing a
+  proposal for the cross-function sweep itself — the architect's own design
+  note already named the pattern and deliberately left it as a non-goal
+  rather than a fourth PRD, and the approver, offered the option twice now
+  in as many replies (this notice explicitly, `ENG-036`'s implicitly via
+  its own pattern-adjacent framing), hasn't asked for it either time; a
+  proposal the department writes for itself here, on a finding already
+  named and already deferred once, would be closer to the self-generated-
+  work shape step 3 exists to cap than to a genuine new observation.
+
+  business-os itself left uncommitted — same standing default every pass
+  has used; the commit-convention question remains open, not re-decided
+  here.
+
+  **Board update (step 10):** In-flight row's `Updated` date bumped
+  (2026-09-03 → 2026-09-04), state/owner unaffected. The live file held
+  three dated pass entries before this one; rolled the oldest to
+  `_index-archive.md` first, then appended this pass's own entry, keeping
+  three per the keep-three rule. See `_index.md` for the full pass entry.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-030`) and whole-board: both exit 0, clean.
+
+  `chained: none` — still held by the machine-WIP cap (`1/1`, the `ENG-016`
+  family), same condition as the prior entry, re-confirmed fresh rather
+  than assumed; re-check once that family reaches `shipped`. Not blocked,
+  not terminal, not waiting on the approver — only the cap.
