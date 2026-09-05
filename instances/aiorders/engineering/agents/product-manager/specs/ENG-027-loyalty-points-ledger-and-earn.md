@@ -1,11 +1,11 @@
 ---
 ticket: ENG-027
 project: aiorders-api
-status: awaiting-scope
+status: approved
 size: L
 author: product-manager
 created: 2026-09-03
-decided:
+decided: 2026-09-05T17:01:12.758537+00:00
 ---
 
 # Loyalty points ledger, balances, and earn API — online-order and dine-in accrual
@@ -705,8 +705,23 @@ plainly.
 
 ## Decision
 
-Filled in by the approver.
-
-- **The approver's answer:**
-- **Date:**
-- **Notes:**
+- **The approver's answer:** approved
+- **Date:** 2026-09-05T17:01:12.758537+00:00
+- **Notes:** Bare approval, no comment — read as accepting the
+  recommendation exactly as proposed: build now, one ticket, `L`, accrual
+  on fulfilment driven by the CloudWaitress completion/cancellation events
+  (un-ignored, not built) with the auto-complete timer as the fallback for
+  orders that never get a terminal event. All four riders adopted at their
+  proposed default, same convention this journal already applies to an
+  unremarked rider (`ENG-016`'s, `ENG-019`'s, `ENG-020`'s, `ENG-021`'s, and
+  `ENG-026`'s own bare approvals): the auto-complete window is **24
+  hours**; the earn % applies to the **pre-tax, post-discount food
+  subtotal**; the rate used is the one in effect **at placement**; and the
+  order's own `status` column becomes the completion signal, not a private
+  loyalty-side view. The risks this PRD flagged as not this gate's to
+  resolve — whether restaurant staff actually mark orders in the
+  CloudWaitress dashboard (an operational fact, not a code fact), the
+  missing CloudWaitress-order-id join key, the Walletly migration question,
+  and `ENG-022` outranking this ticket for the approver's attention — are
+  not resolved by this approval and carry into `designed` for the architect
+  to inherit or escalate.
