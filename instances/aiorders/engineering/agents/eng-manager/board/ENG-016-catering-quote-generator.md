@@ -9,14 +9,14 @@ time_spent:
 time_remaining:
 severity: P2
 priority: next
-state: building
+state: verified
 owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-03
+updated: 2026-09-04
 branch:
 depends_on: []
 blocks: []
@@ -77,10 +77,10 @@ correctness requirement there, not a preference):
 
 | Sub-ticket | Surface | Repo | Depends on | State |
 |---|---|---|---|---|
-| `ENG-031` | database | `aiorders-api` | — | `building` |
-| `ENG-032` | frontend | `restaurant-portal` | `ENG-031` | `ready` |
-| `ENG-033` | backend | `aiorders-api` | `ENG-031`, `ENG-032` | `ready` |
-| `ENG-034` | frontend | `config-site-builder` | `ENG-033` | `ready` |
+| `ENG-031` | database | `aiorders-api` | — | `verified` |
+| `ENG-032` | frontend | `restaurant-portal` | `ENG-031` | `verified` |
+| `ENG-033` | backend | `aiorders-api` | `ENG-031`, `ENG-032` | `verified` |
+| `ENG-034` | frontend | `config-site-builder` | `ENG-033` | `verified` |
 
 This parent carries no diff of its own from here on — its evidence is its
 children's (ADR-003-class exemption; this instance's own `ADR-003` is a
@@ -432,3 +432,45 @@ without an explicit rule — is in
 
   business-os itself left uncommitted — same standing default; the
   commit-convention question remains open, not re-decided here.
+
+- `2026-09-04` **`building → shipped → verified`** (eng-manager/
+  product-manager, `continue` event pass, `acceptance-check/SKILL.md`).
+  Reading map: steps 6, 6b, not-negotiable set. Mode/pre-pass gate-check
+  (scoped + whole-board) both clean.
+
+  All four children `verified` (`ENG-031`..`034`) — `ADR-003`-class
+  exemption met, `building → shipped`, no diff/gates of its own. Ran
+  acceptance-check in full despite the exemption: all 13 PRD criteria
+  pass — 8 cross-referenced from `ENG-034`'s own walk, the other 5 (AC-5/6
+  storage half, AC-7, AC-8, AC-10, AC-12, AC-13 — `ENG-032`/`ENG-033`'s own,
+  never individually walked before) checked fresh against live
+  `origin/main` on `aiorders-api`/`restaurant-portal`. No scope creep, cost
+  `$0/month` as estimated. `shipped → verified`. Full reasoning:
+  `agents/product-manager/notebook/2026-09-04-eng016-acceptance.md`.
+
+  **2 transitions**, under cap of 4. Machine WIP: family's slot frees,
+  `1/1 → 0/1`.
+
+  **Step 6b: bar not met** — G1 ("Lets start with piece 1") didn't sign off
+  on the sequence; Piece 2 also waits on a named price-book-owner answer.
+  Raised a targeted question rather than auto-filing:
+  `inbox/2026-09-04-eng016-continue-piece2-question.md`, notified, stamped.
+  Two observations filed (`observations.md`): parent acceptance-check as the
+  natural backfill point for a shortcut-shipped child's un-walked criteria;
+  and a pre-existing, out-of-scope mass-assignment note on
+  `update_catering_request` noticed while checking AC-13.
+
+  `chained: none` — terminal (`verified`), `blocks: []`. Freed WIP slot is
+  for the next dispatch-scoped pass to pick up, not this one (`continue`'s
+  own single-ticket scope). Post-pass gate-check (scoped + whole-board):
+  clean.
+
+  business-os itself left uncommitted — same standing default; the
+  commit-convention question remains open, not re-decided here.
+
+- `2026-09-05` no state change, ticket itself still terminal (`verified`)
+  (eng-manager, `scheduled` event pass, 09:30 PDT). Its own still-open
+  continue-Piece-2 question (`inbox/2026-09-04-eng016-continue-piece2-question.md`,
+  `notified: 2026-09-04T10:58:06`) crossed 24h with no prior `nudged:` —
+  nudged this pass (one-time, per `eng_build_loop.md` step 7), stamped.
+  Still unanswered. `chained: none` — terminal, nothing to chain.
