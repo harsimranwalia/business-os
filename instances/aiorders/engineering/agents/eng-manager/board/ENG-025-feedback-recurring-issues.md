@@ -10,13 +10,13 @@ time_remaining:
 severity: P2
 priority:
 state: designed
-owner: eng-manager
+owner: architect
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-08-31
+updated: 2026-09-04
 branch:
 depends_on: []
 blocks: []
@@ -357,3 +357,17 @@ Append-only. One line per state transition, newest last.
   ("held by a cap (WIP or approvals)"), not waiting on the approver and not
   blocked. Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
   (`ENG-025`) and whole-board: both exit 0, clean, no `WAIVED:` lines.
+
+- `2026-09-04` `designed` (no state change; `owner` corrected `eng-manager →
+  architect`), `scheduled` event pass, context `launchd`. Same finding and
+  same fix as `ENG-014`'s identical entry this pass, found while sweeping
+  the whole board: frontmatter read `owner: eng-manager`, contradicting this
+  ticket's own log immediately above (explicitly left `designed`/`architect`)
+  and `ENG-019`'s 2026-09-03 `continue` entry, which names this ticket as
+  part of the same held-for-slot pool, same owner. No log entry records an
+  intentional handoff; likely origin the `e281c71` board-reconciliation
+  merge, not chased further. Corrected to `architect`. No functional
+  consequence (routing keys off `state:`, not `owner:`); does not affect
+  this ticket's standing in the pool (no `priority:` set, so `ENG-019`
+  outranks it for this pass's freed slot regardless). Full pass account:
+  `agents/eng-manager/board/_index.md`'s dated entry for this pass.

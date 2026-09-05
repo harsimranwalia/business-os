@@ -12,6 +12,3367 @@ there is a tax on every future pass.
 
 ---
 
+## 2026-09-05 — continue (`ENG-020`): fix hop for round-2 quality gap (Gap 4) — stays `building`
+
+`continue` event pass, context `ENG-020`. Reading map: steps 6 and 6b, plus
+the not-negotiable set. Mode clean (`MODE=active`). Pre-pass/post-pass
+`eng-gate-check.sh`, scoped and whole-board: both exit 0. `restaurant-portal`
+worktree clean at `f129f14` before starting, matching round 2's own reviewed
+checkpoint; `aiorders-api` untouched, still `cd82579`.
+
+**Closed the one gap `agents/qa/test-plans/ENG-020.md` (round 2) named** —
+two additions to `Index.test.tsx`: the coverage sentence asserted against
+the existing `baseReport()` default (`attributed_pct: 61`), and a
+show/suppress pair for the low-volume caveat mirroring
+`ChannelBreakdown.test.tsx`'s own existing pattern for the same field. No
+production-code change, no deviation from the fix note this round. Full
+narrative: this ticket's own board-file log.
+
+Self-tested clean: `npm run test -- --run` 32/32 across 9 suites (29
+pre-existing + 3 new), `npm run lint` 0 new issues (62 errors/34 warnings,
+exact pre-existing baseline), `npm run build` clean. Committed `5783a2d`
+(`restaurant-portal`, one file) on the existing
+`feat/ENG-020-marketing-roi-attribution-reporting` branch and pushed — no
+new PR.
+
+**0 net transitions** — enters and leaves this hop at `building`/
+`eng-manager`, same bookkeeping every fix hop on this ticket has used.
+**Consequence:** no WIP-cap change — still the ticket holding the 1/1
+machine-WIP slot.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched. **Notify
+sweep:** nothing raised (internal fix hop, not approver-facing); `eng028`
+and `eng016`'s Piece-2 question both re-read fresh, both already carry their
+one-ever `nudged:`, neither carries a `decision:`, neither re-nudged. No
+observations/exceptions filed this pass.
+
+**Board update:** In-flight row unchanged (`state`/`owner`/`priority` all
+stay `building`/`eng-manager`/`now`). Live file held three dated entries
+before this one, all three this ticket's own — oldest (`continue (ENG-020):
+review+quality combined hop, round 1`) rolled to `_index-archive.md` per the
+keep-three rule.
+
+Post-pass `eng-gate-check.sh`, scoped (`ENG-020`) and whole-board: both exit
+0, clean.
+
+`chained: ENG-020` — `building` is agent-owned (review+quality round 3 is
+the next step), not the approver, not blocked, not terminal, not held by a
+cap. Fired
+`/bin/zsh /Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-020` before this pass exits.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-020`): review+quality combined hop, round 2 — REVIEW pass, QUALITY fail (narrower), stays `building`
+
+`continue` event pass, context `ENG-020`. Reading map: steps 6 and 6b, plus
+the not-negotiable set. Mode clean (`MODE=active`). Pre-pass/post-pass
+`eng-gate-check.sh`, scoped and whole-board: all four runs exit 0. Worktrees
+re-fetched fresh, no drift in either repo.
+
+Scoped to the diff since round 1's reviewed commit
+(`restaurant-portal@2d3dc15..f129f14`; `aiorders-api` unchanged, not
+re-reviewed). **Code review: PASS, round 2, second consecutive pass** —
+`resolveRange`'s extraction confirmed behaviour-preserving by direct diff
+inspection, two mutation tests on this round's only genuinely-new-to-coverage
+behaviours (date-window math, range-change refetch wiring) both caught
+cleanly. Full narrative: `agents/principal-engineer/reviews/ENG-020.md`.
+
+**Quality gate: FAIL, round 2, narrower.** Gaps 1–3 (AC1/AC3 rendering, AC2)
+close. AC4 only partly closed: round 1's own Gap 3 named three unverified
+things but its fix bullet asked for tests on only one — the coverage
+sentence and low-volume caveat shipped this round still untested, confirmed
+by grep, not assumed. Filed as Gap 4, fully specified. Full detail:
+`agents/qa/test-plans/ENG-020.md`. One process observation filed
+(`observations.md`) — a gap's own narrative naming more than its fix bullet
+delivers, second occurrence after `ENG-038`'s.
+
+**0 net transitions** — enters and leaves this hop at `building`/
+`eng-manager`, same bookkeeping this ticket's own round-1 entry used. Not a
+third-failed-round escalation (that clause counts code review's own
+failures; review has passed twice running).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched. **Notify
+sweep:** nothing raised (internal machine-gate round); both open `inbox/`
+items already carry their one-ever `nudged:`, neither re-nudged.
+
+`chained: ENG-020` — `building` is agent-owned (the Gap 4 fix hop is next),
+not the approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh /Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-020` before this pass exits.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-020`): fix hop for round-1 quality gaps — stays `building`
+
+`continue` event pass, context `ENG-020`. Reading map: steps 6 and 6b, plus
+the not-negotiable set. Mode clean (`MODE=active`). Pre-pass
+`eng-gate-check.sh`, scoped and whole-board: both exit 0.
+
+Closed all three gaps `agents/qa/test-plans/ENG-020.md` (round 1) named, per
+that report's own fully-specified fix list — no re-derivation. Added
+`ChannelBreakdown.test.tsx` (Gap 1/AC1/AC3: one row per channel,
+`direct_unknown` shown even at zero, a channel the caller didn't include
+never appears, `low_volume`-gated column both ways), `Index.test.tsx` (Gap
+1/2/3/AC1/AC2/AC3/AC4: totals, empty/error states, organic-search disclaimer
+shown/hidden, range-change → refetch → updated totals), and extracted
+`resolveRange` into its own `dateRange.ts` (+ `dateRange.test.ts`, Gap 2:
+each preset's boundary independently re-derived via `vi.setSystemTime`, not
+by calling the function under test).
+
+**One deviation from the fix note, found only by running the suite, not by
+design taste:** exporting `resolveRange` alongside `Index.tsx`'s default
+component export tripped `react-refresh/only-export-components` — a new
+lint warning round 1's own "zero new issues in a touched file" bar would
+have failed. Extracting to a dedicated module fixed it at the source; lint
+confirmed back to the exact pre-existing baseline (62 errors/34 warnings)
+after. Also needed a `scrollIntoView` polyfill (`Element.prototype.scrollIntoView
+= vi.fn()`, scoped to `Index.test.tsx` via `beforeAll`) — jsdom has none, and
+Radix `Select`'s own mount effect calls it, tearing down the whole React tree
+on an uncaught `TypeError` otherwise. Full narrative, including the fixture
+mistake that cost one throwaway iteration (a channel row reusing a totals
+figure made `getByText` ambiguous — fixed by keeping every fixture's
+per-channel numbers distinct from its own totals): this ticket's own
+board-file log.
+
+Self-tested clean: `npm run test` 29/29 across 9 suites (14 pre-existing + 15
+new), `npm run lint` 0 new issues, `npm run build` clean. Did not touch
+`aiorders-api` — round 1's gaps were all `restaurant-portal`-side; its own
+40/40 stands untouched at `cd82579`. Committed `f129f14` (5 files, one
+commit) on the existing `feat/ENG-020-marketing-roi-attribution-reporting`
+branch and pushed — no new PR, still devops's own step.
+
+**0 net transitions** — enters and leaves this hop at `building`/
+`eng-manager`, same bookkeeping this ticket's own round-1 entry used: a fix
+a gate asked for isn't itself a gate, so the state doesn't move until
+review+quality round 2 rules on it.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched. Live
+file held three dated entries before this one — oldest (`scheduled
+auto-drain`, `ENG-020` claims the slot) rolled to `_index-archive.md` per
+the keep-three rule.
+
+`chained: ENG-020` — `building` is agent-owned (review+quality round 2 is
+next), not the approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh /Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-020` before this pass exits.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-020`): review+quality combined hop, round 1 — REVIEW pass, QUALITY fail, stays `building`
+
+`continue` event pass, context `ENG-020`. Reading map: steps 6 and 6b, plus
+the not-negotiable set. Mode clean (`MODE=active`). Pre-pass gate-check,
+scoped and whole-board: both exit 0. Acted as principal-engineer and qa on
+this combined hop, no subagent dispatch — this board's own standing pattern.
+
+**Code review: PASS, round 1, both repos** — 0/10 automatic failures, both
+ADRs confirmed honored, AC5 mutation-tested (forcing the access check off
+failed exactly the one denial test). Independently re-ran both suites fresh
+(`aiorders-api` 40/40, `restaurant-portal` 14/14) plus `deno check`/lint/
+build, all matching the build hop's own account with zero new issues. Three
+non-blocking findings. Receipt: `agents/principal-engineer/reviews/ENG-020.md`,
+`links.review` set. Full reasoning:
+`agents/principal-engineer/notebook/2026-09-05-review-log.md`.
+
+**Quality gate: FAIL, round 1 — first real run on this ticket.** Backend
+(`acquisition.ts`/`channels.ts`) is thoroughly covered by the same 40 tests.
+But AC1/AC2/AC3/AC4 — what the owner actually *sees* — have no test on the
+`restaurant-portal` side: no `*.test.tsx` added for the new page/component at
+all, despite this exact repo already carrying direct, repeated precedent for
+testing this shape of component (`BroadcastReport.test.tsx` most directly).
+Not a manual-verification case — the runner and the pattern both already
+exist. Three gaps filed, each with a specific fix: Gap 1 (AC1/AC3, the
+breakdown/totals/`direct_unknown` row/empty state never rendered in a test),
+Gap 2 (AC2, `resolveRange`'s own date math and the range-change → refetch
+path untested), Gap 3 (AC4, the honesty framing itself unverified on screen).
+AC5 passes, mutation-verified. Test plan written per its own receipt
+exception regardless of verdict: `agents/qa/test-plans/ENG-020.md`,
+`links.test_plan` set. Full reasoning:
+`agents/qa/notebook/2026-09-05-coverage-gaps.md`.
+
+**0 net transitions** — same bookkeeping this board used for `ENG-033`'s own
+round 3 (review pass, quality fail, ticket's first quality run): state/owner
+enter and leave this hop at `building`/`eng-manager`. **Consequence:** no
+WIP-cap change — still the ticket holding the 1/1 machine-WIP slot, still
+inside the counted `ready`..`ready-to-ship` range. Owner stays `eng-manager`
+rather than moving to `frontend`, matching this ticket's own established
+multi-repo-single-hop convention (never delegated to a per-repo role
+identity across either of its two prior build-hop entries).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched. **Notify
+sweep:** nothing raised — internal machine-gate round, not approver-facing;
+both open `inbox/` items already carry their one-ever `nudged:`. No
+observations/exceptions filed. Journal: n/a, no gate answered this pass.
+
+**Board update:** In-flight row unchanged (`state`/`owner` both stay
+`building`/`eng-manager`). Live file held three dated entries before this
+one — oldest (`continue ENG-019`, parent settled) rolled to
+`_index-archive.md` per the keep-three rule.
+
+Post-pass `eng-gate-check.sh`, scoped (`ENG-020`) and whole-board: both
+exit 0, clean.
+
+`chained: ENG-020` — `building` is agent-owned (the fix hop is next), not
+the approver, not blocked, not terminal, not held by a cap. Fired
+`/bin/zsh /Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-020` before this pass exits — queued behind one older pending
+event (`watch launchd`) in `traces/.pending`, drained in arrival order per
+`lib/eng-trigger.sh`'s own queue discipline, not something this pass forces.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-020`): built across both repos — `ready → building`
+
+`continue` event pass, context `ENG-020`. Reading map: steps 6 and 6b, plus
+the not-negotiable set. Mode clean (`MODE=active`). Pre-pass/post-pass
+`eng-gate-check.sh`, scoped and whole-board: all four runs exit 0.
+
+Built in one hop across `aiorders-api` and `restaurant-portal` — the
+`ENG-008`/`ENG-013` precedent for an `M`-sized multi-repo ticket, not
+`ENG-016`/`ENG-019`'s `L`-sized work-breakdown split. A disposable-Postgres
+migration test (following `ENG-037`'s precedent, not just a read-only schema
+check) caught and fixed a real bug — a multi-column `IS NOT DISTINCT FROM`
+`FULL JOIN` Postgres cannot plan a join strategy for — before it ever
+reached a PR. Full narrative: `agents/backend/notebook/2026-09-05-eng020-build.md`;
+migration receipt: `agents/database/migrations/ENG-020-marketing-roi-attribution-reporting.md`.
+Self-tested clean both repos (40/40 Deno tests; `npm run lint`/`build`/`test`
+14/14, zero new issues in either repo). Two findings routed off-ticket
+rather than bundled in: a stale post-`ENG-022` README note (`observations.md`)
+and a missing `customers(restaurant_id, created_at)` index (`proposals.md`).
+
+**1 transition** (`ready → building`), well under the cap of 4 — stopped
+there per `eng_build_loop.md`'s "a pass stops after `building` on purpose";
+review/QA is a fresh session's job. **Consequence:** no WIP-cap change,
+still inside the counted `ready`..`ready-to-ship` range. Branches pushed, no
+PR opened (devops's own step): `aiorders-api@cd82579`,
+`restaurant-portal@2d3dc15`.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched. Live
+file held three dated entries before this one — oldest (`watch ENG-039`)
+rolled to `_index-archive.md` per the keep-three rule.
+
+`chained: ENG-020` — `building` is agent-owned, not the approver, not
+blocked, not terminal, not capped. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-020` before this pass exits.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — scheduled (auto-drain): `ENG-020` claims the free machine-WIP slot — `designed → ready`
+
+`scheduled` event pass, context `auto-drain` — the four-times-daily safety
+net; reading map for `scheduled` is the whole document, never narrowed.
+Mode check clean (repo-root `.env` → `MODE=active`). Pre-pass
+`lib/eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Business/technical intake (steps 2-3):** `agents/product-manager/inbox/`,
+`agents/eng-manager/inbox/` and `inbox/requests/` all hold only
+`.gitkeep`/processed folders — nothing new for either intake.
+
+**Gate returns (step 4):** the two open `inbox/` items —
+`ENG-028`'s G1 (`inbox/2026-09-03-eng028-g1-scope.md`) and `ENG-016`'s
+continue-to-Piece-2 question (`inbox/2026-09-04-eng016-continue-piece2-question.md`)
+— re-read fresh: both still carry empty `decision:`/`decided:` fields and
+an unfilled `## Decision` section. Neither answered; neither read as
+approval by silence. Both already past their one-ever nudge, so neither
+re-nudged.
+
+**Merge detection (step 5):** every ticket's own frontmatter re-checked
+directly (not the cached header prose) — no ticket anywhere on the board is
+`state: blocked`. Nothing to check.
+
+**Dispatch (step 6):** Machine WIP `0/1`, free — the whole `ENG-019` family
+reached `verified` in the two passes immediately before this one. To-do
+column (`intake`/`shaped`/`awaiting-scope`) had nothing machine-actionable:
+`ENG-018` stays `priority: hold`; `ENG-028` sits on its own still-unanswered
+G1. Picked from the held-for-slot pool instead — `designed` tickets with a
+completed design and no one-way door — same shape `ENG-019`'s own pick used
+2026-09-04: `ENG-020`, `ENG-021`, `ENG-026` and `ENG-027` all carry
+`priority: now`; lowest id decided. `ENG-020`'s routing (`ready`, `owner:
+eng-manager`, no G2) was already determined by its own 2026-09-03 `continue`
+pass and held at `designed` only by the cap since — re-used here, not
+re-derived; re-verifying the design's own code-level claims against current
+`main` is the `building` hop's job, same split every prior build hop on this
+board has drawn. `state: designed → ready`, `owner: architect →
+eng-manager`. **Machine WIP: `0/1 → 1/1`.** **1 transition**, well under the
+cap of 4 — work-breakdown/building is new implementation work and stays out
+of a `scheduled` pass. Full reasoning: `ENG-020`'s own board-file log.
+
+**Dead-end sweep (step 8):** no broken chains — the two immediately prior
+passes (`watch ENG-039`, `continue ENG-019`) both carry proper `chained:`
+records. No `*-eng-events-dropped.md` file exists for today.
+`traces/.pending` holds one already-queued `watch launchd` entry, unrelated
+to this ticket — `lib/eng-trigger.sh`'s own queue mechanism, not this pass's
+to drain. No ticket lacks an owner; no ticket is blocked past threshold.
+
+**Observations/exceptions (step 8b):** none filed — nothing noticed outside
+the ordinary dispatch. No `exception-request:` found. **Journal (step 8c):**
+n/a — no G1/G2/G3 or merge request answered this pass.
+
+**Board update:** In-flight row for `ENG-020` (`state`, `owner`, `updated`);
+header paragraph added noting the slot's new occupant. Live file held three
+dated entries before this one — oldest (`continue ENG-027`, tech design)
+rolled to `_index-archive.md` per the keep-three rule.
+
+Post-pass `lib/eng-gate-check.sh`, scoped (`ENG-020`) and whole-board: both
+exit 0, clean.
+
+`chained: ENG-020` — `ready` is agent-owned (`eng-manager`), not the
+approver, not blocked, not terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-020` before this pass exits.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-019`): parent settled — `building → shipped → verified`, machine WIP `0/1`
+
+`continue` event pass, context `ENG-019` — the hop the immediately preceding
+`watch (launchd)` pass fired once `ENG-039` (the family's last sub-ticket)
+reached `verified`. Reading map for `continue`: steps 6 and 6b, plus the
+not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four
+lanes*; *Guards*) — step 2's mid-PRD checkpoint doesn't apply, the PRD has
+been `approved` since 2026-09-03. Mode check clean (repo-root `.env` →
+`MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-019`) and
+whole-board: both exit 0, clean.
+
+**All three children re-verified `verified` off their own frontmatter**
+(`ENG-037`, `ENG-038`, `ENG-039`, all `parent: ENG-019`, none dropped) —
+not trusted from this file's own cached narrative. `ADR-003`-class
+exemption met (every child settled, all three actually shipped).
+`building → shipped`, no diff/review/QA/security hop of its own — same
+handoff shape `ENG-016`'s own parent transition used 2026-09-04.
+
+**Ran `acceptance-check/SKILL.md` in full despite the exemption** — the
+trigger has no parent carve-out. Re-fetched both repos fresh: `aiorders-api`
+`origin/main` → `89c6fdb1`, `restaurant-portal` `origin/main` → `aeeb7b9`,
+both identical to the commits `ENG-038`'s and `ENG-039`'s own
+acceptance-checks already walked — zero drift. Unlike `ENG-016`'s family (3
+of 4 children shipped via the receipt-bookkeeping shortcut), both of this
+family's non-schema children had already run acceptance-check in full at
+their own shipping point, so this pass is a rollup and a fresh no-drift
+confirmation, not a gap-fill — the first family on this board where the
+parent check found nothing to backfill. All 7 PRD criteria pass; no scope
+creep in a whole-family non-goals sweep; cost `$0/month`, confirmed
+independently on all three children's own release records. `shipped →
+verified`. Full reasoning:
+`agents/product-manager/notebook/2026-09-05-eng019-acceptance.md`.
+
+**2 transitions**, under the cap of 4. **Machine WIP: `1/1 → 0/1`, free** —
+the whole `ENG-019` family (parent plus `ENG-037`–`039`) is now terminal;
+the next free slot goes to whichever `designed` ticket the next
+dispatch-scoped pass (`scheduled`, or a qualifying `decision`/`watch`)
+picks by the board's own priority order, not fired inline here
+(`continue`'s own single-ticket scope).
+
+**Step 6b: neither condition met** — the PRD's Non-goals section names
+deferred ideas in prose (deeper ROI/attribution, a fuller segment builder,
+AI-generated content) but no "Feature shape and sequencing" section with a
+named next ticket, and the G1 answer was a bare "approved" with no explicit
+sequence sign-off. Nothing filed.
+
+**Two observations filed** (`observations.md`): this family as the first
+where the parent's own acceptance-check found zero backfill work (not
+treated as closing the standing receipt-bookkeeping proposal); and a stale
+`ADR-003` citation in `lib/eng-gate-check.sh`'s own comments pointing at a
+file (`ADR-003-parent-ticket-receipts.md`) that doesn't exist on this
+instance (this instance's real `ADR-003` is an unrelated migrations
+decision) — likely a life-os-origin reference, not fixed inline.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+**Notify sweep:** no gate item raised this pass — nothing to notify.
+**Journal:** n/a — no G1/G2/G3 or merge request answered this pass.
+
+**Board update:** In-flight row for `ENG-019` removed (terminal); its
+terminal paragraph added after `ENG-039`'s in the "In flight" section. Live
+file held three dated entries before this one — oldest (`decision ENG-027`,
+G1 rescope) rolled to `_index-archive.md` per the keep-three rule.
+
+`chained: none` — terminal (`verified`), `blocks: []`. The freed
+machine-WIP slot is for the next dispatch-scoped pass to pick up, not this
+one — `continue`'s own single-ticket scope, same precedent `ENG-016`'s own
+shipping pass already set. Post-pass `eng-gate-check.sh`, scoped
+(`ENG-019`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — watch (launchd) (`ENG-039`): merge detected — `blocked → shipped → verified`
+
+`watch` event pass, context `launchd`. Reading map for `watch`: steps 2-4
+plus 5 (this ticket's own merge-request item, unchanged on disk but its PR
+state hadn't been re-checked in about an hour — two prior `watch`/`scheduled`
+passes today both found it still open), plus the not-negotiable set (1, 7,
+8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*). Mode check
+clean (`MODE=active`, repo-root `.env`). Swept all three watched inboxes
+(`agents/product-manager/inbox/`, `agents/eng-manager/inbox/`, top-level
+`inbox/`) — the first two held only `.gitkeep`/processed folders; the
+top-level held three items, two already one-time-nudged and genuinely
+waiting on the approver (`ENG-028`'s G1, `ENG-016`'s Piece-2 question, both
+re-checked and still under/past their own thresholds correctly), and this
+ticket's own merge request. Pre-pass `eng-gate-check.sh`, scoped (`ENG-039`)
+and whole-board: both exit 0, clean.
+
+**Merge confirmed two ways, not trusted from the last `watch` pass's own
+"not merged" answer:** `git fetch` + `git merge-base --is-ancestor 2f438e0
+origin/main` → YES; `gh pr view 3` → `state: MERGED`, `baseRefName: main`,
+`mergeCommit: aeeb7b9`, `mergedAt: 2026-09-05T17:05:41Z`. `git diff 2f438e0
+aeeb7b9 --stat` empty — zero drift from what all three gates reviewed.
+
+**All three gate receipts re-read fresh, all still `pass`:** code review
+round 1, quality round 1 (14/14), security round 1 (zero findings). No
+migration owed (no `agents/database/migrations/ENG-039-*`, confirmed against
+the 9-file/1,571-line diff). Per step 5 ("a merge is not a gate"), verified
+before advancing.
+
+**Ran `acceptance-check/SKILL.md` in full** — this family's third
+consecutive full run, after `ENG-034`'s and `ENG-038`'s own. This ticket
+owns AC1-5 of `ENG-019`'s 7. Read the merged tree directly (`origin/main` at
+`aeeb7b9`), not the diff, PR description, or any gate's own summary. Unlike
+`ENG-038`'s live-deploy-timing surprise, this is a static Cloudflare Pages
+frontend with no runtime state of its own — the merge commit is the full
+source of truth, no drift window to chase. **All 5 owned criteria: pass.**
+No scope creep (`types/autopilot.ts`, `Templates.tsx`, every reactive
+`Automations` flow confirmed untouched via `git diff --stat`). Cost matches
+($0/month, no dependency/lockfile change). Full walk:
+`agents/product-manager/notebook/2026-09-05-eng039-acceptance.md`. Release
+record: `agents/devops/releases/2026-09-05-restaurant-portal-ENG-039.md`.
+
+**This is also the third data point that a `watch` pass carries a freshly
+detected merge all the way to `verified` in the same session** (after
+`ENG-034`, `ENG-038`) **rather than stopping at `shipped` for a
+fuller-scoped pass to finish** — the reading map's step 5 itself instructs
+the `shipped` consequence, and "map is a floor, not a ceiling" licenses
+reading whatever finishing the job actually needs once a ticket's real state
+doesn't match what a typical `watch` sweep expects to find.
+
+**2 transitions** (`blocked → shipped`, `shipped → verified`), under the
+cap of 4. `state: verified`, `owner: approver → eng-manager`, `blocked_on`/
+`blocked_from` cleared, `time_remaining: none`.
+
+**Consequence for the family:** every child of `ENG-019` (`ENG-037`,
+`ENG-038`, this ticket) is now `shipped`/`verified` — the `ADR-003` parent
+exemption is satisfied (all children settled, at least one shipped).
+`ENG-019` itself not touched this pass — its own next hop belongs in its
+own dedicated session, same handoff shape `ENG-034`'s shipping pass used for
+`ENG-016`.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched — the
+`watch` reading map doesn't call for a full board sweep. **Notify sweep:**
+merge-request item resolved this pass (moved to `inbox/_handled/`, `##
+Decision` filled in — no written reply was ever given, same standing
+pattern this approver has used for every prior L1 merge); `ENG-027`/
+`ENG-028` already past their one-time `nudged:`; `ENG-016`'s Piece-2
+question already nudged by an earlier `scheduled` pass today. Nothing new
+crossed 24h. **Observations:** none new. No `exception-request:` found.
+**Step 6b:** not run — this hop wrote a release record, an acceptance
+notebook, and board/inbox/journal updates; no rule about a business-os
+artifact path, state name, or config key. **Journal:** decision-journal
+entry added.
+
+**Board update:** In-flight row for `ENG-039` removed (terminal); its
+terminal paragraph added after `ENG-038`'s in the "In flight" section; its
+"Waiting on the approver" paragraph updated in place with the resolution
+(same convention `ENG-038`'s own paragraph there already used) and the
+section's open-item count corrected from three to two. Live file held three
+dated entries before this one — oldest (`ENG-039`, release-readiness)
+rolled to `_index-archive.md` per the keep-three rule.
+
+`chained: ENG-019` — not this ticket (`verified` is terminal, the chaining
+guard never fires on it), but the parent this ticket's own shipping now
+makes eligible for its own `ADR-003`-class exemption. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-019` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-039`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-027`): tech design written — held at `designed`, machine WIP `1/1`
+
+`continue` event pass, context `ENG-027` (resume from its `designed`
+checkpoint — the prior pass's own handoff was explicit the design didn't
+exist yet). Reading map for `continue`: steps 6 and 6b, plus the
+not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four
+lanes*; *Guards*). Mode check clean (`MODE=active`). Pre-pass
+`eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Ran `tech-design/SKILL.md` in full.** Investigated `aiorders-api` fresh
+against `origin/main` (`89c6fdb`) via `git show`/`git grep` rather than the
+shared department worktree, which sat on `ENG-038`'s branch at the time
+(merged during this pass; already correctly `verified` on this board, not
+touched). Re-verified four of the PRD's own cited facts independently plus
+one it hadn't checked (nothing in this repo branches on `orders.status`'s
+string value — confirmed by `git grep`, safe to start writing real terminal
+values into it). Full design:
+`agents/architect/designs/ENG-027-loyalty-points-ledger-and-earn.md`. One
+new table (`loyalty_ledger_entries`), two additive `orders` columns closing
+the CloudWaitress-id join-key gap, one Postgres function shared by both the
+webhook and a new `pg_cron` sweep for idempotency, dine-in routed through
+`brand-portal` rather than `admin-portal`. **`ADR-021` logged**
+(architect-decided, not escalated): the sweep reuses `ADR-018`'s
+`pg_cron`/`net.http_post` batch-poller shape rather than
+`sendFeedbackQueueMessage`'s per-order Cloudflare Queue delay, on AC15's own
+batch-failure-isolation language and the absence of any source in this repo
+for that mechanism's own maximum delay. `agents/architect/decisions/_index.md`
+`next_id` incremented to `ADR-022` in the same edit. **No one-way door
+escalated** — the decisions that would have needed one were already settled
+at this ticket's own second G1.
+
+**Routing (step 11): would be `ready` — held at `designed` instead.**
+Neither L0 nor a one-way door, so the skill's own routing reads `ready`,
+`owner: eng-manager`. **Machine WIP re-checked fresh from every ticket's own
+frontmatter: `1/1`, occupied by `ENG-019`** (`state: building`). Per this
+board's own standing precedent (`ENG-014`, `ENG-017`, `ENG-020`, `ENG-021`,
+`ENG-023`, `ENG-025`, `ENG-026`, `ENG-029`, `ENG-030`, `ENG-035`, `ENG-036`
+already sit `designed` with a completed design for the same reason),
+`ENG-027` is **held at `designed`, owner staying `architect`** — entering
+`ready` is what claims the slot, not being designed. **Not first in line
+despite `priority: now`**: `ENG-020`, `ENG-021` and `ENG-026` are also `now`
+with lower ids, so the board's own tie-break puts each ahead of `ENG-027`
+once the slot frees — checked fresh rather than assumed.
+
+**One observation filed** (`observations.md`): a stale in-code comment
+("5 second delay") on `cloudwaitress.ts`'s feedback-queue call, whose actual
+default is 3 hours — noticed only because this design needed the real value,
+not something this ticket touches.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+**Notify sweep:** no new gate item raised — nothing to notify. All three
+open `inbox/` items checked fresh: `ENG-028` and `ENG-016`'s Piece-2
+question already used their one-ever nudge; `ENG-039`'s merge request
+(~14h old) is under the 24h threshold. **Journal:** n/a — no gate answered
+this pass.
+
+**Board update:** In-flight row for `ENG-027` unchanged — `state`,
+`priority`, `owner`, `size`, `updated` were already correct. This entry
+appended; live file held three dated entries before this one — oldest
+(`ENG-039`, security gate round 1) rolled to `_index-archive.md` per the
+keep-three rule.
+
+`chained: none` — held by the machine-WIP cap (`1/1`, `ENG-019`,
+`building`), one of the documented no-chain conditions. Re-check via a
+`decision`/`watch`/`scheduled` pass once the slot frees, or via a dedicated
+`continue ENG-027`. Post-pass `eng-gate-check.sh`, scoped (`ENG-027`) and
+whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — decision (`ENG-027`): G1 rescope approved — `awaiting-scope` → `designed`
+
+`decision` event pass, context `inbox/2026-09-03-eng027-g1-rescope.md`.
+Reading map for `decision`: steps 4 and 8c, plus the not-negotiable set (1,
+7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*). Mode
+check clean (`MODE=active`). Pre-pass `eng-gate-check.sh`, whole-board: exit
+0, clean.
+
+**The answer** (`decision: approved`, decided
+2026-09-05T17:01:12.758537+00:00): a bare approval, no additional comment,
+on `ENG-027`'s second G1 — the first got a `changed` reply naming its own
+mechanism (row above). Read the same way this board already reads a silent
+rider or assumption on a bare approval (`ENG-016`'s, `ENG-019`'s,
+`ENG-020`'s, `ENG-021`'s and `ENG-026`'s own, per `decision-journal.md`) —
+as accepting the recommendation exactly as proposed: build now, one
+ticket, `L`, accrual on fulfilment driven by the CloudWaitress
+completion/cancellation events (already subscribed, currently discarded —
+un-ignored, not built) with the auto-complete timer as fallback, and all
+four riders at their proposed default (24-hour auto-complete window;
+pre-tax, post-discount food subtotal as the earn base; the rate in effect
+at placement; the order's own `status` column becomes the completion
+signal rather than a private loyalty-side view).
+
+`ENG-027`: `awaiting-scope → designed`, `owner: approver → architect`, PRD
+`status: awaiting-scope → approved`, `## Decision` filled in. Handed to the
+architect for the tech design, not attempted inline — a design is a heavy
+step that earns its own session, same shape `ENG-016`'s and `ENG-026`'s own
+G1 approvals already used, and `designed` is the state `tech-design/SKILL.md`
+triggers on rather than a claim the design already exists. Old G1 moved to
+`inbox/_handled/2026-09-03-eng027-g1-rescope.md` as-is, no appended note.
+Decision-journal row appended.
+
+**1 transition**, under the cap of 4. Machine WIP unaffected — `designed`
+sits outside the counted range (`ready`..`ready-to-ship`), same as
+`awaiting-scope` did. Approver-facing WIP: drops from four open items to
+three — the "Waiting on the approver" header count, `ENG-027`'s own
+paragraph there, and the "genuinely on the approver's plate" summary just
+above the In-flight table all updated this pass to drop it from the live
+count; the dated, per-pass historical mentions elsewhere in this file (the
+`ENG-019`-dispatch narrative, the approver-facing-WIP bullet list, the
+`ENG-039` build-hop entries) are snapshots of what was true when each was
+written and are left as-is, same convention this file already uses
+elsewhere (e.g. the "at the time it was written" notes).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched, per
+this event's own narrower contract (act on the answered gate item, advance
+only the ticket it belongs to). **Notify sweep:** no new gate item raised
+this pass — nothing to notify. **Step 6b:** not run — no business-os
+artifact rule touched this hop. **Journal:** row appended,
+`decision-journal.md`.
+
+**Board update:** In-flight row for `ENG-027` updated (`awaiting-scope` →
+`designed`, `approver` → `architect`, `updated` → `2026-09-05`). Live file
+held three dated entries before this one — oldest (`review round 1`)
+rolled to `_index-archive.md` per the keep-three rule.
+
+`chained: ENG-027` — `designed` is agent-owned (architect): not the
+approver, not blocked, not terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-027` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-027`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-039`): release-readiness — PR opened, `ready-to-ship` → `blocked`
+
+`continue` event pass, context `ENG-039`. Reading map for `continue`: steps
+6 and 6b plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (`MODE=active`).
+Pre-pass `eng-gate-check.sh`, scoped (`ENG-039`) and whole-board: both exit
+0, clean. WIP re-checked fresh: still `1/1`, `ENG-019` family, last
+sub-ticket. `restaurant-portal` confirmed `L1` (`config/projects.md`).
+
+`skills/release-runner/SKILL.md` run step by step, same L1 reading this
+project's own devops notebook already established (step 1 is the clock
+check only; steps 2-3's readiness content still run, minus the window
+bullet). All three upstream gates re-read fresh from their receipt files:
+code review, QA, and security all `pass`, round 1. No migration owed
+(confirmed no `agents/database/migrations/ENG-039-*.md`, correct for a pure
+frontend diff). Readiness gate: rollback fine (single-branch revert, no
+migration, `deploy-cf.yml` re-triggers on a revert — same mechanism
+`ENG-032`'s own hop already established for this repo); cost $0/month;
+window n/a (L1).
+
+**Two pre-existing, out-of-scope gaps investigated in full and named
+prominently rather than carried forward quietly**, because this is the
+ticket that ends their dormancy — it's the first and only UI that can
+actually create and send a broadcast. (1) `BROADCAST_UNSUBSCRIBE_SECRET` is
+not provisioned (checked live against the project's actual edge-function
+secrets, not the Vault table checked first) — every real send throws
+minting the unsubscribe link, caught, logged, and marked `failed` per
+recipient (visible in this ticket's own Report view, not silent) — but
+guaranteed on the first real send until fixed. (2) SMS delivery is entirely
+mocked in `outgoing-communications` — traced `sendBroadcastMessage`'s own
+`sendSMS` calls directly and confirmed they use the correct field name
+(unlike three legacy call sites with an unrelated bug that makes *them*
+fail loudly), so a real SMS-channel campaign step will report `'sent'` for
+every recipient while delivering nothing — silent, not just unmonitored.
+Point (2) is not a fresh proposal: found an existing 2026-09-03 (`architect`)
+row on this exact file, already corrected once (2026-09-04, `ENG-038`'s
+build hop), and corrected it a third time with the consequence made
+explicit rather than filing a duplicate. Full reasoning for both:
+`agents/devops/notebook/2026-09-05-release-readiness-log.md`. Neither blocks
+this PR — both are pre-existing conditions in already-shipped, unrelated
+code.
+
+Opened `restaurant-portal` PR #3
+(https://github.com/harsimranwalia/restaurant-portal/pull/3) — what's new,
+all three gates with receipt paths, self-test summary, two non-blocking
+code-review findings plus the `EmailEditor` observation, and both gaps
+above named in full. Wrote and raised
+`inbox/2026-09-05-eng039-merge-request.md` (`notified: 2026-09-05T03:41:22`).
+
+**1 transition** (`ready-to-ship → blocked`), under the cap of 4. `blocked_on:
+approver`, `blocked_from: ready-to-ship`, owner `devops → approver`,
+`links.pr` set. Machine WIP unaffected — still `1/1`, held by the `ENG-019`
+family (parent still `building`, waiting on this PR's merge — its own last
+sub-ticket). Approver-facing WIP uncapped (no limit since 2026-09-02); this
+item is now on their plate, see "Waiting on the approver" below.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+**Notify sweep:** all three other open `inbox/` items checked fresh —
+`ENG-027`/`ENG-028` already past their one-time nudge; `ENG-016`'s Piece-2
+question still under 24h. Nothing crossed, nothing raised beyond this hop's
+own new item. **Observations:** one filed (`observations.md`, 2026-09-05) —
+an existing proposal row surviving two prior corrections without either one
+restating its own "Why it matters" cell is most of why this hop nearly
+duplicated it instead of finding it. **Step 6b:** not run — no business-os
+artifact rule written this hop. **Journal:** n/a — no gate answered this
+pass (this hop raises one, doesn't answer one).
+
+**Board update:** In-flight row for `ENG-039` updated (`ready-to-ship` →
+`blocked`, `devops` → `approver`). Live file held three dated entries before
+this one — oldest (`build`) rolled to `_index-archive.md` per the keep-three
+rule.
+
+`chained: none` — waiting on the approver (`blocked_on: approver`); an L1
+merge is a human gate, and the next build-loop pass detects the merge
+itself by local git ancestry (step 5) once it lands, no reply required.
+Post-pass `eng-gate-check.sh`, scoped (`ENG-039`) and whole-board: both exit
+0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-039`): security gate round 1 — PASS, `in-security` → `ready-to-ship`
+
+`continue` event pass, context `ENG-039`. Reading map for `continue`: steps
+6 and 6b plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (`MODE=active`).
+Pre-pass `eng-gate-check.sh`, scoped (`ENG-039`) and whole-board: both exit
+0, clean. WIP re-checked fresh: still `1/1`, `ENG-019` family. Project
+confirmed `L1` (`config/projects.md`) — no L0 restriction applies.
+`skills/security-gate/SKILL.md` followed step by step.
+
+Worktree fetched fresh, no drift, branch head (`2f438e0`) matching both
+prior gates. Threat-modeled the change first: a pure frontend addition over
+`ENG-038`'s already-shipped, already-security-reviewed backend — no new
+endpoint, no new actor, no new data exposure.
+
+**Did not take either prior gate's account of the backend on trust** — read
+`aiorders-api`'s actual `brand-portal/broadcasts.ts`/`utils.ts` directly at
+current `origin/main` (`89c6fdb`; confirmed `63f5635`, the commit both
+earlier hops cited, is its ancestor and the file is unchanged since).
+Confirmed all 7 actions this ticket's frontend calls independently enforce
+`requireRestaurantAccess` plus row-level `restaurant_id` scoping together
+with `id` — no IDOR — and that none of the 7 are reachable via the
+orders-only API-key path, a structurally different route from `ENG-035`/
+`ENG-036`'s still-open `systemTriggered` bypass. `restaurantId` is
+client-sourced from `useRestaurant()`'s session context, never a URL param.
+
+OWASP walk, all ten marked, none skipped silently: A01 clean (above), A03
+clean (no new HTML/script sink; `EmailEditor`'s existing raw-HTML preview
+unmodified by this diff), A04 considered rather than n/a'd (the feature's
+larger blast radius through the reused `EmailEditor` is capped by
+`ENG-037`/`ENG-038`'s own recipient-cap/interval checks, re-confirmed live
+— the feature's own intended capability, not an emergent gap), A06/A09
+clean (zero dependency changes; zero new `console.*`), A02/A05/A07/A08/A10
+n/a with reasons. LLM checklist n/a in full. Secrets: diff + branch history
+scanned, one benign comment, no credential. Negative-case coverage: the
+authz case is `ENG-038`'s own, already discharged; this ticket's own
+client-side lock case (re-edit after send starts) is tested and
+mutation-verified, confirmed by reading the test directly.
+
+**Zero new findings.** `F1`/`F2` (code review) and the `EmailEditor`
+observation stay where they were filed, not duplicated here. `ENG-038`'s
+own carried-forward items (TOCTOU race, `enrollAudience` scoping,
+`ENG-036`'s bypass) are unreachable through this diff. No notebook entry —
+nothing new to log. Receipt written: `agents/security/reviews/ENG-039.md`;
+`links.security_review` set. Full walk: that file and the ticket's own
+board-file log.
+
+**1 transition** (`in-security → ready-to-ship`), under the cap of 4.
+Machine WIP unaffected — still `1/1`, `ENG-019` family (parent still
+`building`, waiting on this, its own last sub-ticket). Approver-facing WIP
+and approval cap unaffected — no gate touched this hop.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+**Notify sweep:** all three open `inbox/` items checked fresh (current
+`2026-09-05T10:24:07Z`) — `ENG-027`/`ENG-028` already past their one-time
+nudge; `ENG-016`'s Piece-2 question (~23h26m old) still under 24h. Nothing
+crossed, nothing raised. **Observations:** none new — the one candidate
+(`EmailEditor`'s raised blast radius) was already filed by the code-review
+hop. **Step 6b:** not run — no business-os artifact rule written this hop.
+**Journal:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-039` updated (`in-security` →
+`ready-to-ship`, `security` → `devops`). Live file held two dated entries
+before this one — under the keep-three cap, nothing rolled to
+`_index-archive.md` this time.
+
+`chained: ENG-039` — `ready-to-ship` is agent-owned (`devops`), not the
+approver, not blocked, not terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-039` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-039`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-039`): review round 1 — PASS / PASS, `building` → `in-security`
+
+`continue` event pass, context `ENG-039`, combined review+quality hop per
+`eng_build_loop.md` step 6. Reading map for `continue`: steps 6 and 6b plus
+the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The
+four lanes*; *Guards*). Mode check clean (`MODE=active`). Pre-pass
+`eng-gate-check.sh`, scoped (`ENG-039`) and whole-board: both exit 0,
+clean. WIP re-checked fresh: still `1/1`, `ENG-019` family.
+
+**Code review (principal-engineer):** worktree fetched fresh, no drift;
+diff traced against both the ticket/design and the actual merged
+`ENG-038` backend (types, DB migration, and every handler's real response
+shape verified field-by-field, not assumed). 0/10 automatic failures. Two
+non-blocking findings — a drip step's auto-computed default delay can land
+outside the preset dropdown list (display-only, self-correctable), and
+`BroadcastComposer.tsx` is already past the 400-line smell threshold at
+creation with two clean extraction points. One observation filed
+(`observations.md`): the reused `EmailEditor`'s pre-existing raw-HTML
+preview is now reachable by a feature that can fan out to an owner's whole
+customer list, not previously touched by this ticket's diff. Full detail:
+`agents/principal-engineer/reviews/ENG-039.md`.
+
+**Quality gate (qa):** the build hop's own claim ("no established
+per-component test convention beyond one bug-fix regression") checked
+against `ENG-032`'s actual test plan and found only half true — two of
+that ticket's three tests were AC tests for new UI, not regressions. Wrote
+the missing coverage for this ticket's owned criteria (AC1–AC5) rather
+than carrying the gap forward: `BroadcastComposer.test.tsx` (6 tests) and
+`BroadcastReport.test.tsx` (3 tests), mocking `@/hooks/use-broadcasts`/
+`@/hooks/use-offers` at the hook boundary (no `QueryClientProvider`
+precedent on this repo) and avoiding all Radix `Select`/`Switch`
+open-state interaction (no `@testing-library/user-event` dependency here).
+Three mutations run live and confirmed red for the right reason before
+reverting (`isLocked` forced `false`; `BroadcastReport`'s null-check
+loosened; the create-payload's `email_subject` forced constant). Full
+detail, AC-coverage table, and Result block: `agents/qa/test-plans/ENG-039.md`.
+
+**Independently re-run this hop:** `npm run lint` — 96/0-new. `npm run
+build` — clean, bundle unchanged. `npx tsc --noEmit` — 0 errors. `npm run
+test` — **14 passed, 0 failed, 0 skipped** (6 files). No open P0/P1
+against this ticket.
+
+**Committed and pushed, two commits:** `b766b41` (the two new test files)
+and `2f438e0` (the added create-path test), both on
+`feat/ENG-039-broadcasts-tab-composer-and-report-ui`, both on `origin`.
+`branch` frontmatter bumped to the new head; `links.review`/`links.test_plan`
+set to the two receipts.
+
+**2 transitions** (`building → in-review → in-security`, both gates
+passing round 1), under the cap of 4. Machine WIP unaffected — still
+`1/1`, `ENG-019` family. Approver-facing WIP and approval cap unaffected —
+no gate touched this hop.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+**Notify sweep:** all three open `inbox/` items checked fresh against the
+24h threshold (current `2026-09-05T10:12:28Z`) — `ENG-027`/`ENG-028`
+already past their one-time `nudged:`; `ENG-016`'s Piece-2 question
+(~23h14m old) still under 24h by about 46 minutes. Nothing crossed,
+nothing raised. **Step 6b:** not run — every edit this hop is product test
+code plus two receipt files in this ticket's own directories, no rule
+about a business-os artifact path/state name/config key. **Journal:** n/a
+— no G1/G2/G3 or merge request answered this pass.
+
+**Board update:** In-flight row for `ENG-039` updated (`building` →
+`in-security`, `eng-manager` → `security`). Live file held two dated
+entries before this one — under the keep-three cap, nothing rolled to
+`_index-archive.md` this time.
+
+`chained: ENG-039` — `in-security` is agent-owned (`security`), not the
+approver, not blocked, not terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-039` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-039`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — continue (`ENG-039`): build — `ready` → `building`
+
+`continue` event pass, context `ENG-039` — this ticket's own turn, per the
+prior pass's own `chained: ENG-039`. Narrow scope per the event's own
+contract — this ticket only. Reading map for `continue`: steps 6 and 6b
+(design already complete, no mid-PRD checkpoint applies) plus the
+not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four
+lanes*; *Guards*). Mode check clean (`MODE=active`). Pre-pass
+`eng-gate-check.sh`, scoped (`ENG-039`) and whole-board: both exit 0, clean.
+
+WIP re-checked fresh: still `1/1`, held by the `ENG-019` family (this is its
+last sub-ticket). Worktree (`~/Documents/projects/_eng/restaurant-portal`)
+was left on `ENG-032`'s own already-merged branch, clean tree — branched
+fresh off `origin/main` (`5276a53`) as
+`feat/ENG-039-broadcasts-tab-composer-and-report-ui` rather than checking
+out local `main` (already checked out in the human's own working copy).
+
+Built all 7 `restaurant-portal` rows of the design's own `## Components`
+table — `types/broadcasts.ts`, `services/brandPortalApi.ts` (8 new
+broadcast methods), `hooks/use-broadcasts.ts`, `components/autopilot/BroadcastComposer.tsx`,
+`components/autopilot/BroadcastReport.tsx`, `pages/autopilot/Broadcasts.tsx`,
+and the third tab on `pages/autopilot/Automations.tsx` — reading the actual
+merged `ENG-038` code directly rather than trusting design/ticket prose,
+which caught two small drifts (the `getOffers`/`createOffer` idiom cited
+doesn't exist in `brandPortalApi.ts`; the report has no per-channel
+pending/failed breakdown) resolved inline. Full reasoning:
+`agents/frontend/notebook/2026-09-05-eng039-broadcasts-tab-composer-and-report.md`.
+
+Self-tested: lint 96/0-new (exact baseline `ENG-032` established), build
+clean at +1.4% bundle (measured, not assumed), existing suite 5/5 green, no
+new test (additive feature work, no bug fixed, same position/resolution
+`ENG-032`'s own build hop used). Committed and pushed:
+`restaurant-portal@9a9ec86`; no PR opened yet (devops's own
+release-readiness hop). PR body drafted on the ticket's own board-file log.
+
+**1 transition** (`ready → building`), under the cap of 4. Machine WIP
+unaffected — still `1/1`. Dead-end sweep (scoped to this event): no other
+ticket touched. Notify sweep: `ENG-027`/`ENG-028` already past their
+one-time nudge; `ENG-016`'s Piece-2 question (~22h48m old) still under 24h.
+Nothing crossed, nothing raised. Step 6b: not run (product code consuming
+an already-fixed backend contract, no business-os artifact rule written).
+Journal: n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-039` updated (`ready` → `building`).
+Live file held three dated entries before this one — oldest (migration
+gate) rolled to `_index-archive.md` per the keep-three rule.
+
+`chained: ENG-039` — `building` is agent-owned (next hop: combined
+review+quality, `principal-engineer`), not the approver, not blocked, not
+terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-039` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-039`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — scheduled (launchd, 02:00): ENG-038 merge found, full acceptance-check — `blocked` → `shipped` → `verified`
+
+`scheduled` event pass, context launchd, 02:00 PDT. Reading map for
+`scheduled`: the whole document, per the reading map's own instruction —
+never narrowed. Mode check clean (repo-root `.env` → `MODE=active`).
+Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`) and whole-board: both exit
+0, clean.
+
+**Step 2/3 (intake sweeps):** `agents/product-manager/inbox/` and
+`agents/eng-manager/inbox/` both empty but for their own `_handled`/
+`_processed` subfolders — nothing new from either. `inbox/requests/` empty.
+
+**Step 4 (gate returns):** four `inbox/` items open at pass start —
+`ENG-027`'s rescope G1, `ENG-028`'s G1, `ENG-016`'s continue-to-Piece-2
+question, `ENG-038`'s L1 merge request. Read all four: the first three
+remain unanswered (`decision:` blank on each) — left open, silence is not a
+rejection. `ENG-038`'s carries no written reply either, but step 5 below
+found it resolved on GitHub directly.
+
+**Step 5 (merge detection):** swept the whole board for `state: blocked`
+(`grep`) — `ENG-038` is the only one. `git fetch` + `git merge-base
+--is-ancestor` against `~/Documents/projects/_eng/aiorders-api`: merged.
+Cross-checked `gh pr view 16`: `state: MERGED`, `baseRefName: main`,
+`mergeCommit: 89c6fdb1`, `mergedAt: 2026-09-05T07:22:20Z`, no stacking.
+`git show --stat` on the merge commit and `git ls-tree` both confirm all 18
+files landed on `origin/main` exactly as this ticket's own diff recorded.
+
+**Per step 5's "a merge is not a gate":** re-read all four gate receipts
+fresh before advancing — code review round 6 (`verdict: pass`), quality
+round 6 (`last_result: pass`, 85/85, all 7 ACs), security round 2
+(`verdict: pass`, both round-1 findings re-confirmed closed), migration
+gate (`Gate verdict: pass`). No gap.
+
+**Ran `acceptance-check/SKILL.md` in full**, not the receipt-bookkeeping
+shortcut — `2026-09-04-eng019-work-breakdown.md`'s own AC-mapping assigns
+all 7 of `ENG-019`'s criteria to this ticket specifically ("every criterion
+is backend-enforced... mapped here so a later gate doesn't have to
+re-derive it"), unlike `ENG-037`'s 0-criteria schema-only shape. Read every
+touched file directly from `origin/main` at the merge commit
+(`brand-portal/broadcasts.ts`, `broadcast-dispatch/dispatch.ts`,
+`broadcast-unsubscribe/{index,unsubscribe}.ts`, `_shared/broadcastUnsubscribe.ts`,
+`outgoing-communications/actors/consumers.ts`) and traced each of the 7
+criteria against it line-by-line, not against the diff, PR description, or
+any gate's own summary.
+
+**Discovered mid-check, and re-verified rather than assumed:** the
+immediately-prior release-readiness hop's own "not deployed" finding had
+already gone stale. `supabase functions list` (this host's linked CLI,
+`bmnmnejwdxbcqinqkwko`) shows `brand-portal` (v81), `broadcast-dispatch`
+(v1), `broadcast-unsubscribe` (v1), and `outgoing-communications` (v70) all
+version-bumped `07:25:20Z`–`07:25:55Z` — 3 to 8 minutes after the PR's own
+merge, covering exactly the four functions this diff touches. No tracked
+workflow is responsible; reads as the approver deploying by hand
+immediately after merging. Re-verified live, read-only (row/name data only,
+never values): the migration's `'claimed'` check value and `step_id` index
+are live; the Vault `service_role_key` `ENG-037`'s cron needs is present;
+`BROADCAST_UNSUBSCRIBE_SECRET` is **not** in `supabase secrets list` —
+`hmacKey()` will throw the instant this path is exercised, dormant today
+(zero campaigns exist, and `ENG-039` — the only way to create one — hasn't
+shipped), same non-blocking shape as `ENG-037`'s own named Vault
+prerequisite, already tracked in three other notebooks. `broadcast-dispatch-tick`'s
+last 30 minutes of HTTP calls (`net._http_response`, project-wide table):
+9× `200`, 1× `401`, 3× `null` — reads healthy for the current no-op case,
+not chased further. **Deliberately not done:** no test campaign created, no
+send exercised — that would dispatch real email/SMS to real customers
+against a live production project, out of bounds for a verification step.
+
+**All 7 criteria: pass.** No scope creep (one adjacent-but-not-violating
+non-goal named: the report's open/click counters read pre-existing,
+universally-populated `communication_log` columns, adding no new tracking
+instrumentation of their own). Cost matches ($0/month). Full walk:
+`agents/product-manager/notebook/2026-09-05-eng038-acceptance.md`. Release
+record written: `agents/devops/releases/2026-09-05-aiorders-api-ENG-038.md`,
+`links.release` set in the same edit.
+
+**2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+the cap of 4 — `state: verified`, `owner: approver → eng-manager`,
+`blocked_on`/`blocked_from` cleared. Machine WIP unaffected — `1/1`, still
+held by the `ENG-019` family (parent still `building`, `ENG-039` its last
+unsettled child).
+
+**Consequence for the family:** `ENG-038`'s `blocks: [ENG-039]` — its sole
+dependency now satisfied. Not built inline (new implementation work stays
+out of a `scheduled` sweep) — fired `continue ENG-039` instead.
+
+**Dead-end sweep (whole board, per the `scheduled` reading map):** no
+`*-eng-events-dropped.md` for today in `traces/`; `traces/.pending` empty —
+no broken or dropped chains found. No `priority: hold` ticket in a working
+state (`ENG-018` correctly parked at `shaped`). No ticket blocked past its
+3-day resurface threshold. One `watch (launchd)` event queued itself behind
+this pass mid-run (`traces/eng-loop-2026-09-05.log`, `02:17:45`) — this
+pass's own file writes to `inbox/`/board files, not an external change;
+normal queue behavior, drains on the next fire per its own FIFO design, not
+acted on here.
+
+**Notify sweep:** nothing new to raise — a ship isn't approver-facing.
+`ENG-027`/`ENG-028` already past their one-time `nudged:`; `ENG-016`'s
+Piece-2 question (~15h old) still under the 24h threshold. `ENG-038`'s own
+merge-request item moved to `inbox/_handled/`, `## Decision` filled in with
+the plain-language merge note.
+
+**Step 8b:** one observation filed (`observations.md`) — a gate's own "not
+deployed" snapshot went stale within the same evening once a human started
+merging and deploying by hand outside any tracked workflow; worth
+re-verifying live deploy state at each gate that depends on it rather than
+trusting the prior pass's own answer. No `exception-request:` found on any
+ticket touched.
+
+**Step 8c:** decision-journal entry added for `ENG-038`'s merge
+(`decision-journal.md`).
+
+**Board update:** In-flight row for `ENG-038` removed (terminal); `ENG-039`'s
+row `updated` date bumped. Header narrative and terminal-closing paragraph
+both updated; "Waiting on the approver" header count corrected (four → three
+open items) and `ENG-038`'s own paragraph marked resolved. Live file held
+two dated entries before this one (migration gate, release-readiness round
+2) — under the keep-three cap, so nothing rolled to `_index-archive.md`
+this time.
+
+`chained: none` — this pass's own ticket (`ENG-038`) is terminal
+(`verified`); the chaining guard never fires on a terminal ticket.
+`chained: ENG-039` fired instead: `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-039`, recorded on `ENG-039`'s own board-file log. Post-pass
+`eng-gate-check.sh`, scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): release-readiness round 2 — PASS, `ready-to-ship` → `blocked`, PR opened
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `ready-to-ship`, owner `devops`, per
+the migration-gate hop's own hand-back. Ran `skills/release-runner/SKILL.md`
+step by step, same L1 reading this project's own prior hops established.
+
+**Step 2 (upstream gates), all four re-read fresh from their own receipts
+and all still passing:** code review round 6 (`agents/principal-engineer/
+reviews/ENG-038.md`, 0/10 auto-fail), quality round 6 (`agents/qa/test-plans/ENG-038.md`,
+85/85, all seven ACs), security round 2 (`agents/security/reviews/ENG-038.md`,
+both round-1 blocking findings verified closed against the code and
+schema), migration gate (`agents/database/migrations/ENG-038-broadcast-recipients-claimed-status.md`,
+`pass`, written by the immediately-prior hop). No gap this round.
+
+**Step 3 (readiness gate), no blocking failure:** migration rollback
+already tested against a disposable replica (the real risk surface for an
+L1 ticket — code ships as a PR, not a deploy, in this hop). Two
+observability points named, both non-blocking: a carried-forward
+claimed-row-stuck edge case (self-diagnosable, bounded to a missed send),
+and — checked directly against the live project this round, not left as a
+named risk — `ENG-037`'s `broadcast-dispatch-tick` cron confirmed `active`
+and firing every 5 minutes since that PR merged (~14:19 PDT today) against
+this ticket's own `broadcast-dispatch` function, which `supabase functions
+list` confirms isn't deployed yet. Real and currently occurring, not
+hypothetical — but presently inert (all three broadcast tables still
+empty, no campaign ever created) and closes the moment this PR merges and
+someone deploys the function; named prominently in the PR body and merge
+request, not just here, per the same three non-blocking reasons `ENG-037`'s
+own hop already gave. Cost $0/month. Window n/a, L1. Full reasoning:
+`agents/devops/notebook/2026-09-04-release-readiness-log.md`.
+
+**Step 4 (route):** worktree re-checked fresh — clean but for three
+untracked `deno.lock` files (one per new function directory, same
+already-traced auto-generated-lockfile pattern). `git diff
+origin/main...HEAD --stat`: 18 files, 3235/7, all 11 commits this ticket's
+own (confirmed `origin/main` already carries `ENG-037`'s merged migration,
+so this is exactly the incremental surface). No existing PR, no auto-deploy
+workflow on this repo.
+
+Opened `aiorders-api` PR #16 (https://github.com/harsimranwalia/aiorders-api/pull/16).
+Wrote `inbox/2026-09-04-eng038-merge-request.md`; `lib/eng-notify.sh raise`
+run, `notified: 2026-09-04T21:06:41`.
+
+**1 transition** — `ready-to-ship → blocked`, `blocked_on: approver`,
+`blocked_from: ready-to-ship`, owner `devops → approver`, `links.pr` set.
+No G3 — L1 has none; the PR merge is the human gate. Machine WIP unaffected
+(`ENG-019` family's own slot, `1/1` — a `blocked` ticket still holds it).
+`time_spent`/`time_remaining` updated.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+`ENG-037`'s current state was checked while confirming this diff's base
+(the two are adjacent) and found already `verified` — an earlier `scheduled`
+pass's own step-5 merge detection had already carried it there; nothing
+stale, nothing to fix.
+
+**Notify sweep:** this pass's own merge request raised and notified
+(above). Checked the three pre-existing open `inbox/` items for the
+24h-nudge condition (current time `2026-09-04T21:09:48` PDT): `ENG-027`/
+`ENG-028` each already carry their one-time nudge; `ENG-016`'s Piece-2
+question (~10h12m old) still under the 24h threshold. Nothing nudged.
+
+**Step 8b:** nothing new to observe or propose — the live-cron observation
+is a re-confirmation of a fact `ENG-037`'s own hop already surfaced, not a
+fresh finding. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass (a merge request was raised,
+not answered).
+
+**Board update:** In-flight row for `ENG-038` updated (`ready-to-ship` →
+`blocked`, `devops` → `approver`) and moved into "Waiting on the approver"
+below. Live file held three dated entries before this one (security gate
+round 2, release-readiness round 1, migration gate); rolled the oldest
+(security gate round 2) to `_index-archive.md` before appending this entry,
+per the keep-three rule.
+
+`chained: none` — waiting on the approver (`blocked_on: approver`); an L1
+merge is a human gate, not agent-owned. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): migration gate — PASS, `building` → `ready-to-ship`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `building`, owner `database`, per
+release-readiness round 1's own return — a missing migration-gate verdict
+on `supabase/migrations/20260904150000_broadcast_recipients_claimed_status.sql`,
+which `backend` had written directly during the original `building` hop
+instead of routing it through `database`. Wrote the missing plan/receipt
+(`agents/database/migrations/ENG-038-broadcast-recipients-claimed-status.md`)
+and ran the gate against the migration as it already stood — no edit to the
+migration file itself.
+
+**Verified live:** `20260904140000` (ENG-037's base schema) already applied
+to the linked project; this migration is not yet pushed. All three
+broadcast tables confirmed empty (0 rows) via read-only aggregate queries.
+
+**Verified against a disposable Postgres replica**
+(`public.ecr.aws/supabase/postgres:15.8.1.073`, same image/method as
+`ENG-037`'s own gate): seeded minimal stand-ins for the referenced tables,
+applied `140000` then `150000` unmodified. By actual failing/succeeding
+inserts, not by reading the SQL back — `'claimed'` now accepted, a bogus
+status still rejected, the new `step_id` index present, a `scheduled`
+campaign with a null `scheduled_send_at` rejected, the same with a real
+timestamp accepted. **Then ran the migration's own trailing-comment
+rollback** — the specific gap release-readiness returned the ticket for,
+since it had never been executed — and behaviourally re-verified each
+reversal (claim rejected again, index gone, constraint gone), not just that
+the DDL ran clean. Final state confirmed empty on all three tables.
+Container removed after.
+
+**Schema/code coexistence confirmed by reading the application code
+directly**, not assumed: every write path to `broadcast_campaigns.status`
+(`brand-portal/broadcasts.ts`'s `createBroadcast`/`updateBroadcast`/
+`setBroadcastStatus`/`cancelBroadcast`, `broadcast-dispatch/dispatch.ts`'s
+`promoteDueCampaigns`) either always sets a non-null `scheduled_send_at` in
+the same write, or only ever flips `status` on a row whose value was already
+set at creation — no reachable code path can produce a row the new
+`scheduled_send_at` constraint would reject.
+
+Per `skills/schema-change/SKILL.md` step 10 ("pass → continue the
+pipeline") and this ticket's own upstream gates (review round 6, quality
+round 6, security round 2) already passing: **1 transition** —
+`building → ready-to-ship`, owner `database → devops`, for
+release-readiness to re-run with all four gate receipts now present.
+Machine WIP unaffected (still the `ENG-019` family's own slot, `1/1`).
+`time_spent`/`time_remaining` updated.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a gate pass isn't approver-facing.
+Checked all three open `inbox/` items for the 24h-nudge condition (current
+time `2026-09-04T20:53:20` PDT): `ENG-027`/`ENG-028` already carry their
+one-time nudge; `ENG-016`'s Piece-2 question (~9h55m old) still under the
+24h threshold. Nothing nudged.
+
+**Step 8b:** nothing new — the process gap that made this receipt
+retroactive (`backend` writing a migration directly instead of routing it
+to `database`) is already proposed (`proposals.md`, 2026-09-04). No
+`exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`building` →
+`ready-to-ship`, `database` → `devops`). Live file held two dated entries
+before this one (security gate round 2, release-readiness round 1) — under
+the keep-three cap, so nothing rolled to `_index-archive.md` this time.
+
+`chained: ENG-038` — `ready-to-ship` is agent-owned (devops's
+release-readiness re-run is next), not the approver, not blocked, not
+terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): release-readiness round 1 — RETURNED, `ready-to-ship` → `building`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `ready-to-ship`, owner `devops`,
+per security gate round 2's own hand-back. Ran `skills/release-runner/SKILL.md`
+step by step, same L1 reading this project's own prior release-readiness
+hops established (`ENG-034`/`ENG-037`: step 1 is the clock check only,
+steps 2-3's readiness content still runs).
+
+**Step 2 (upstream gates) found a real gap, not a formality.** Code review
+(round 6), quality (round 6), and security (round 2) all re-verified
+genuinely `pass` from their own receipts. But this ticket's own `building`
+hop (owner `backend`) had written a real schema migration directly —
+`supabase/migrations/20260904150000_broadcast_recipients_claimed_status.sql`
+(a new `'claimed'` check-constraint value, a new index on
+`broadcast_campaign_recipients.step_id`, a new check constraint on
+`broadcast_campaigns.scheduled_send_at`), read in full this pass — against
+`agents/backend/agent.md`'s own `never_touches: schema design or
+migrations (database owns those — you request, they design)`. No
+`agents/database/migrations/ENG-038-*.md` exists, no log entry on this
+ticket attributes any hop to `database`, and the migration's rollback
+exists only as a SQL comment, never executed — unlike `ENG-037`'s/
+`ENG-031`'s own migrations, both drilled against a disposable Postgres
+replica before shipping. Per `release-runner/SKILL.md` step 2, verbatim:
+"A missing verdict is a fail, not an assumption — return the ticket to the
+gate that never ran." Step 3 (rollback/observability/cost) checked anyway
+for completeness — one non-blocking observability gap named (a recipient
+row stuck `claimed` on a hard process kill, self-diagnosable, bounded) —
+but that isn't why this ticket is returned. Step 4 not reached; no PR
+opened. Full reasoning: `agents/devops/notebook/2026-09-04-release-readiness-log.md`.
+
+**1 transition** — `ready-to-ship → building`, owner `devops → database`
+— not `blocked` (no ticket on this board uses `blocked` for an unmet gate
+verdict), and `building` is where `ENG-037`'s/`ENG-031`'s own `database`
+work already happened, before their own `in-review` hop. Machine WIP
+unaffected (still the `ENG-019` family's own slot, `1/1`). `time_spent`/
+`time_remaining` updated.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a gate fail isn't approver-facing (no
+production exposure). Checked all three open `inbox/` items for the
+24h-nudge condition (current time `2026-09-04T20:33` PDT): `ENG-027`/
+`ENG-028` already carry their one-time nudge; `ENG-016`'s Piece-2 question
+(~9h35m old) still under the 24h threshold. Nothing nudged.
+
+**Step 8b:** proposal filed (`proposals.md`, this date) — no mechanical
+check anywhere catches a migration file with no matching
+`agents/database/migrations/` receipt before `ready-to-ship`/`shipped`;
+both this hop's own pre-pass `eng-gate-check.sh` runs exited 0 clean
+despite the gap. Related to, distinct mechanism from, the existing
+2026-09-03 principal-engineer proposal on the same file. No
+`exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`ready-to-ship` →
+`building`, `devops` → `database`). Live file held three dated entries
+before this one (security-fix round 1, review round 6, security gate round
+2); rolled the oldest (security-fix round 1) to `_index-archive.md` before
+appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `building` is agent-owned (database's own migration
+gate is the next hop's work), not the approver, not blocked, not terminal,
+not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): security gate round 2 — PASS, `in-security` → `ready-to-ship`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean. Worktree re-checked fresh: HEAD
+`63f5635`, matching round 6's own reviewed commit, no drift.
+
+**Step 6 (dispatch):** `ENG-038` sat at `in-security`, owner `security`,
+per round 6's own hand-back — not a fresh code-review lap, a confirmation
+that round 1's own two findings are actually closed. Re-verified both
+against the fix commits (`92d1bd4`/`63f5635`) and the live code/schema
+directly, not against the backend's or principal-engineer's own accounts.
+
+**Finding 1 (critical), closed.** `sendBroadcastMessage` takes only
+`{recipientId}`, requires `status = 'claimed'` on that row before doing
+anything, and derives customer/restaurant/step-content/consent from the
+database alone — none of the removed fields
+(`customerId`/`restaurantId`/`emailSubject`/`emailBody`/`smsBody`/
+`sendEmail`/`sendSms`) are read anywhere in the function body. The id is a
+`gen_random_uuid()` primary key (unguessable), the claim is atomic and
+single-winner (`UPDATE ... WHERE status = 'pending'`), and a claimed row is
+consumed — moved to a terminal status — within one HTTP round trip
+regardless of outcome. The regression test replays the exact pre-fix
+attack shape (spoofed `customerId`/`emailSubject`/etc. alongside a
+legitimate `recipientId`) and proves every spoofed field is now inert.
+
+**Finding 2 (medium), closed.** `audienceExceedsCap`/
+`tooSoonSinceLastCampaign` (`brand-portal/broadcasts.ts`) run after
+`requireRestaurantAccess` in both `createBroadcast` and `updateBroadcast`
+(confirmed by line order), both fail closed on a lookup error, and are
+backed by tests that assert on the real returned error strings —
+including one whose fake generically re-implements the real
+`.neq('status','cancelled')` filter rather than hard-coding the outcome.
+
+Full OWASP walk re-run for this round's diff (A01/A04 above; A02/A03/A05–A10
+either re-checked directly or carried forward from round 1 with a reason,
+never silently skipped), secrets scan on the two new commits (clean), no
+new dependency. Independently re-ran the full regression fresh: 85/85
+across five suites, reconciling exactly against round 6's own count.
+
+**One new non-blocking finding:** a TOCTOU race in
+`tooSoonSinceLastCampaign` — a plain `SELECT`, not a lock, so two
+`create_broadcast` calls close together for the same restaurant can both
+read "no recent campaign" and both proceed. Bounded: the size cap
+(`MAX_RECIPIENTS_PER_CAMPAIGN`) has no equivalent race, so this only
+defeats the 24h cooldown, not the per-campaign cap, and needs precisely
+concurrent requests from an already-authenticated owner to exploit. Not
+filed as a proposal — specific to this ticket's own new code, not a
+systemic pattern. Full detail: `agents/security/reviews/ENG-038.md` (the
+receipt — round 1 had none) and `agents/security/notebook/
+2026-09-04-findings.md`.
+
+Per `skills/security-gate/SKILL.md` step 9: **1 transition** —
+`in-security → ready-to-ship`, owner `security → devops`. Machine WIP
+unaffected (still the `ENG-019` family's own slot, `1/1`). `time_spent`/
+`time_remaining` updated. `links.security_review` set.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a gate pass isn't approver-facing.
+Checked all three open `inbox/` items for the 24h-nudge condition anyway
+(current time ~20:17 PDT; `notified:`/`nudged:` read as local time per
+`proposals.md`'s 2026-09-02 correction, not UTC): `ENG-027`/`ENG-028`
+already carry their one-time nudge; `ENG-016`'s Piece-2 question
+(~9h19m old) still under the 24h threshold. Nothing nudged.
+
+**Step 8b:** nothing beyond the one ticket-specific finding recorded
+above — not a systemic pattern, so not a proposal. No `exception-request:`
+found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`in-security` →
+`ready-to-ship`, `security` → `devops`). Live file held three dated
+entries before this one (security gate round 1, security-fix round 1,
+review round 6); rolled the oldest (security gate round 1) to
+`_index-archive.md` before appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `ready-to-ship` is agent-owned (devops's own
+release-readiness hop is next: verify upstream gates, hold the readiness
+gate, open the PR, raise the L1 merge request), not the approver, not
+blocked, not terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): review round 6 — REVIEW pass, QUALITY pass, `in-review` → `in-security`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `in-review`, owner
+`principal-engineer`, per the prior hop's security-fix. That hop's own
+`building → in-review` transition cited "this ticket's own round-2/3/4-fix
+precedent" — a citation that doesn't quite fit (those precedents were
+fixes for findings raised *inside* the in-review combined hop; these two
+were security-gate findings, raised after review had already passed once)
+— but the destination is right on independent grounds: the two fix
+commits are new code principal-engineer has never reviewed. Ran the
+combined review+quality hop, scoped to the diff since round 5's reviewed
+commit (`125286f..63f5635`, the two security-fix commits — 7 files,
+474/106). Worktree re-checked fresh: HEAD `63f5635`, no drift from
+`origin/main` either direction.
+
+**Verdict: PASS on code review.** 0/10 automatic failures. Verified both
+fixes against the actual system, not just the diff:
+`broadcast_campaign_recipients.restaurant_id` is a real, denormalized
+column and `'claimed'` is a legal status value added in the *original*
+build commit (not new this round). Chased down the new consent
+re-check's object-shape assumption
+(`customer.consent_email?.consent !== false`) against every read/write
+site in the repo — real, established idiom, not a defect. `links.review`
+re-set to `agents/principal-engineer/reviews/ENG-038.md` (round 6).
+
+**Verdict: PASS on the quality gate.** Neither finding maps to a PRD
+acceptance criterion, so this round owned suite-green, a verified
+regression test per finding, and no open P0/P1 — all three satisfied.
+Fresh re-check of AC1–7 surfaced nothing new; all seven still pass, none
+touching this round's changed logic. `links.test_plan` updated in place:
+`agents/qa/test-plans/ENG-038.md`.
+
+Independently re-ran the full regression fresh (85 passed/0 failed across
+five suites — round 5's 77 plus 8 new, reconciling exactly against the
+backend's own count) and `deno check` from each function's own directory
+(`dispatch.ts` 0 errors, `broadcasts.ts` 3 pre-existing in `utils.ts`,
+`consumers.ts` 8 in-file + 5 imported = 13 total, matching round 5's own
+baseline exactly). Two new non-blocking findings (a `cancel_broadcast`
+gap on already-`claimed` rows; a test-quality nit on the new cap/interval
+tests not verifying restaurant-scoping independently) plus round 5's own
+finding broadened from two untested DB-fetch branches to four. Full
+detail: `ENG-038`'s own board-file log (this pass's entry),
+`agents/principal-engineer/reviews/ENG-038.md`,
+`agents/qa/test-plans/ENG-038.md`, and
+`agents/principal-engineer/notebook/2026-09-04-review-log.md`.
+
+Per `code-review-gate/SKILL.md` step 9: **1 transition** —
+`in-review → in-security`, owner `principal-engineer → security` — back
+to security to confirm its own two findings are actually closed. Machine
+WIP unaffected (still the `ENG-019` family's own slot, `1/1`).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a gate pass isn't approver-facing.
+Checked all three open `inbox/` items for the 24h-nudge condition anyway
+(current time `2026-09-04T19:54:00` PDT): `ENG-027`/`ENG-028` already
+carry a one-time `nudged:` stamp, nothing more owed; `ENG-016`'s Piece-2
+question (`notified: 2026-09-04T10:58:06`) is ~8h56m old, still under the
+24h threshold. Nothing nudged.
+
+**Step 8b:** no new observation or proposal beyond the two non-blocking
+findings already recorded in the review/notebook above — nothing else
+noticed outside this ticket's own scope. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`in-review` →
+`in-security`, `principal-engineer` → `security`). Live file held three
+dated entries before this one (review round 5, security gate round 1,
+security-fix round 1); rolled the oldest (review round 5) to
+`_index-archive.md` before appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `in-security` is agent-owned (security's own gate is
+the next hop's work), not the approver, not blocked, not terminal, not
+held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+
+## 2026-09-04 — continue (`ENG-038`): security-fix round 1 — both findings fixed, `building` → `in-review`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean. Worktree re-checked fresh: up to date
+with `origin/feat/ENG-038-broadcast-composer-dispatcher-unsubscribe`
+(round 5's own reviewed commit `125286f`), no drift.
+
+**Step 6 (dispatch):** `ENG-038` sat at `building`, owner `backend`, per
+security gate round 1's own `FAIL` verdict (two blocking findings, one
+critical). Backend build hop this pass, fixing both exactly as specified
+(security's findings come with an exact fix; not escalated, not negotiated
+down). **Finding 1 (critical):** `outgoing-communications/actors/
+consumers.ts#sendBroadcastMessage` now takes only a `recipientId` — the
+already-`claimed` `broadcast_campaign_recipients.id` — and derives
+customer, restaurant, step content, and consent from the database; it no
+longer trusts `customerId`/`restaurantId`/`emailSubject`/`emailBody`/
+`smsBody`/`sendEmail`/`sendSms` from the request body on this
+`systemTriggered: true`, no-credential path. `broadcast-dispatch/
+dispatch.ts`'s `SendBroadcastFn` type, `resolveRecipient`, and its own
+HTTP-calling `sendBroadcastMessage` updated to the matching contract.
+**Finding 2 (medium):** `brand-portal/broadcasts.ts`'s `createBroadcast`/
+`updateBroadcast` now reject an audience over `MAX_RECIPIENTS_PER_CAMPAIGN`
+(10000, a conservative pre-consent-filter estimate); `createBroadcast`
+alone also rejects a new campaign within `MIN_CAMPAIGN_INTERVAL_HOURS`
+(24h) of the same restaurant's last non-cancelled one. Both checks fail
+closed on a lookup error. 8 new/rewritten tests across three suites (one
+asserts the exact `sendFn` payload shape — `Object.keys(...) ===
+['recipientId']` — as a direct regression guard for Finding 1; one proves
+the cancelled-campaign exception via a fake that generically implements
+the real `.neq('status','cancelled')` filter rather than hard-coding the
+outcome). Full regression re-run fresh: 70/70 across five suites (62
+pre-existing + 8 this round), no regression anywhere. `deno check` on all
+three touched source files: zero new errors, all remaining hits pre-existing
+and outside this diff (same repo-wide `catch (error) { error.message }`
+pattern round 4 already logged). Full detail: `ENG-038`'s own board-file
+log (this pass's entry) and `agents/backend/notebook/
+2026-09-04-eng038-security-round1-fixes.md`.
+
+Two commits, pushed to
+`origin/feat/ENG-038-broadcast-composer-dispatcher-unsubscribe`: `92d1bd4`
+(Finding 1) and `63f5635` (Finding 2, plus `supabase/functions/README.md`
+per this repo's own `CLAUDE.md` convention). **Step 6b:** grepped
+`sendBroadcastMessage`/`SendBroadcastFn`/`broadcast_message` — every hit
+outside the touched files is this ticket's own history or an unrelated
+literal tag (`trigger_type: 'broadcast_message'`); no other caller of
+either symbol exists anywhere in this repo. `MAX_RECIPIENTS_PER_CAMPAIGN`/
+`MIN_CAMPAIGN_INTERVAL_HOURS` are new names, nothing to reconcile.
+`README.md` updated in the same commit as the code it describes.
+
+**1 transition** — `building → in-review`, owner `backend →
+principal-engineer`. Machine WIP unaffected (still the `ENG-019` family's
+own slot, `1/1`).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a security-gate fix is fixed, not
+escalated, so no gate item was written this pass; checked all three open
+`inbox/` items for the 24h-nudge condition (current time
+`2026-09-04T19:39:44` PDT): `ENG-027`/`ENG-028` already carry a one-time
+`nudged:` stamp, decision still empty, nothing more owed; `ENG-016`'s
+Piece-2 item (`notified: 2026-09-04T10:58:06`) is ~8h41m old, still under
+the 24h threshold. Nothing nudged.
+
+**Step 8b:** no new observation or proposal beyond this ticket's own
+scope — the systemic gap this same finding class surfaced was already
+filed as an observation on the security-gate-round-1 pass immediately
+before this one. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`building` →
+`in-review`, `backend` → `principal-engineer`). Live file held three dated
+entries before this one (round-4 fixes, review round 5, security gate
+round 1); rolled the oldest (round-4 fixes) to `_index-archive.md` before
+appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `in-review` is agent-owned (review round 6 is the
+next hop's own work), not the approver, not blocked, not terminal, not
+held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): security gate round 1 — FAIL, `in-security` → `building`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `in-security`, owner `security`,
+after round 5's combined review+quality pass. Ran the security gate per
+`skills/security-gate/SKILL.md` against the full diff
+(`origin/main...HEAD`, 9 commits, `c1d55df..125286f`, 18 files, worktree
+`~/Documents/projects/_eng/aiorders-api`).
+
+**Verdict: FAIL — two blocking findings.** Finding 1 (Critical): the new
+`broadcast_message` action (`outgoing-communications/actors/consumers.ts`)
+is reachable fully unauthenticated through `outgoing-communications/
+index.ts`'s pre-existing `systemTriggered`-skips-auth bypass — the same bug
+class already tracked as `ENG-036` (P0, `state: designed`, not yet built),
+whose own PRD predates this ticket and never named this action. Trusts
+caller-supplied recipient and content verbatim, with no consent re-check
+on this path. Finding 2 (Medium): no rate limit, quota, or audience-size
+cap anywhere on broadcast sends — the gap `ENG-037`'s own security review
+routed forward and asked this gate to explicitly decide on; neither a
+bound nor a recorded accept-the-risk decision exists. Full OWASP walk (all
+ten categories), exploit paths, and specific fixes for both:
+`agents/eng-manager/board/ENG-038-broadcast-composer-api-dispatcher-and-unsubscribe.md`
+(this pass's log entry) and `agents/security/notebook/
+2026-09-04-findings.md`. **No receipt written** —
+`agents/security/reviews/ENG-038.md` is not created on a fail, per the
+skill's own step 9.
+
+Per `skills/security-gate/SKILL.md` step 9: **1 transition** —
+`in-security → building`, owner `security → backend`. Machine WIP
+unaffected (still the `ENG-019` family's own slot, `1/1`, `building` is
+within the counted range). `time_spent`/`time_remaining` updated.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a security-gate fail is fixed, not
+escalated, so no gate item was written. Checked all three open `inbox/`
+items for the 24h-nudge condition anyway (current time
+`2026-09-04T19:14:05` PDT): `ENG-027`/`ENG-028` already carry a one-time
+`nudged:` stamp, nothing more owed; `ENG-016`'s Piece-2 question
+(`notified: 2026-09-04T10:58:06`) is ~8h16m old, still under the 24h
+threshold. Nothing nudged.
+
+**Step 8b:** one observation filed (`observations.md`) — this ticket
+shipped a new, especially dangerous action onto an already-filed-but-
+unfixed security ticket's own broken gate (`ENG-036`), and no step in this
+department's process currently cross-checks an in-flight ticket's new
+capabilities against open, unfixed security findings on the shared code it
+extends. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`in-security` →
+`building`, `security` → `backend`). Live file held three dated entries
+before this one (round-4 fixes, review round 4, review round 5); rolled
+the oldest (review round 4) to `_index-archive.md` before appending this
+entry, per the keep-three rule.
+
+`chained: ENG-038` — `building` is agent-owned (the two fixes are the next
+hop's own work, owner `backend`), not the approver, not blocked, not
+terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): review round 5 — REVIEW pass, QUALITY pass, `in-review` → `in-security`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `in-review`, owner
+`principal-engineer`, Gap 4 (the only open item) fixed since round 4. Ran
+the combined review+quality hop, scoped to the diff since round 4's
+reviewed commit (`d13722a..125286f`, per `code-review-gate/SKILL.md` step
+9 — rounds 3–4's own review passes stand, not re-litigated). Worktree
+re-checked fresh: HEAD `125286f`, matching the checkpoint; no drift from
+`origin/main` either direction.
+
+**Verdict: PASS on code review, third consecutive pass.** 0/10 automatic
+failures. Confirmed the `sendBroadcastMessage` extraction
+(`decideBroadcastChannelEligibility`, `buildBroadcastEmailLogRow`/
+`buildBroadcastSmsLogRow`, injectable `deps`) is behaviour-preserving by
+line-by-line trace against the pre-extraction version, not just by the
+tests passing; confirmed the one `any` in the diff (a test-only fake
+client) matches `brand-portal/broadcasts.test.ts`'s own established
+pattern by reading that file directly. `links.review` re-set to
+`agents/principal-engineer/reviews/ENG-038.md` (round 5).
+
+**Verdict: PASS on the quality gate — first time on this ticket.** Gap 4
+(AC5 write half) closed: all five of QA's own round-4 cover cases present
+in `consumers.test.ts`, mapped 1:1. Fresh re-check of the full acceptance
+table (not just Gap 4) surfaced nothing new. `links.test_plan` updated in
+place: `agents/qa/test-plans/ENG-038.md`.
+
+Independently re-ran the full regression fresh (77 passed/0 failed across
+five suites, 62 ENG-038-relevant — matches the backend's own numbers) and
+ran two mutation tests of my own choosing on this round's new logic,
+distinct from the backend's own (`anySucceeded` OR/AND) and round 4's own
+(`decideUnsubscribePreCheck`): dropped the `customerEmail` requirement from
+the email-eligibility gate (caught by exactly 1 of 16 tests) and flipped
+the skip-path `&&` to `||` (caught by exactly 2 of 16, the two
+single-channel tests). Both restored clean before re-running. One new
+non-blocking finding (low severity): `sendBroadcastMessage`'s own
+customer/restaurant-fetch failure branches remain untested in every round,
+including this one — doesn't fail any AC (no `communication_log` row is
+ever written on that path), recorded so it doesn't repeat Gap 4's own
+"visible but unnumbered" history. Full detail: `ENG-038`'s own board-file
+log (this pass's entry),
+`agents/principal-engineer/reviews/ENG-038.md`,
+`agents/qa/test-plans/ENG-038.md`, and
+`agents/principal-engineer/notebook/2026-09-04-review-log.md`.
+
+Per `code-review-gate/SKILL.md` step 9 ("pass → the ticket continues to
+`in-security` once QA has also passed"): **1 transition** —
+`in-review → in-security`, owner `principal-engineer → security`. Machine
+WIP unaffected (still the `ENG-019` family's own slot, `1/1`).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a gate pass isn't approver-facing.
+Checked all three open `inbox/` items for the 24h-nudge condition anyway
+(current time `2026-09-04T18:54:44` PDT): `ENG-027`/`ENG-028` already
+carry a one-time `nudged:` stamp, nothing more owed; `ENG-016`'s Piece-2
+question (`notified: 2026-09-04T10:58:06`) is ~7h56m old, still under the
+24h threshold. Nothing nudged.
+
+**Step 8b:** no new observation or proposal beyond the non-blocking
+finding already recorded in the review/notebook above — nothing else
+noticed outside this ticket's own scope. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`in-review` →
+`in-security`, `principal-engineer` → `security`). Live file held three
+dated entries before this one (rounds 3 and 4, plus round-3's own fixes
+hop); rolled the oldest (round-3 fixes) to `_index-archive.md` before
+appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `in-security` is agent-owned (security's own gate is
+the next hop's work), not the approver, not blocked, not terminal, not
+held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): round-4 fixes — Gap 4 closed, `building` → `in-review`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean. Worktree re-checked fresh: `@d13722a`,
+matching the checkpoint, no drift vs `origin/main`.
+
+**Step 6 (dispatch):** `ENG-038` sat at `building`, owner `backend`, per
+round 4's own verdict (review PASS, quality gate FAIL on Gap 4 alone).
+Backend build hop this pass, closing the one gap QA's round-4 report
+specified: extracted `sendBroadcastMessage`'s
+(`outgoing-communications/actors/consumers.ts`) per-channel gate into
+`decideBroadcastChannelEligibility` and its `communication_log` row shape
+into `buildBroadcastEmailLogRow`/`buildBroadcastSmsLogRow`; exported
+`sendBroadcastMessage` itself (was module-private) with a new optional
+`deps` param (`sendEmail`/`sendSMS`/`buildUnsubscribeUrl`, defaulting to the
+real functions) — same injectable shape `broadcast-dispatch/dispatch.ts`'s
+`sendFn` already uses, so the orchestration itself is testable against a
+fake Supabase client with no network or `BROADCAST_UNSUBSCRIBE_SECRET`
+touched. 14 new tests (`consumers.test.ts` 2 → 16), covering QA's full list:
+email-only, sms-only, both, the skip path, and one channel succeeding while
+the other fails. Mutation-verified the `anySucceeded` OR-aggregation QA
+named directly — flipping it to `&&` failed exactly the 3 dependent tests.
+ENG-038-relevant total 62/62, no regression. Full detail: `ENG-038`'s own
+board-file log (this pass's entry) and
+`agents/backend/notebook/2026-09-04-eng038-review4-fixes.md`.
+
+One commit (`125286f`), pushed to
+`origin/feat/ENG-038-broadcast-composer-dispatcher-unsubscribe`. **Step
+6b:** grepped every artifact this hop touches
+(`sendBroadcastMessage`/`decideBroadcastChannelEligibility`/
+`buildBroadcastEmailLogRow`/`buildBroadcastSmsLogRow`/`communication_log`) —
+all hits are this ticket's own history or a `location`-level design/
+precedent mention, no edit needed. `suite_command` deliberately **not**
+touched this round — the injectable-`deps` approach was chosen specifically
+to avoid needing `--allow-env` on this directory, which would have
+contradicted round 3's own recorded claim that `_shared/` is the only file
+here touching `Deno.env`.
+
+**1 transition** — `building → in-review`, owner `backend →
+principal-engineer`. Machine WIP unaffected (still the `ENG-019` family's
+own slot, `1/1`).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — no gate item written this pass;
+checked all three open `inbox/` items for the 24h-nudge condition (current
+time `2026-09-04T18:45:02` PDT): `ENG-027`/`ENG-028` already nudged once,
+nothing more owed; `ENG-016`'s Piece-2 item (`notified:
+2026-09-04T10:58:06`) is ~7h47m old, still under the 24h threshold. Nothing
+nudged.
+
+**Step 8b:** no new observation or proposal — nothing noticed outside this
+ticket's own scope. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`building` →
+`in-review`, `backend` → `principal-engineer`). Live file held three dated
+entries before this one; rolled the oldest (review round 3) to
+`_index-archive.md` before appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `in-review` is agent-owned (review round 5 is the next
+hop's own work), not the approver, not blocked, not terminal, not held by a
+cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): review round 4 — REVIEW pass, QUALITY fail (Gap 4), back to `building`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `in-review`, owner
+`principal-engineer`, all three of round 3's named gaps fixed since. Ran
+the combined review+quality hop, scoped to the diff since round 3's
+reviewed commit (`87f3f8c..d13722a`, per `code-review-gate/SKILL.md` step
+9 — round 3's own review pass stands, not re-litigated). Worktree
+re-checked fresh: HEAD `d13722a`, matching the checkpoint; no drift from
+`origin/main`.
+
+**Verdict: PASS on code review, second consecutive pass.** 0/10 automatic
+failures. Confirmed the `broadcast-unsubscribe` extraction is
+behaviour-preserving by tracing the control flow line by line against the
+pre-extraction version, not just by the tests passing; the `brand-portal`
+extractions are byte-for-byte copy-moves. Independently re-ran the full
+regression fresh (matches the backend's own numbers exactly) and ran two
+mutation tests against `decideUnsubscribePreCheck` — the one genuinely new
+decision shape this round, since round 3 already mutation-verified the
+relocated logic before it was extracted — both caught their targeted
+mutation. `links.review` re-set to `agents/principal-engineer/reviews/
+ENG-038.md` (round 4).
+
+**Verdict: FAIL on the quality gate, second consecutive fail.** Gaps 1–3
+(AC4, AC5-read, AC6) closed and independently confirmed. **One gap
+remained uncaught by the round-3 fix hop**, and it wasn't newly introduced:
+round 3's own test-plan had already named it, in the "Not automated"
+section under AC5 (write) — `sendBroadcastMessage`'s own
+`communication_log` insert (`outgoing-communications/actors/consumers.ts`)
+has zero test coverage anywhere, confirmed by grep against the whole repo.
+Round 3 left it unnumbered as a reporting-efficiency call ("the read half
+already fails the gate for this AC"), not a substantive judgement that it's
+safe untested — unlike AC3's restaurant-scoping note in the same section,
+which does rest on real design reasoning and stays non-blocking, unchanged.
+Filed fresh as Gap 4, blocking, with a specific fix. `links.test_plan`
+updated in place: `agents/qa/test-plans/ENG-038.md`.
+
+Per `code-review-gate/SKILL.md` step 9 and this ticket's own round-3
+precedent: **1 transition** — `in-review → building`, owner
+`principal-engineer → backend`. Not a "third failed round" escalation —
+that clause is code review's own failure count, and review has passed
+twice running (rounds 3–4); the quality gate has no equivalent
+three-strike rule in this department's docs. Machine WIP unaffected (still
+the `ENG-019` family's own slot, `1/1`). Full detail: `ENG-038`'s own
+board-file log (this pass's entry),
+`agents/principal-engineer/reviews/ENG-038.md`,
+`agents/qa/test-plans/ENG-038.md`, and
+`agents/principal-engineer/notebook/2026-09-04-review-log.md`.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a quality-gate fail isn't
+approver-facing. Checked all three open `inbox/` items for the 24h-nudge
+condition anyway (current time `2026-09-04T18:20:59` PDT):
+`ENG-027`/`ENG-028` already carry a one-time `nudged:` stamp, nothing more
+owed; `ENG-016`'s Piece-2 question (`notified: 2026-09-04T10:58:06`) is
+~7h23m old, still under the 24h threshold. Nothing nudged.
+
+**Step 8b:** one observation filed (`observations.md`) — a quality-gate
+report that folds one still-real gap into a sibling gap's blocking status
+for reporting efficiency needs its own re-check once the sibling closes, or
+it can silently disappear, which is close to what happened here. Not a
+proposal — one occurrence. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`in-review` →
+`building`, `principal-engineer` → `backend`). The live file held three
+dated entries before this one (rounds 2 and 3 of this ticket's own review,
+plus round-3's own fixes hop); rolled the oldest (round 2) to
+`_index-archive.md` before appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `building` is agent-owned (the Gap 4 fix is the next
+hop's own work), not the approver, not blocked, not terminal, not held by
+a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): round-3 fixes — `building` → `in-review`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean. Worktree re-checked fresh: `@87f3f8c`,
+matching the checkpoint, no drift vs `origin/main`.
+
+**Step 6 (dispatch):** `ENG-038` sat at `building`, owner `backend`, per
+round 3's own verdict (review PASS, quality gate FAIL). Backend build hop
+this pass, closing all three gaps QA's round-3 report specified: extracted
+`computeRedemptions`/`buildDeliveryByChannel` out of `getBroadcastReport`
+(Gaps 1–2, AC4/AC5); added direct sign/verify tests for the unsubscribe
+token and extracted `broadcast-unsubscribe/index.ts`'s response-decision
+logic into a new `unsubscribe.ts`, same serve()-stays-thin shape
+`broadcast-dispatch` already uses (Gap 3, AC6 — the highest-stakes of the
+three, a public unauthenticated consent-mutating endpoint). Also closed F1
+(non-blocking since round 1) in the same pass per QA's own note that it was
+cheap to do here. 21 new tests; ENG-038-relevant total 48/48, no
+regression. Two properties mutation-verified (coupon-matching money logic,
+token tamper-detection). Full detail: `ENG-038`'s own board-file log (this
+pass's entry) and
+`agents/backend/notebook/2026-09-04-eng038-review3-fixes.md`.
+
+Three commits (`af3da30`, `8be42ec`, `d13722a`), pushed to
+`origin/feat/ENG-038-broadcast-composer-dispatcher-unsubscribe` — 18 files,
+2472/7 vs `origin/main`. **Step 6b:** the one instruction found in
+conflict — `agents/qa/test-plans/ENG-038.md`'s own `suite_command`, now
+missing the two new test directories and the `--allow-env` flag `_shared/`
+needs — fixed in this hop (that field only; `last_run`/`last_result` stay
+QA's own to set). Design-doc/README hits for the touched artifacts are all
+`location`-level (behaviour unchanged), no edit needed.
+
+**1 transition** — `building → in-review`, owner `backend →
+principal-engineer`. Machine WIP unaffected (still the `ENG-019` family's
+own slot, unchanged at `1/1`).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — no gate item written this pass, and no
+open `inbox/` item newly crossed the 24h-nudge threshold.
+
+**Step 8b:** no new observation or proposal — nothing noticed outside this
+ticket's own scope. No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`building` →
+`in-review`, `backend` → `principal-engineer`). Live file held three dated
+entries before this one; rolled the oldest (review round 1) to
+`_index-archive.md` before appending this entry, per the keep-three rule.
+
+`chained: ENG-038` — `in-review` is agent-owned (review round 4 is the next
+hop's own work), not the approver, not blocked, not terminal, not held by a
+cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): review round 3 — REVIEW pass, QUALITY fail, back to `building`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `in-review`, owner
+`principal-engineer`, both of round 2's items fixed (SMS/email body
+extraction + regression test, `promoteDueCampaigns`/`enrollAudience`
+coverage) since round 2's fail. Ran the combined review+quality hop.
+Worktree re-checked fresh: branch at `87f3f8c`, matching the checkpoint; no
+drift from `origin/main`; `git diff ede0e1e..HEAD` confirms exactly the
+three files the prior pass's log claims.
+
+**Verdict: PASS on code review.** Automatic-failure scan 0/10, re-run
+fresh — round 2's finding (missing test on the SMS-copy fix) is closed.
+Independently re-ran the full suite fresh (27/27, matches exactly) and ran
+two mutation tests on properties the fix hop's own trace hadn't already
+covered (the SMS-copy regression, and — the more consequential one —
+`enrollAudience`'s consent-inclusion default, which failed exactly the
+right test when flipped from default-contactable to default-excluded).
+`links.review` set: `agents/principal-engineer/reviews/ENG-038.md`.
+
+**Verdict: FAIL on the quality gate — its first real verdict on this
+ticket** (rounds 1–2 both failed at review first, discarding QA's result
+both times). Went looking at `getBroadcastReport` and
+`broadcast-unsubscribe/index.ts` for the first time this round — neither
+appears in either prior round's own coverage notes, both of which focused
+entirely on the now-closed dispatcher path. Found three gaps, all
+pre-existing since the original build, none introduced by rounds 2–3: **(1)
+AC4** — the redemption/revenue matching in `getBroadcastReport` has zero
+test of its actual logic, only the no-offer-attached null case is covered.
+**(2) AC5 (read half)** — the same function's delivery-by-channel
+aggregation is likewise only exercised via its empty-array branch. **(3)
+AC6, highest-stakes of the three** — the unsubscribe token sign/verify pair
+and the `broadcast-unsubscribe` handler have no test anywhere, on a public,
+unauthenticated, consent-mutating endpoint the PRD's own Risks section
+flags for CASL exposure. `links.test_plan` set:
+`agents/qa/test-plans/ENG-038.md` (written regardless of verdict, per that
+file's own template exemption — unlike `links.review`, this is not a
+pass-only artifact).
+
+**Standards promotion.** The "extract inline/private logic into a pure
+exported function for testability" remedy has now been written a third
+time on this board (`ENG-033`'s `deriveActionStatus`; this ticket's own
+SMS/email body extraction, just confirmed above; this round's three new
+findings). Per `code-review-gate/SKILL.md` step 10, added a rule to
+`agents/eng-manager/config/engineering-standards.md` (`## Naming and
+structure`) rather than treating a fourth occurrence as ticket-specific
+again.
+
+Per `code-review-gate/SKILL.md` step 9 and the `ENG-033` round-3 precedent
+(review pass + quality fail → `building` on the quality finding; review's
+own pass stands, re-confirmed rather than re-litigated next round): **1
+transition** — `in-review → building`, owner `principal-engineer →
+backend`. Machine WIP unaffected (still the `ENG-019` family's own slot,
+`1/1`). Full detail: `ENG-038`'s own board-file log (this pass's entry),
+`agents/principal-engineer/reviews/ENG-038.md`,
+`agents/qa/test-plans/ENG-038.md`, and
+`agents/principal-engineer/notebook/2026-09-04-review-log.md`.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a quality-gate fail isn't
+approver-facing. Checked all three open `inbox/` items for the 24h-nudge
+condition anyway: `ENG-027`/`ENG-028` already carry a one-time `nudged:`
+stamp, nothing more owed; `ENG-016`'s Piece-2 question (`notified:
+10:58:06`) is ~13h48m old against this pass's `2026-09-05T00:45:56`, still
+under the 24h threshold. Nothing nudged.
+
+**Step 8b:** no new observation or proposal beyond the standards promotion
+above (a direct edit under that skill step's own authority, not a proposal
+needing a gate). No `exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`in-review` →
+`building`, `principal-engineer` → `backend`). The live file held three
+dated entries before this one (the `ENG-037` release-readiness sweep,
+rounds 1 and 2 of this same ticket's review); rolled the oldest (`ENG-037`
+release-readiness) to `_index-archive.md` before appending this entry, per
+the keep-three rule.
+
+`chained: ENG-038` — `building` is agent-owned (the three quality-gate
+fixes are the next hop's own work), not the approver, not blocked, not
+terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here
+(this pass also touched the department-shared `engineering-standards.md`
+for the promotion above; same standing default applies to it).
+
+## 2026-09-04 — continue (`ENG-038`): review round 2 — FAIL, back to `building`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*). Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-038`)
+and whole-board: both exit 0, clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `in-review`, owner
+`principal-engineer`, one blocking finding already fixed (`ede0e1e`, the
+SMS "Reply STOP" text) since round 1's fail. Ran the combined
+review+quality hop. Worktree re-checked fresh: branch at `ede0e1e`,
+matching the checkpoint; no drift from `origin/main`; `git show --stat
+ede0e1e` confirms exactly the one file, one line the prior pass claimed.
+
+**Verdict: FAIL, round 2.** Automatic-failure scan 1/10 — item 3, "missing
+test on a bug fix": the SMS-text fix itself ships with no regression test
+anywhere (`sendBroadcastMessage` unexported, `outgoing-communications/` has
+zero test files), same shape as this board's own `ENG-033` round 2. Two
+non-blocking findings carried forward unchanged. QA's own side of this hop
+(discarded with the round): `promoteDueCampaigns`/`enrollAudience` have
+zero test coverage, covering three of this ticket's seven acceptance
+criteria — named as a real risk for the next quality-gate round, not a
+nice-to-have. Both fixes fully specified so a third round isn't needed for
+either. Full detail: `ENG-038`'s own board-file log (this pass's entry) and
+`agents/principal-engineer/notebook/2026-09-04-review-log.md`.
+
+No receipt written (`links.review` untouched), no QA test-plan file
+(discarded, per `code-review-gate/SKILL.md` step 9). **1 transition** —
+`in-review → building`, owner `principal-engineer → backend`. Machine WIP
+unaffected (still the `ENG-019` family's own slot, `1/1`).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a review fail isn't approver-facing.
+Checked all three open `inbox/` items for the 24h-nudge condition anyway:
+`ENG-027`/`ENG-028` already carry a one-time `nudged:` stamp, nothing more
+owed; `ENG-016`'s Piece-2 question (`notified: 10:58:06`) is ~6h old
+against this pass's `17:04:17`, well under the 24h threshold. Nothing
+nudged.
+
+**Step 8b:** one observation filed (`observations.md`) — the immediately
+prior pass (the SMS-copy fix hop, `building → in-review`) does not appear
+to have appended its own dated entry to this file, unlike every other pass
+on this ticket; flagged, not reconstructed retroactively. No
+`exception-request:` found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` updated (`in-review` →
+`building`, `principal-engineer` → `backend`). The live file held two
+dated entries before this one (the `ENG-037` release-readiness sweep, round
+1's own fail entry); appended this entry as the third, no roll owed yet.
+
+`chained: ENG-038` — `building` is agent-owned (both fixes are the next
+hop's own work), not the approver, not blocked, not terminal, not held by
+a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-038`): review round 1 — FAIL, stays `building`
+
+`continue` event pass, context `ENG-038`. Reading map for `continue`: steps
+6 and 6b (design already complete, not mid-PRD), plus the not-negotiable
+set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*;
+*Guards*). Mode check clean (repo-root `.env` → `MODE=active`). Pre-pass
+`eng-gate-check.sh`, scoped (`ENG-038`) and whole-board: both exit 0,
+clean.
+
+**Step 6 (dispatch):** `ENG-038` sat at `building`, owner `backend`, with
+the previous hop's own log recording the implementation as fully complete
+(branch pushed, self-tested, PR body drafted) but the state transition
+into `in-review` deliberately left to this hop rather than folded into the
+build hop itself. Ran the combined code-review + quality hop this pass —
+principal-engineer role, with QA's own coverage/test-execution work
+alongside it per `eng_build_loop.md`'s "one combined hop" instruction.
+**Verdict: FAIL, round 1.** Blocking finding: the new `broadcast_message`
+SMS text ("Reply STOP or visit {link} to unsubscribe") contradicts
+`ADR-020`, which explicitly rejected STOP-reply opt-out for this ticket
+because no inbound SMS path exists anywhere in this codebase — confirmed
+still true this round (`services/sms.ts` is still mock-only). The link
+itself is correct; only that phrase needs to go. Two non-blocking findings
+and two QA coverage gaps also named, none blocking. Full detail:
+`ENG-038`'s own board-file log (this pass's entry) and
+`agents/principal-engineer/notebook/2026-09-04-review-log.md`.
+
+No receipt written (`links.review` untouched), no QA test-plan file
+(discarded with the failed round, per `code-review-gate/SKILL.md` step 9).
+**0 net transitions** — `state`/`owner` unchanged (`building`/`backend`).
+Machine WIP unaffected (still the `ENG-019` family's own slot,
+unchanged at `1/1`).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** nothing to raise — a review fail isn't approver-facing.
+Nothing crossed a nudge threshold.
+
+**Step 8b:** one proposal filed (`proposals.md`) — the untracked
+`deno.lock` files in all three of this ticket's new function directories,
+a fourth independent occurrence of the same pattern `ENG-029`/`ENG-031`/
+`ENG-037` already noticed with zero action taken. No `exception-request:`
+found.
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** In-flight row for `ENG-038` unchanged (`building`/
+`backend`, still today's date). The live file held three dated entries
+before this one; rolled the oldest (`ENG-037` release-readiness) to
+`_index-archive.md` first, then appended this entry, keeping three per the
+keep-three rule.
+
+`chained: ENG-038` — `building` is agent-owned (the fix is the next hop's
+own work), not the approver, not blocked, not terminal, not held by a cap.
+Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-038`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — scheduled: `ENG-037` found merged — shipped, verified; `ENG-038` dispatched
+
+`scheduled` event pass (safety-net sweep). Reading map for `scheduled`: the
+whole document, never narrowed. Mode check clean (repo-root `.env` →
+`MODE=active`). Pre-pass `eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Steps 2–3 (business/technical intake):**
+`agents/product-manager/inbox/`, `agents/eng-manager/inbox/`, and
+`inbox/requests/` all empty beyond `.gitkeep`/`_handled`/`_processed`.
+Nothing to shape, nothing to route to `proposals.md`.
+
+**Step 4 (gate returns):** `inbox/` held the same four items the last
+`watch` pass found — `ENG-027` rescope G1, `ENG-028` G1, `ENG-016`'s
+Piece-2 question, `ENG-037`'s merge request — verified fresh off each
+file's own `decision:` frontmatter, not assumed from the board's cached
+list. The first three still blank, nothing to act on. `ENG-037`'s own
+`decision:` also still blank, but its PR was found merged (below) — a
+merge is not a gate answer, handled by step 5, not step 4.
+
+**Step 5 (merge detection):** `ENG-037` is the only ticket anywhere on the
+board at `state: blocked`. Worktree (`~/Documents/projects/_eng/aiorders-api`)
+fetched fresh: `git merge-base --is-ancestor
+origin/feat/ENG-037-broadcast-campaigns-schema-and-dispatch-cron
+origin/main` → ancestor (merged). Cross-checked `gh pr view 15`: `state:
+MERGED`, base `main`, no stacking, `mergedAt: 2026-09-04T21:19:18Z` —
+about 1h40m after the prior `watch` pass's own check (~19:39 UTC) found it
+still open. One file, 148 additions/0 deletions (`gh pr view --json
+files`), matching this ticket's own recorded diff exactly — no drift.
+
+**Not advanced on the merge alone.** Re-read all four upstream receipts
+directly — code review, quality, security, migration plan — all still
+`pass`. 0 of parent `ENG-019`'s 7 acceptance criteria apply to this
+schema-only diff (established at the ticket's own `in-qa` hop), matching
+`ENG-031`'s own precedent exactly — receipt-bookkeeping to `verified` is
+the correct route, not a hollow acceptance-check run against criteria that
+cannot yet be checked against a live result.
+
+**New this pass:** confirmed the deploy question every prior `aiorders-api`
+release on this board left open. This host's newly-discovered linked
+`supabase` CLI (`agents/database/notebook/2026-09-04-host-tooling-capability.md`)
+queried the live project directly, read-only: all three tables exist in
+`bmnmnejwdxbcqinqkwko` and `broadcast-dispatch-tick` is registered and
+`active` on its 5-minute schedule. Both queries carried the CLI's own
+untrusted-data envelope; treated as inert data. This also confirmed the
+pre-`ENG-038` observability gap named non-blocking at release-readiness is
+now actually firing every 5 minutes, not merely a named risk — still
+non-blocking (nothing external reaches the path, no data at risk,
+self-closes once `ENG-038` ships), named plainly in the release record.
+
+Release record written: `agents/devops/releases/2026-09-04-aiorders-api-ENG-037.md`,
+`links.release` set. `state: blocked → verified`, `owner: approver →
+eng-manager`, `blocked_on`/`blocked_from` cleared. Merge-request item moved
+to `inbox/_handled/`, amended in place with a plain-language note
+(including the deploy-status correction above). Journal entry added
+(`decision-journal.md`) — silent GitHub merge, no written reply, same shape
+as every prior L1 merge on this board.
+
+**Step 6 (dispatch):** `ENG-037` shipping satisfies `ENG-038`'s sole
+dependency (`depends_on: [ENG-037]`). Not transitioned to `building` in
+this pass — same precedent already set on `ENG-032`/`ENG-024`/`ENG-022` (a
+whole-board sweep does not perform new implementation work itself): the
+next hop is a real code edit against `aiorders-api` and belongs in its own
+dedicated session. `ENG-039` (`depends_on: [ENG-038]`) remains blocked on
+`ENG-038` specifically — no other member of the `ENG-019` family is
+dispatchable yet, so there is no ordering choice to make. Machine WIP
+unaffected — `ENG-037` already left the counted `ready..ready-to-ship`
+range at its prior hop; the family's slot (`ENG-019`/`ENG-038`/`ENG-039`)
+stays `1/1` regardless of which member is active. No other `designed`
+ticket is a candidate — the machine-WIP slot is still held by this family,
+unchanged from every pass tonight.
+
+**Dead-end sweep (whole-board):** every ticket's last log line checked for
+a `chained:` record. `ENG-027`/`ENG-028` (`awaiting-scope`/`blocked_on:
+approver`) and `ENG-016`'s Piece-2 question correctly show no chain owed —
+waiting on the approver. Every `designed`-state ticket
+(`ENG-014`/`ENG-017`/`ENG-020`/`ENG-021`/`ENG-023`/`ENG-025`/`ENG-026`/
+`ENG-029`/`ENG-030`/`ENG-035`/`ENG-036`) correctly shows `chained: none —
+held by the machine-WIP cap`, each with `links.design` populated
+(non-empty, per the cheap check this board's own 2026-09-04 observation
+recommends) — no broken chain found. `ENG-018` stays `priority: hold`,
+untouched. No `exception-request:` found on any ticket log. No ticket
+blocked past a threshold worth flagging — `ENG-037` (now terminal) was the
+only `blocked` ticket and is resolved this pass.
+
+**Notify sweep:** nothing new to raise (no gate opened this pass beyond
+what merge detection already closed). `ENG-027`/`ENG-028` already past
+their one-time `nudged:`, nothing to nudge again. `ENG-016`'s Piece-2
+question (`notified: 10:58:06`) still well under the 24h threshold.
+
+**Step 8b:** two observations filed (`observations.md`) — the confirmed-live
+deploy check and what it revealed about the pre-`ENG-038` 404 window. One
+proposal filed (`proposals.md`) — `board/_index.md`'s own header narrative
+has grown to roughly 350 lines, mostly discussing now-terminal tickets, the
+same staleness the dated-entries keep-three rule already solves for a
+different part of this file. No `exception-request:` found anywhere.
+
+**Step 8c:** decision-journal entry added for `ENG-037`'s silent merge (see
+above).
+
+**Board update:** In-flight table — `ENG-037` row removed (terminal).
+Header narrative amended with this pass's finding (kept short, not a
+rewrite of the existing header — see the filed proposal above for why the
+header itself is due a larger cleanup). "Waiting on the approver" summary
+corrected from three items to two, with `ENG-037`'s resolution noted
+in-line. Closing-paragraph section gained `ENG-037`'s own "joins the
+terminal group" paragraph, matching precedent. The live file held two
+dated entries before this one (`ENG-037` release-readiness, the most recent
+`watch` sweep) after rolling the `ENG-019` work-breakdown entry to
+`_index-archive.md`; appended this entry, keeping three per the keep-three
+rule.
+
+`chained: ENG-038` — `ready` is agent-owned (backend build next), not the
+approver, not blocked, not terminal, not held by a cap; recorded on
+`ENG-038`'s own log (this ticket's "0 transitions" entry). Fired
+`/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-038` before this pass exits. `chained: none` on `ENG-037`
+itself — `verified` is terminal, the chaining guard never fires on a
+terminal ticket. Post-pass `eng-gate-check.sh`, scoped (`ENG-037`,
+`ENG-038`) and whole-board: all exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — watch (launchd): swept, nothing new — `ENG-037` merge still pending
+
+`watch` event pass, context `launchd`. Reading map for `watch`: steps 2, 3
+and 4 (sweep all three inboxes), plus step 5 since the most recently
+changed inbox file is a merge-request item, plus the not-negotiable set (1,
+7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*). Mode
+check clean (repo-root `.env` → `MODE=active`). Pre-pass
+`eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Steps 2–3 (business/technical intake):** `agents/product-manager/inbox/`,
+`agents/eng-manager/inbox/`, and `inbox/requests/` all empty beyond
+`.gitkeep`/`_handled`/`_processed`. Nothing to shape, nothing to route to
+`proposals.md`.
+
+**Step 4 (gate returns):** `inbox/` holds the four items already known —
+`ENG-027` rescope G1, `ENG-028` G1, `ENG-016`'s Piece-2 question, and
+`ENG-037`'s merge request — verified fresh off each file's own `decision:`
+frontmatter and `## Decision` section, not assumed from the board's cached
+list. All four still blank. Nothing answered, nothing to act on.
+
+**Step 5 (merge detection):** `ENG-037` is the only ticket anywhere on the
+board at `state: blocked`, and its own merge-request item
+(`inbox/2026-09-04-eng037-merge-request.md`) is the most recently changed
+file across the three watched inboxes — the condition that puts this step
+in scope for a `watch` pass. Fetched `aiorders-api` fresh in the
+department's own worktree (`~/Documents/projects/_eng/aiorders-api`, on
+branch `feat/ENG-037-broadcast-campaigns-schema-and-dispatch-cron`, clean
+except the same long-standing untracked `deno.lock`): `git merge-base
+--is-ancestor origin/feat/ENG-037-broadcast-campaigns-schema-and-dispatch-cron
+origin/main` — not an ancestor. Cross-checked `gh pr view 15`: `state:
+OPEN`, `mergedAt: null`. Ticket stays `blocked`, no transition.
+
+**Dead-end sweep (scoped to this event):** no ticket touched or advanced.
+Checked `ENG-037`'s own board-file log for `exception-request:` — none
+found. `ENG-037` has been blocked only a few hours (raised ~12:33 UTC
+today) — nowhere near a blocked-too-long threshold.
+
+**Notify sweep:** nothing raised (no gate opened this pass). `ENG-027`/
+`ENG-028` already past their one-time `nudged:`, nothing to nudge again.
+`ENG-016`'s Piece-2 question (`notified: 10:58:06`) and `ENG-037`'s merge
+request (`notified: 12:33:03`) both well under the 24h threshold as of this
+pass (~19:39 UTC) — nothing to nudge.
+
+**Step 8b:** one observation filed (`observations.md`) —
+`2026-09-04-eng016-continue-piece2-question.md` carries only `raised:`/
+`notified:` in frontmatter, no `nudged:`/`decision:` key at all, unlike
+every other `gate: intake-question` item checked for comparison (`eng023`,
+`eng026`, `eng007`, all `_handled`). No `exception-request:` found (see
+dead-end sweep above).
+
+**Step 8c:** n/a — no gate answered this pass.
+
+**Board update:** no ticket state changed, so the In-flight table is
+unchanged. The live file held three dated entries before this one; rolled
+the oldest (`ENG-019` dispatched into the freed slot) to
+`_index-archive.md` first, then appended this entry, keeping three per the
+keep-three rule.
+
+`chained: none` — no ticket left this pass in a state owned by an agent as
+a result of anything done here. `ENG-037`, the ticket this pass's own step
+5 examined, stays `blocked`, `blocked_on: approver` — waiting on a GitHub
+merge, not on the department. Post-pass `eng-gate-check.sh`, whole-board:
+exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-037`): release-readiness — `ready-to-ship → blocked`, PR opened
+
+`continue` event pass, context `ENG-037`. Reading map for `continue`: steps
+6 and 6b (design already complete, not mid-PRD), plus the not-negotiable
+set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*).
+Mode check clean (repo-root `.env` → `MODE=active`). Pre-pass
+`eng-gate-check.sh`, scoped (`ENG-037`) and whole-board: both exit 0,
+clean.
+
+Ticket file read directly rather than trusted from the trigger's
+checkpoint. Worktree (`~/Documents/projects/_eng/aiorders-api`) re-checked
+fresh: on the correct branch, up to date with `origin`, `git diff
+origin/main...HEAD --stat` confirms the same one-file, 148-line diff
+(`59e9670`); clean except the same long-standing untracked `deno.lock`
+prior passes already noted. `gh pr list` confirmed no PR already existed
+for this branch.
+
+**`skills/release-runner/SKILL.md` run in full.** `aiorders-api` is L1
+(`config/projects.md`) — window check skipped. All four upstream gates
+re-confirmed fresh from their own receipt files (not the ticket log's
+paraphrase): code review (`agents/principal-engineer/reviews/ENG-037.md`,
+`verdict: pass`), quality (`agents/qa/test-plans/ENG-037.md`, `Verdict:
+PASS`), security (`agents/security/reviews/ENG-037.md`, `verdict: pass`),
+and the migration plan (`agents/database/migrations/ENG-037-*.md`, `Gate
+verdict: pass`). Readiness gate held: rollback actually tested against a
+disposable container (build hop, re-verified not re-derived), $0/month
+cost (no new paid infrastructure — `pg_cron`/`pg_net`/Vault already live on
+this project), window n/a (L1).
+
+**One precise, non-blocking observability finding, from reading the actual
+migration SQL rather than the ticket's own prose.** `broadcast-dispatch-tick`
+calls `net.http_post` unconditionally every 5 minutes — it does not check
+`broadcast_campaign_recipients` for pending work first; that check is
+`ENG-038`'s own dispatcher function's job. The ticket's Outcome section
+("the tick finds empty tables and no-ops") describes `ENG-038`-shipped-and-
+idle behavior, not the actual gap: a pre-`ENG-038` window where the call
+target doesn't exist and every tick 404s, distinct from and earlier than
+the already-documented post-`ENG-038`/pre-Vault-secret 401 window. Judged
+non-blocking, not a gate failure: `aiorders-api` has no CI/CD auto-deploy
+(confirmed — no `.github/workflows/` at all), so merging this PR doesn't
+push the migration live; nothing external reaches this path yet, so no
+user is affected; the gap self-closes once `ENG-038` ships
+(`blocks: [ENG-038]`, already next in sequence). Named precisely in the PR
+body's own "Uncertainties" section and in the merge-request item, so the
+resulting log noise isn't mistaken for a regression later. Full reasoning:
+`agents/devops/notebook/2026-09-04-release-readiness-log.md`.
+
+Opened `aiorders-api` PR #15
+(https://github.com/harsimranwalia/aiorders-api/pull/15) — body covers what
+the migration does, all four gates passed, the two non-blocking code-review
+findings, the two non-blocking security notes, and the observability
+finding above in full. Wrote
+`inbox/2026-09-04-eng037-merge-request.md`, plain `pr_url:` string (single
+repo). `lib/eng-notify.sh raise` run — logged `sent: active
+2026-09-04-eng037-merge-request.md` in `traces/eng-notify-2026-09-04.log`
+at `12:33:03`; stamped `notified: 2026-09-04T12:33:03` on the item by hand.
+
+Ticket set `blocked`, `blocked_on: approver`, `blocked_from: ready-to-ship`,
+`owner: devops → approver`, `links.pr` set. No G3 — L1 has none; the PR
+merge is the human gate. No release record yet — L1's actual deploy and the
+release record both wait for merge detection on a future pass.
+
+**1 transition** (`ready-to-ship → blocked`), under the cap of 4. **Machine
+WIP:** leaves the counted range — no change to the family reading (`ENG-019`
+still `building`, holding the slot regardless of this child's own state).
+
+**Dead-end sweep (scoped to this event):** no other ticket touched.
+
+**Notify sweep:** covered above — this pass's own item raised and stamped.
+`ENG-027`/`ENG-028` already past their one-time `nudged:`, nothing to nudge
+again.
+
+**Step 8b:** one observation filed (`observations.md`) — the ticket's own
+"finds empty tables and no-ops" prose blurs "the callee no-ops on empty
+state" with "the tick itself checks before calling," worth tightening this
+repo's documentation convention for the next poller-shaped cron ticket. No
+`exception-request:` found on this ticket's log.
+
+**Step 8c:** n/a — no gate answered this pass, one raised.
+
+**Board update:** In-flight row for `ENG-037` (`ready-to-ship → blocked`,
+`devops → approver`, updated). "Waiting on the approver" header (two items
+→ three) and list updated with `ENG-037`'s own paragraph. The live file
+held four dated entries after this one would be appended; rolled the
+oldest (`ENG-016` acceptance-check) to `_index-archive.md` first, then
+appended this entry, keeping three per the keep-three rule.
+
+`chained: none` — blocked on the approver (`blocked_on: approver`); merge
+detection (step 5) resumes it on a future pass, same as every other L1
+merge request on this board. Post-pass `eng-gate-check.sh`, scoped
+(`ENG-037`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-019`): work-breakdown — `ready → building`, three sub-tickets created
+
+`continue` event pass, context `ENG-019`. Reading map for `continue`: steps 6
+and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+instructed*; *The four lanes*; *Guards*) — step 2's mid-PRD checkpoint
+doesn't apply, the PRD is already `approved`. Mode check clean (repo-root
+`.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-019`) and
+whole-board: both exit 0, clean.
+
+`ENG-019` landed at `ready`, owner `eng-manager` — `work-breakdown/SKILL.md`'s
+own trigger. Autonomy check: both touched projects (`aiorders-api`,
+`restaurant-portal`) are L1, proceeds. WIP check: the skill's own text names a
+stale config key (`wip.limit`, no longer exists); read the current
+authoritative value instead — `machine_limit: 1`, `1/1`, held by this
+ticket's own family, not a second occupant. Observation filed
+(`observations.md`) — stale key name in a skill file, not edited here (skill
+files go through Fable only).
+
+Split by surface, matching the design's own `## Components` table exactly:
+`ENG-037` (database, `aiorders-api` — one migration, 3 tables + cron
+schedule), `ENG-038` (backend, `aiorders-api` — brand-portal actions,
+dispatch poller, unsubscribe function), `ENG-039` (frontend,
+`restaurant-portal` — Broadcasts tab/composer/report). Sequenced per the
+design's own Rollout order (migration → functions → frontend), a strictly
+serial `depends_on` chain, no domain-specific reordering needed unlike
+`ENG-016`'s kanban-before-backend case. Considered and rejected splitting
+`backend` further (CRUD vs. dispatch/unsubscribe) — same owning agent, same
+WIP slot either way, no parallelism gained; the parent's own `L` sizing
+already priced in this scope. `ENG-037` dispatched straight to `building` (no
+dependency); `ENG-038`/`ENG-039` held at `ready`, owner `eng-manager` while
+waiting. Full reasoning, ADR/AC mapping per child, and sizing:
+`agents/eng-manager/notebook/2026-09-04-eng019-work-breakdown.md`.
+
+**1 transition** on `ENG-019` itself (`ready → building`). **Machine WIP:
+still `1/1`** — same family (`ENG-019` + `ENG-037`..`039`), applying the
+`ENG-016`/`ENG-031` precedent rather than re-litigating it. **Next ID:
+`ENG-037` → `ENG-040`.** No G1/G2/G3, no one-way door, nothing raised to the
+approver this pass.
+
+Dead-end sweep (scoped to this event): no other ticket touched. Notify
+sweep: nothing to raise (no gate opened) or nudge (no open item crossed 24h
+this pass). Step 8b: one observation filed (above); no `exception-request:`
+found on any ticket log. Step 8c: n/a — no gate answered this pass.
+
+**Board update:** In-flight table — `ENG-019` (`ready → building`, updated),
+three new rows for `ENG-037`/`ENG-038`/`ENG-039`. Header's Next-ID and
+machine-WIP narrative updated in the same edit. The live file held three
+dated entries before this one; rolled the oldest (`decision`, `ENG-030` P0
+incident) to `_index-archive.md` first, then appended this entry, keeping
+three per the keep-three rule.
+
+`chained: ENG-037` — the only child with a met dependency and something
+agent-actionable now; `building` is agent-owned (`database`), not the
+approver, not blocked, not terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-037` before this pass exits. `chained: none` on `ENG-019`
+itself (parent has no action until a child reports back) and on
+`ENG-038`/`ENG-039` (each waiting on an unmet dependency) — recorded on each
+ticket's own log. Post-pass `eng-gate-check.sh`, scoped (`ENG-019`,
+`ENG-037`, `ENG-038`, `ENG-039`) and whole-board: all exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — scheduled (launchd): `ENG-019` dispatched into the freed slot — `designed → ready`
+
+`scheduled` event pass, context `launchd`. Reading map for `scheduled`: the
+whole document — never narrowed, the safety-net sweep is what it exists
+for. Read `eng_build_loop.md` in full at pass start. Mode check clean
+(repo-root `.env` → `MODE=active`). Concurrency verified rather than
+assumed: `traces/.loop.lock/pid` (`21578`) confirmed live and is the
+wrapper that launched this very session (`eng-trigger.sh scheduled
+manual`, draining an earlier genuinely-queued `scheduled (launchd)` fire
+from `traces/.pending` — not a race, this pass *is* that fire). Pre-pass
+`eng-gate-check.sh`, whole-board: exit 0, clean.
+
+**Steps 2–3 (business/technical intake):** `agents/product-manager/inbox/`,
+`agents/eng-manager/inbox/`, and `inbox/requests/` all empty beyond
+`.gitkeep`/`_handled`/`_processed`. Nothing to shape, nothing to route to
+`proposals.md`.
+
+**Step 4 (gate returns):** `inbox/` holds exactly the three items already
+known — `ENG-027` rescope G1, `ENG-028` G1 (both `decision:` blank, both
+already past their one-time `nudged:`), and `ENG-016`'s Piece-2 question
+(`decision:` blank, raised this morning by the `continue ENG-016` pass,
+well under the 24h nudge threshold). Verified fresh off each file's own
+`## Decision` section, not assumed from the board's cached list. Nothing
+answered — nothing to act on.
+
+**Step 5 (merge detection):** every board file's own frontmatter grepped
+fresh — no ticket anywhere is `state: blocked`. Nothing to fetch or check.
+
+**Step 6 (dispatch):** machine WIP `0/1`, free (the whole `ENG-016` family
+now `verified`, confirmed off frontmatter, not the header prose). To-do
+column (`intake`/`shaped`/`awaiting-scope`) had no machine-actionable
+ticket — `ENG-018` is `priority: hold`; `ENG-027`/`ENG-028` are genuinely
+waiting on the approver. Per `ENG-019`'s own 2026-09-03 log entry, the slot
+instead went to the held-for-slot pool: `designed` tickets with a completed
+design and no one-way door, deferred only by the cap. `ENG-019`, `ENG-020`
+and `ENG-021` all carry `priority: now`; lowest id decided —`ENG-019`.
+Re-verified its design is unchanged (`links.design`/`links.adrs` still
+populated, file still on disk) rather than re-derived. **`designed → ready`,
+`owner: architect → eng-manager`**, no G2 (`tech-design/SKILL.md` step 11:
+no one-way door, not L0). **1 transition**, well under the cap of 4.
+**Machine WIP: `0/1 → 1/1`.** Stopped there, deliberately — work-breakdown/
+building is new implementation work, out of scope for this event type, same
+precedent every `continue`-dispatched hop today already set. Full
+reasoning: `ENG-019`'s own board-file log.
+
+**Step 6b:** no artifact-mention rule was written or relied on this hop —
+a frontmatter bookkeeping transition, nothing another agent is told to
+produce under a name this could conflict with.
+
+**Step 8 (dead-end sweep, whole board, per this event's own contract):**
+found and fixed two stale `owner` fields — `ENG-014` and `ENG-025`, both
+frontmatter `owner: eng-manager` despite each one's own log explicitly
+leaving it `designed`/`architect`, and despite `ENG-019`'s own 2026-09-03
+entry naming both as part of the identical held-for-slot pool, same state,
+same owner as `ENG-019` itself. No log entry on either ticket records an
+intentional hand-off; likely origin the `e281c71` board-reconciliation
+merge (26 diverged files), not chased further since the fix is the same
+regardless of cause. Both corrected to `owner: architect`; no functional
+consequence (a `continue` fire routes off `state:`, not `owner:`) but left
+wrong it misleads a reader about whose desk the ticket is on. Neither
+ticket's standing in the pool changes (both still carry no `priority:`).
+No other ticket found without an owner; no ticket `blocked` at all, let
+alone past a threshold. **Broken-chain check, against the real trace log
+this time** (`traces/eng-loop-2026-09-04.log`, 156KB, read directly rather
+than assumed empty): no `DROPPED` line anywhere today, no
+`*-eng-events-dropped.md` file for today, `traces/.pending` holds exactly
+one legitimate queued fire (`1 watch launchd`, behind this pass). An
+earlier pass today (same log, ~line 1173) already re-verified all twelve
+then-`designed` tickets were genuinely in the design-complete-but-capped
+sub-state rather than stalled — not re-derived here, cited fresh off the
+log instead.
+
+**Step 8b:** no `exception-request:` found on any ticket log. No
+observations filed this pass beyond the two owner-field corrections logged
+on `ENG-014`/`ENG-025` and above.
+
+**Step 8c:** n/a — no G1/G2/G3 or merge request was answered this pass.
+
+**Board update:** In-flight table — `ENG-019` (`designed → ready`,
+`architect → eng-manager`, updated), `ENG-014`/`ENG-025` (`owner` corrected,
+updated). The live file held three dated entries before this one; rolled
+the oldest (`ENG-034` merge-detected/acceptance-check entry) to
+`_index-archive.md` first, then appended this entry, keeping three per the
+keep-three rule.
+
+`chained: ENG-019` — `ready` is agent-owned (`eng-manager`, work-breakdown
+next), not the approver, not blocked, not terminal, not held by a cap
+(this ticket now holds the cap itself). Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-019` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-019`, `ENG-014`, `ENG-025`) and whole-board: all exit 0,
+clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-016`): acceptance-check run in full — `building → shipped → verified`
+
+`continue` event pass, context `ENG-016`. Reading map for `continue`: steps
+6 and 6b (not mid-PRD), plus the not-negotiable set (1, 7, 8b, 9, 10;
+*Enforced vs instructed*; *The four lanes*; *Guards*). Mode check clean
+(repo-root `.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped
+(`ENG-016`) and whole-board: both exit 0, clean.
+
+All four children (`ENG-031`..`034`) confirmed `verified` fresh off each
+one's own frontmatter, `parent: ENG-016` confirmed set on each — the
+`ADR-003`-class parent exemption is met. `building → shipped`, no diff/
+review/QA/security hops of its own (`agents/eng-manager/notebook/
+2026-09-03-eng016-work-breakdown.md`'s own reasoning for this transition,
+cited fresh). That entered `shipped`, triggering `acceptance-check/
+SKILL.md` — no parent carve-out in its own trigger, so ran it in full
+rather than treating the exemption as a rubber stamp: of the PRD's 13
+criteria, 8 (owned by `ENG-034`) were cross-referenced from that ticket's
+own very-recent, line-cited live-code walk; the other 5 (AC-5/6 storage
+half, AC-7, AC-8, AC-10, AC-12, AC-13 — owned by `ENG-032`/`ENG-033`, which
+reached `verified` via the receipt-bookkeeping shortcut and had never been
+individually checked against live code) were walked fresh this pass against
+`origin/main` on `aiorders-api` (`5415ef0`) and `restaurant-portal`
+(`5276a53`). **All 13: pass.** No scope creep (full non-goals re-scan
+across all four merged diffs); cost `$0/month`, matching the estimate.
+`shipped → verified`. Full evidence:
+`agents/product-manager/notebook/2026-09-04-eng016-acceptance.md`.
+
+**2 transitions** (`building → shipped`, `shipped → verified`), under the
+cap of 4. **Machine WIP: `1/1 → 0/1`, free** — the whole family is now
+terminal.
+
+**Step 6b: bar not met.** This ticket's own G1 ("Lets start with piece 1")
+confirmed build order, not an explicit sequence sign-off (`ENG-006`'s own
+recorded bar) — so the PRD's named Piece 2 was not auto-filed. Per 6b's own
+instruction for this case, raised a targeted question instead:
+`inbox/2026-09-04-eng016-continue-piece2-question.md`, bundling the
+sequence question with the PRD's own separate condition on Piece 2 (a named
+price-book-maintenance owner). `lib/eng-notify.sh raise` run, `notified:`
+stamped from the trace log (`10:58:06`).
+
+Dead-end sweep (scoped to this event): no other ticket touched — the freed
+WIP slot is for the next dispatch-scoped pass to pick up, not this one.
+Notify sweep: `ENG-027`/`ENG-028` already past their one-time `nudged:`
+with no `decision:`, nothing to nudge again; this pass's own item raised
+and stamped, nothing else to nudge. Two observations filed
+(`observations.md`): the parent's own acceptance-check as the natural
+backfill point for a family's shortcut-shipped children; and a pre-existing,
+out-of-scope mass-assignment note on `update_catering_request` noticed
+while checking AC-13. Step 8c: n/a — no gate answered this pass, one raised.
+
+**Board update:** In-flight row for `ENG-016` removed (terminal). "Waiting
+on the approver" header and list updated (two items → three, this
+question added). `## Breakdown` table on `ENG-016`'s own file corrected to
+show all four children `verified`. The live file held three dated entries
+before this one; rolled the oldest (`ENG-034` release-readiness) to
+`_index-archive.md` first, then appended this entry, keeping three per the
+keep-three rule.
+
+`chained: none` — terminal (`verified`), `blocks: []`. Post-pass
+`eng-gate-check.sh`, scoped (`ENG-016`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — decision (`ENG-030` P0 incident): acknowledged, no transition — held at `designed`
+
+`decision` event pass, context `2026-09-03-eng030-p0-incident.md`. Reading
+map for `decision`: steps 4 and 8c, plus the not-negotiable set (1, 7, 8b, 9,
+10; *Enforced vs instructed*; *The four lanes*; *Guards*) — not an L1 merge
+request, and the answer doesn't advance the ticket into a new machine-owned
+state, so steps 5 and 6 don't apply. Mode check clean (repo-root `.env` →
+`MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-030`) and
+whole-board: both exit 0, clean.
+
+The item: architect's P0 incident notice on `analytics`'s missing
+restaurant-ownership check (third instance this week of the same bug class,
+after `ENG-022`/`ENG-029`), answered **approved**, no additional comment.
+`ENG-030`'s own ticket file read directly, machine WIP re-checked fresh off
+every `ENG-016` sibling's own frontmatter rather than assumed from this
+ticket's prior log entry: `ENG-016` itself still `building`, its own
+`continue` fire confirmed still genuinely queued in `traces/.pending`
+(third, behind `scheduled launchd` and `watch launchd`, neither drained
+yet); `ENG-031`/`ENG-032`/`ENG-033`/`ENG-034` all now `verified`. Slot still
+1/1, now held by `ENG-016` alone. Conclusion: still `designed`,
+`owner: architect`, no transition available — same shape `ENG-029`'s and
+`ENG-035`'s own decision passes already reached for identical bare-approve
+replies to a "nothing to decide" incident notice. `ENG-030`'s own
+`priority:` stays empty and this notice's second offered option (a
+dedicated cross-function sweep for the bug-class pattern) went unexercised
+too — read as acknowledgement of the interrupt on both counts, not an
+instruction to reorder the board or start unscoped work; not filed as a
+proposal either, since the architect's own design already named the pattern
+and deliberately left it as a non-goal rather than a fourth PRD.
+
+Processed note appended to the incident item and moved to
+`inbox/_handled/2026-09-03-eng030-p0-incident.md`, per `eng_build_loop.md`
+step 4's Incident handling. **Journal (step 8c):** row added to
+`decision-journal.md` — noted explicitly that the *reply* is a plain bare
+approve, same as `ENG-029`'s/`ENG-035`'s, not a second occurrence of
+`ENG-036`'s substantive-instruction shape; only the *notice* offered
+something new (the sweep option), and it went untaken too.
+
+Dead-end sweep (scoped to this event): no other ticket touched. Notify
+sweep: current `2026-09-04T17:41:18Z` — two open items left in `inbox/`
+(`ENG-027`, `ENG-028`), both already past their one-time `nudged:` with no
+`decision:`; nothing to nudge again, nothing raised this pass. Step 8b:
+nothing new to observe or except; no `exception-request:` found.
+
+**Board update:** In-flight row's `Updated` date bumped (2026-09-03 →
+2026-09-04), state/owner unaffected. The live file held three dated entries
+before this one; rolled the oldest (`continue (ENG-034)`: security gate,
+round 1, PASS) to `_index-archive.md` first, then appended this entry,
+keeping three per the keep-three rule.
+
+`chained: none` — still held by the machine-WIP cap (`1/1`, the `ENG-016`
+family); re-check once that family reaches `shipped`. Not blocked, not
+terminal, not waiting on the approver — only the cap. Post-pass
+`eng-gate-check.sh`, scoped (`ENG-030`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — watch (launchd): `ENG-034` merge detected, acceptance-check run in full — `blocked → shipped → verified`
+
+`watch` event pass, context `launchd`. Reading map for `watch`: steps 2, 3,
+4 (sweep all three inboxes), and step 5 (the changed file —
+`inbox/2026-09-04-eng034-merge-request.md` — is a merge-request item), plus
+the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four
+lanes*; *Guards*). Mode check clean (repo-root `.env` → `MODE=active`).
+
+**Inbox sweep (steps 2–4):** `agents/product-manager/inbox/` and
+`agents/eng-manager/inbox/` both empty beyond `_handled`/`_processed`.
+`inbox/` held four items: `ENG-027` rescope G1, `ENG-028` G1, `ENG-030` P0
+incident — all three already `nudged:`, `decision:` still blank, nothing
+new to act on — and `ENG-034`'s merge request, new this pass.
+
+**Step 5 — merge detection.** `git fetch` + `git merge-base --is-ancestor`
+on this ticket's own recorded commit (`62b3ca0`) against fresh
+`origin/main`: YES. Cross-checked `gh pr view 4`: `MERGED`, base `main`
+directly, no stacking, `mergedAt: 2026-09-04T17:09:10Z`. Branch tip matches
+the ticket's own frontmatter exactly, no drift. All three gate receipts
+re-read fresh from the files themselves: review/quality/security all
+`pass`; no migration (frontend-only diff). Confirmed directly on the merged
+tree, not just cited from the receipts: both changed files present and
+byte-matching the reviewed diff. Release record written:
+`agents/devops/releases/2026-09-04-config-site-builder-ENG-034.md` — this
+department does not run `config-site-builder`'s own manual deploy scripts
+at L1, same posture `ENG-032`'s and `ENG-033`'s own records already
+established for this exact question (confirmed by reading both before
+deciding, not assumed).
+
+**Acceptance-check run in full, not the receipt-bookkeeping shortcut.**
+`acceptance-check/SKILL.md`'s own trigger ("a ticket enters state
+`shipped`") had gone unexercised, with no notebook entry, since
+`ENG-007`/`ENG-011` (2026-08-30) — ten tickets shipped in between with none.
+`exceptions.md` carries zero rows, so this was never a granted exception.
+Ran it properly for this ticket: all eight owned criteria (AC-1 narrowed,
+AC-2, AC-3, AC-4, AC-5/6 client half, AC-9, AC-11) walked against the
+merged `origin/main` tree directly — full evidence
+`agents/product-manager/notebook/2026-09-04-acceptance.md`. Production/
+live-path verification not available (no Cloudflare dashboard/API access,
+and no restaurant has the new opt-in enabled yet regardless) — named
+honestly, same substitute `ENG-007`/`ENG-011` already set precedent for.
+All pass. Proposal filed (`proposals.md`) on the ten-ticket gap rather than
+corrected retroactively.
+
+**2 transitions** (`blocked → shipped`, `shipped → verified`), well under
+the cap of 4. Machine WIP unaffected — still 1/1, held by the `ENG-016`
+family; the parent itself still occupies the slot until it reaches
+`shipped`. Merge-request item moved to `inbox/_handled/`; decision-journal
+entry written.
+
+Dead-end sweep (scoped to this event): no other ticket touched — `ENG-016`'s
+own transition is chained, not processed inline. Notify sweep: `ENG-027`/
+`ENG-028`/`ENG-030` already carry their one-time `nudged:`, nothing to
+nudge again; nothing new raised this pass beyond the proposal, which isn't
+approver-facing.
+
+**Board update:** In-flight row for `ENG-034` removed (terminal). "Waiting
+on the approver" header and list updated (three items → two — `ENG-027`,
+`ENG-028`). The live file held three dated entries before this one; rolled
+the oldest (`ENG-034` code review + quality gate, round 1) to
+`_index-archive.md` first, then appended this entry, keeping three per the
+keep-three rule.
+
+`chained: ENG-016` — not `ENG-034` itself (`verified` is terminal, the
+chaining guard never fires on it), but the parent this ticket's own
+shipping unblocked: all four `ENG-016` sub-tickets are now
+`shipped`/`verified`, meeting the `ADR-003`-class exemption named in
+`ENG-016`'s own `## Breakdown`. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-016` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-034`, `ENG-016`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-034`): release-readiness — PR opened, merge request raised — `ready-to-ship → blocked`
+
+`continue` event pass, context `ENG-034`. Reading map for `continue`: steps
+6 and 6b (design already complete, not mid-PRD), plus the not-negotiable set
+(1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*); also
+read `skills/release-runner/SKILL.md` in full, the skill this hop actually
+lands on. Mode check clean (repo-root `.env` → `MODE=active`). Pre-pass
+`eng-gate-check.sh`, scoped (`ENG-034`) and whole-board: both exit 0.
+
+Machine WIP re-checked fresh off every `ENG-016` sibling's own frontmatter —
+still 1/1, held by the family. Worktree re-checked: still only the same
+2-line `package-lock.json` diff outside the reviewed commit range, already
+traced to `npm`'s own install normalization — left alone again. All three
+upstream gates re-verified fresh from the receipt files (not frontmatter):
+code review `pass` (round 1), quality `pass` (round 1, `no suite` — expected,
+`config-site-builder` has no test runner of any kind), security `pass`
+(round 1). `config-site-builder` confirmed **L1** — step 1's window check
+does not apply; step 3's readiness checks still do (read against step 3's
+own per-bullet L2/L3 scoping, an interpretation call recorded in full on the
+ticket's own board-file log). Rollback, observability and cost all clear, no
+blocker; `.github/workflows/` confirmed absent from `origin/main`, so no
+auto-deploy risk from opening the PR.
+
+**Opened `config-site-builder` PR #4**
+(https://github.com/harsimranwalia/config-site-builder/pull/4) and **wrote
+the L1 merge request** (`inbox/2026-09-04-eng034-merge-request.md`),
+carrying all three gates passed, the four non-blocking code-review findings,
+and two named pre-existing conditions. `lib/eng-notify.sh raise` run,
+`notified:` stamped from the trace log. State `ready-to-ship → blocked`,
+`blocked_on: approver`, `blocked_from: ready-to-ship`, owner
+`devops → approver`, `links.pr` set. No release record yet — written once
+merge-detection confirms the PR merged. Full detail:
+`agents/devops/notebook/2026-09-04-release-readiness-log.md` — this entry
+and the ticket's own board-file log entry are kept short per
+`config/conventions.yaml` → `ticket_log.entry.cap_lines: 20` (a `pass`
+readiness hop isn't in `over_cap_allowed_when`).
+
+**1 transition** (`ready-to-ship → blocked`), under the cap of 4. This is
+the `ENG-016` family's last sub-ticket leaving the counted
+`ready`..`ready-to-ship` range — machine WIP is now genuinely free once this
+merges. No approver-facing WIP change to report (`wip.approver_limit`
+uncapped).
+
+Dead-end sweep (scoped to this event): no other ticket touched. Notify
+sweep: current `2026-09-04T17:02:12Z` — this pass's own item raised and
+stamped; the three pre-existing open items (`ENG-027`, `ENG-028`, `ENG-030`)
+all already carry their one-time `nudged:`, nothing to nudge again. **One
+proposal filed** (`proposals.md`): recommends `lib/eng-gate-check.sh`
+mechanically enforce `cap_lines: 20`, since three separate `observations.md`
+entries (2026-09-03 ×2, 2026-09-04 ×1) have already named this same drift
+without it stopping — most pointedly, this ticket's own build hop
+self-corrected the pattern and the very next two hops (review+quality,
+security) reverted anyway before this hop caught it again. Step 6b: not
+run — no receipt path/state name/config key/cross-agent artifact rule
+touched. Journal: n/a — this hop raised a gate item, it didn't answer one.
+
+**Board update:** In-flight row updated (`ready-to-ship → blocked`,
+`devops → approver`, date unchanged — same day). "Waiting on the approver"
+header and list updated (two items → three, `ENG-034` added). The live file
+held three dated entries before this one; rolled the oldest (`ready →
+building`) to `_index-archive.md` first, then appended this entry, keeping
+three per the keep-three rule.
+
+`chained: none` — `blocked`, `blocked_on: approver`. This is the human gate
+the whole pass was driving toward; firing `continue ENG-034` again would
+only queue against a ticket with nothing left for a machine to do, same
+reasoning `ENG-008`'s, `ENG-022`'s and `ENG-033`'s own release-readiness
+entries already recorded at this identical state. Post-pass
+`eng-gate-check.sh`, scoped (`ENG-034`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-034`): security gate, round 1, PASS — `in-qa → in-security → ready-to-ship`
+
+`continue` event pass, context `ENG-034`. Reading map for `continue`: steps
+6 and 6b (design already complete, not mid-PRD), plus the not-negotiable set
+(1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*). Mode
+check clean (repo-root `.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`,
+scoped (`ENG-034`) and whole-board: both exit 0.
+
+Ticket file read directly rather than trusted from the trigger's checkpoint
+— matched verbatim. Machine WIP re-checked fresh off every `ENG-016` sibling's
+own frontmatter (`ENG-016` `building`; `ENG-031`/`ENG-032`/`ENG-033` all
+`verified`) — still 1/1, held by the family, `ENG-034` its only active
+member. Worktree re-checked, not assumed unchanged: still only the same
+2-line `package-lock.json` version-metadata diff outside the reviewed commit
+range, already traced to `npm`'s own install normalization by an earlier
+hop — left alone again.
+
+**Security gate: PASS, round 1.** Read the design's own `## Interfaces` and
+`## Risks` first for trust-boundary context, then threat-modelled the diff:
+it adds no field, endpoint, or capability beyond what `ENG-033`'s
+already-reviewed, already-shipped `catering-request` accepts from any HTTP
+client, and adds no new fetch of its own (grepped: zero), so no new data
+reaches a new audience either. Walked all ten OWASP categories explicitly,
+each marked applicable or `n/a` with a reason. Two worth naming: **A03** —
+the one genuinely new rendered-data source this ticket introduces
+(owner-configured `config.catering.fulfillmentCopy`) renders via plain JSX
+text interpolation with zero `dangerouslySetInnerHTML` in either changed
+file (grepped directly) — React's default escaping holds, no stored/
+reflected XSS; selection identity uses a `Map`, not bracket-assignment off
+an attacker-influenced key, so none of the prototype-pollution shape
+`ENG-032`'s own gate had to check applies here. **A04** — quantity can't go
+negative through the UI by construction; a caller bypassing it is bounded
+by `ENG-033`'s own server validation. Two pre-existing, out-of-this-repo
+conditions named rather than re-filed: no upper bound on `quantity` or
+`selections[].name`'s length (the latter already on record, `ENG-033`
+Finding 2), and native-`required`-only enforcement on `email`/`requirements`
+(explicitly non-security-relevant, named in the design itself). Independently
+confirmed `lucide-react` pre-existing (grepped `package.json` directly) — A06
+clean. Secrets: diff and the branch's single commit scanned, no match. LLM
+checklist n/a in full. Negative-case authz coverage n/a — no auth/tenant/role
+surface in this diff, same conclusion `ENG-032`/`ENG-033` already reached.
+SOC 2 evidence trail checked complete. **Zero findings** — the two named
+conditions were disclosed, not manufactured into fresh findings. Receipt
+written: `agents/security/reviews/ENG-034.md`, `links.security_review` set
+on the ticket in the same edit.
+
+**2 transitions** (`in-qa → in-security → ready-to-ship`), under the cap of
+4. Machine WIP unaffected — `ready-to-ship` is still inside the counted
+`ready..ready-to-ship` range, still 1/1, still the `ENG-016` family. No
+approver-facing WIP change — a security pass that clears isn't approver-
+facing on its own. Owner `eng-manager → devops`.
+
+Dead-end sweep (scoped to this event): no other ticket touched. Notify
+sweep: current `2026-09-04T16:45:39Z` — all three open `inbox/` items
+(`ENG-027`, `ENG-028`, `ENG-030`) already carry their one-time `nudged:`;
+nothing to nudge, nothing raised this pass. No observations or proposals
+filed — both conditions surfaced during the review are already tracked
+(one is `ENG-033` Finding 2's own record; the other is a named, accepted,
+non-security-relevant design choice). Step 6b: not run — this hop wrote a
+security receipt and ticket frontmatter/log only, using conventions the
+skill already defines; no receipt path/state name/config key/cross-agent
+artifact rule was itself touched or relied on. Journal: n/a — no gate
+answered this pass.
+
+**Board update:** In-flight row updated (`in-qa → ready-to-ship`,
+`eng-manager → devops`, date unchanged — same day). The live file held
+three dated entries before this one; rolled the oldest (`watch (launchd)`:
+`ENG-009`/`ENG-010`/`ENG-033` shipped) to `_index-archive.md` first, then
+appended this entry, keeping three per the keep-three rule.
+
+`chained: ENG-034` — `ready-to-ship` is agent-owned (release-readiness next,
+devops); not the approver, not blocked, not terminal, not held by a cap.
+Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-034` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-034`) and whole-board: both exit 0, clean.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-034`): code review + quality gate, round 1, both PASS — `building → in-review → in-qa`
+
+`continue` event pass, context `ENG-034`. Reading map for `continue`: steps
+6 and 6b (design already complete, not mid-PRD), plus the not-negotiable set
+(1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*). Mode
+check clean (repo-root `.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`,
+scoped (`ENG-034`) and whole-board: both exit 0.
+
+Machine WIP re-checked fresh off every ticket's own frontmatter (`ENG-016`
+`building`; `ENG-031`/`ENG-032`/`ENG-033` all `verified`) — still 1/1, held
+by the `ENG-016` family, `ENG-034` its only active member.
+
+**Code review: PASS, round 1.** 0/10 automatic failures. `MenuList.tsx` and
+`isDishHidden` read directly to confirm `CateringMenuSelector`'s menu-read
+shape, selection-identity key, and no-stock-stays-selectable rule all match
+the design's own stated requirement, rather than trusting its paraphrase.
+AC-9 (gate-closed ⇒ byte-identical to today) traced end-to-end against
+`origin/main`'s own pre-diff file. Four non-blocking findings, most notable:
+`handleSubmit`'s `SubmitEvent.submitter` read has no fallback — an
+unsupported/non-compliant browser on a gate-open submit silently drops
+`action_type`/`selections` rather than failing closed with a message.
+Judged non-blocking given materially lower reachability than the
+same-shaped bug this family's own `ENG-033` failed a round over (any HTTP
+client vs. an aged browser) and a fallback that degrades no worse than
+gate-closed. Full detail: `agents/principal-engineer/reviews/ENG-034.md`.
+
+**Quality gate: PASS, round 1.** `config-site-builder` has zero test runner
+of any kind (confirmed fresh) — a materially different gap than
+`aiorders-api`'s own (which has `deno test` built in for free) — so every
+acceptance criterion this ticket owns is manual verification with a
+specific reason and specific evidence, under `definition-of-done.md`'s
+allowance, same shape `ENG-033`'s own AC-10/AC-13 rows already used. The
+design's own Risks section cites this gap as "`ENG-002`'s tracked gap" —
+checked, not assumed: that citation is wrong (`ENG-002` is scoped to
+`restaurant-portal` only). Fresh proposal filed rather than silently
+inheriting it as already tracked. Full detail:
+`agents/qa/test-plans/ENG-034.md`.
+
+**Worktree wasn't clean at pass start — investigated, not assumed.**
+`~/Documents/projects/_eng/config-site-builder` carried an uncommitted
+2-line `package-lock.json` diff, traced to the prior `building` hop's own
+logged `npm install` (npm's own `package.json`-version mirroring, zero
+dependency change) rather than stranded code — left alone, noted on the
+review receipt.
+
+**2 transitions** (`building → in-review → in-qa`), under the cap of 4.
+Machine WIP unaffected. Owner `frontend → eng-manager`, matching this
+family's own precedent for a same-round double-pass (`ENG-031`/`ENG-032`/
+`ENG-033`: owner rests at `eng-manager` once both gates clear in one hop).
+
+Dead-end sweep (scoped to this event): no other ticket touched. Notify
+sweep: current `2026-09-04T16:34:18Z` — all three open `inbox/` items
+already carry their one-time `nudged:`; nothing crossed, nothing raised
+(not approver-facing). One proposal filed (`proposals.md`):
+`config-site-builder`'s own missing test harness. No observations filed
+separately — findings live on the ticket's own log and the review receipt.
+Step 6b: not run — no receipt path/state name/config key/cross-agent
+artifact rule touched. Journal: n/a — no gate answered this hop.
+
+**Board update:** In-flight row updated (`building → in-qa`,
+`frontend → eng-manager`, date unchanged — same day). The live file held
+three dated entries before this one; rolled the oldest (`decision
+(ENG-036's P0 incident)`) to `_index-archive.md` first, then appended this
+entry, keeping three per the keep-three rule.
+
+`chained: ENG-034` — `in-qa` is agent-owned (next hop: security gate); not
+the approver, not blocked, not terminal, not held by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-034` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-034`) and whole-board: see below.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — continue (`ENG-034`): `ready → building` — `ENG-016` family's last sibling now dispatched
+
+`continue` event pass, context `ENG-034`, per the prior `watch (launchd)`
+pass's own `chained: ENG-034` (`ENG-033` shipped, satisfying this ticket's
+sole dependency). Reading map for `continue`: steps 6 and 6b (design
+already complete, not mid-PRD), plus the not-negotiable set (1, 7, 8b, 9,
+10; *Enforced vs instructed*, *The four lanes*, *Guards*). Mode check clean
+(repo-root `.env` → `MODE=active`). Pre-pass `eng-gate-check.sh`, scoped
+(`ENG-034`) and whole-board: both exit 0, clean.
+
+Ticket file and `ENG-033`'s own board file both read directly rather than
+trusted from the trigger's checkpoint — `ENG-033` confirmed `verified`,
+`aiorders-api` PR #13 merged to `main`, all three gate receipts `pass`.
+Machine WIP re-checked fresh: `ENG-016` `building`, `ENG-031`/`ENG-032`/
+`ENG-033` all `verified` — still `1/1`, held by the family as a whole per
+this family's own first-precedent reading, so dispatching this last sibling
+needed no fresh slot.
+
+**Built all three files the design's own `## Components` table names for
+this surface**: `config-site-builder`'s `src/types/restaurant.ts` (extended
+with `CateringFulfillmentCopy` and the two new `CateringPageContent` keys,
+mirrored field-for-field off `restaurant-portal`'s already-shipped copy of
+the same interface), new `src/components/CateringMenuSelector.tsx`
+(category-grouped dish picker, quantity + per-dish note, controlled, no
+price rendered anywhere per the design's own Out-of-scope section), and
+`src/components/CateringForm.tsx` (the gate expression, fulfillment
+label/description copy, conditional email requirement, selector mount, the
+two submit actions). Every gate-open-only change is expressed as
+`orderFormEnabled ? new : original` against the exact original code, so
+AC-9's byte-for-byte gate-closed rendering holds by construction rather
+than by a parallel branch. Full reasoning and every interpretation call —
+selection identity vs. the wire shape, the no-stock/hidden-dish read, which
+submit button fired read via `SubmitEvent.submitter`, and more:
+`agents/eng-manager/notebook/2026-09-04-eng034-build.md`.
+
+**Self-tested.** First-ever `npm install` in this worktree (`node_modules`
+didn't exist). `npm run lint`: the two touched/new files clean;
+`types/restaurant.ts`'s 4 `no-explicit-any` hits on the untouched
+`brand.metadata` block confirmed pre-existing via `git stash` (identical
+count against the pristine file, merely shifted by this diff's own
+insertion). `npm run build`: clean. `npx tsc --noEmit` (beyond this
+project's own defined check surface — only `lint`/`build` are, per
+`config/projects.md` — run for extra rigor since Vite's `build` doesn't
+type-check): clean.
+
+**Worktree was on the parent ticket's own stale branch**
+(`feat/ENG-016-catering-quote-generator`, never diverged from
+`origin/main`) — same slip `ENG-031`/`ENG-032`/`ENG-033` each hit on this
+shared worktree. Branched fresh:
+`feat/ENG-034-catering-menu-selector-public-form` off `origin/main`,
+carrying this hop's working-tree changes over cleanly. Committed
+`config-site-builder@62b3ca0`, pushed. No PR opened yet — devops's own
+release-readiness hop, same precedent every prior building hop on this
+board has set.
+
+**1 transition** (`ready → building`), under the cap of 4. Machine WIP
+unaffected — still 1/1, `ENG-016` family. No approver-facing WIP or
+approval-cap change — no gate touched this hop. `time_spent`/
+`time_remaining` and `branch` set in frontmatter for the first time on this
+ticket.
+
+Dead-end sweep (scoped to this event): no other ticket touched. Notify
+sweep: current `2026-09-04T16:13:26Z` — `ENG-028`'s G1 crossed 24h with no
+`nudged:`/`decision:` (`notified: 2026-09-03T16:10:27`), nudged and stamped
+`nudged: 2026-09-04T09:13:37` (copied verbatim from the trace log, same
+standing local-time-labeled-as-UTC convention this board already uses);
+`ENG-027`/`ENG-030` already carry their one-time nudge. One observation
+filed (`observations.md`): `ENG-031`/`ENG-032`/`ENG-033`'s own build-hop
+log entries were each written long-form, directly in the ticket log, rather
+than routed through `config/conventions.yaml` →
+`ticket_log.entry.reasoning_goes_to` the way `cap_lines: 20` is meant to
+enable — this hop followed the written convention instead. Step 6b: not
+run — product code internal to one repo, no receipt path/state name/config
+key/cross-agent artifact rule involved. Journal: n/a — no gate answered
+this hop.
+
+**Board update:** In-flight row updated (`ready → building`,
+`eng-manager → frontend`, date bumped). The file held three live dated
+entries before this one; rolled the oldest (`decision (ENG-035's P0
+incident)`) to `_index-archive.md` first, then appended this entry, keeping
+three per the keep-three rule.
+
+`chained: ENG-034` — `building` is agent-owned (next hop: code review,
+principal-engineer); not the approver, not blocked, not terminal, not held
+by a cap. Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-034` before this pass exits. Post-pass `eng-gate-check.sh`,
+scoped (`ENG-034`) and whole-board: see below.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+## 2026-09-04 — watch (launchd): three silent GitHub merges found and shipped (`ENG-009`, `ENG-010`, `ENG-033`) — `continue ENG-034` fired
+
+`watch` event pass, context `launchd`. Per the reading map: steps 2, 3, 4
+(sweep all three inboxes) and 5 (merge detection — run because open
+merge-request items exist for every currently-`blocked` ticket, the same
+reading this board's own prior `watch` passes already established), plus
+the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*, *The
+four lanes*, *Guards*). Mode check clean (repo-root `.env` →
+`MODE=active`). Pre-pass `lib/eng-gate-check.sh`, whole-board and scoped
+(`ENG-009`, `ENG-010`, `ENG-033`): all exit 0, clean.
+
+**Why this fired.** The immediately preceding `decision (ENG-036)` pass
+(entry above) closed the last of three P0-incident hand-edits
+(`ENG-029`/`ENG-035`/`ENG-036`); each edit landed inside the watched
+`inbox/`, and one `watch (launchd)` fire had queued behind them as a
+self-echo (`traces/.pending` — noted in advance on the `ENG-035` entry
+above). This is that fire draining.
+
+**Step 2 (PM intake):** `agents/product-manager/inbox/` holds nothing
+beyond `_handled/`/`.gitkeep` — no new business intake.
+
+**Step 3 (EM technical intake):** `agents/eng-manager/inbox/` holds
+nothing beyond `_processed/`/`.gitkeep` — no new department-originated
+finding.
+
+**Step 4 (gate returns):** all six open `inbox/` items grepped for
+`decision:` fresh — `ENG-009`/`ENG-010`/`ENG-033` merge requests,
+`ENG-027`'s rescope G1, `ENG-028`'s G1, `ENG-030`'s P0 incident — every
+`decision:` field still blank on every one. Nothing answered in the
+tracked channel this pass; the self-echo carried no new signal of its own.
+
+**Step 5 (merge detection) — this is where the pass's real work was.** For
+each of the three currently-`blocked`, merge-request-carrying tickets:
+`git fetch origin` fresh on both worktrees
+(`~/Documents/projects/_eng/{aiorders-api,aiorders-admin-hub}`), then
+`git merge-base --is-ancestor` on each ticket's own **recorded** commit
+(frontmatter `branch:`, not a live branch tip — this board's standing fix
+for the `ENG-008` branch-tip-contamination failure mode) against fresh
+`origin/main`:
+
+| Ticket | Recorded commit(s) | Result |
+|---|---|---|
+| ENG-009 | `aiorders-api@d37e0c9`, `aiorders-admin-hub@92bcacd` | **MERGED**, both repos |
+| ENG-010 | `aiorders-api@486eec0`, `aiorders-admin-hub@8b90f0e` | **MERGED**, both repos |
+| ENG-033 | `aiorders-api@697df79` | **MERGED** |
+
+All three came back positive — a first for this board's `watch`-pass
+history, whose prior two occurrences (`_index-archive.md`) both found no
+change from the `scheduled` sweep immediately before them. Re-fetched a
+second time on discovering this to rule out reading an in-flight write;
+identical result both times.
+
+Cross-checked every hit with `gh pr view`/`gh pr list` rather than taking
+the ancestry bit alone, given the severity of getting a `shipped` write
+wrong: `ENG-033`'s own PR #13 merged directly to `main`
+(`2026-09-04T15:25:13Z`, no stacking). `ENG-009`'s and `ENG-010`'s
+*original* PRs (`aiorders-api` #7/#8, `aiorders-admin-hub` #6/#7) were
+still merged only into their stacked sibling branches, exactly as this
+board's own prior finding recorded — the ancestry hit came from a **new**
+PR on each repo, `merge/ENG-009-ENG-010-to-main` (`aiorders-api` #14,
+`aiorders-admin-hub` #9), base `main`, head the stacked branch's own
+current tip, merged directly on GitHub at `15:39:16Z`/`15:40:31Z` — one
+to fifteen minutes before this pass ran. This is the "fresh PR from the
+current stacked-branch tip" option `ENG-009`'s own board log had named as
+one of two open paths to `main`; the approver took it, by hand, without
+being asked.
+
+**Not advanced past a state that owes gates** (step 5's own "a merge is
+not a gate" clause) — all three tickets' full receipt sets re-read
+directly before writing `shipped`: `ENG-009` (review/QA/security all
+`pass`), `ENG-010` (same, all `pass`), `ENG-033` (review round 4/QA round
+2/security, all `pass`). No migration owed by any of the three. All
+recorded commits confirmed present on `origin/main` by exact SHA. Release
+records written: a combined one for `ENG-009`+`ENG-010` (same merge
+commits ship both,
+`agents/devops/releases/2026-09-04-ENG-009-ENG-010-aiorders-api-and-admin-hub.md`)
+and one for `ENG-033`
+(`agents/devops/releases/2026-09-04-aiorders-api-ENG-033.md`), `links.pr`
+and `links.release` updated on all three tickets in the same edits. All
+three: `state: blocked → verified`, `owner: approver → eng-manager`,
+`blocked_on`/`blocked_from` cleared. All three merge-request items closed
+with a final resolution note and moved to `inbox/_handled/`. Two
+`decision-journal.md` rows added (one combined for `ENG-009`/`ENG-010`,
+one for `ENG-033`) as new rows documenting the follow-up resolution,
+rather than edits to the existing rows that correctly recorded the
+original, incomplete finding.
+
+**6 transitions total** (2 each × 3 tickets: `blocked → shipped`,
+`shipped → verified`), well under the per-ticket cap of 4. **Consequence:**
+no machine-WIP change from `ENG-009`/`ENG-010` (never inside the counted
+`ready..ready-to-ship` range, no family membership, `blocks: []` on both).
+`ENG-033`'s own exit doesn't free the machine-WIP slot either — it was
+already outside that range while `blocked` — but its shipping **does**
+satisfy `ENG-034`'s sole dependency (`depends_on: [ENG-033]`), the last
+`ENG-016` sub-ticket, sitting `ready`/`owner: eng-manager` with nothing
+else holding it. Per this family's own first-precedent reading
+(`agents/eng-manager/notebook/2026-09-03-eng016-work-breakdown.md`), the
+WIP slot is held by the family as a whole, so dispatching `ENG-034` needs
+no fresh slot. **Fired `continue ENG-034`** rather than building it inline
+— new implementation work stays out of a `watch` event's contract — same
+handoff shape `ENG-031`'s and `ENG-032`'s own shipping passes already used
+for their own successors.
+
+**Step 7 (notify sweep):** current `2026-09-04T15:56:07Z`. Three open
+`inbox/` items remain (`ENG-027`, `ENG-028`, `ENG-030`'s P0) — `ENG-027`
+and `ENG-030` already carry a `nudged:` timestamp; `ENG-028` (~23h46m
+since `notified:`) is still under the 24h threshold, by about 14 minutes.
+Nothing crossed; no nudge sent.
+
+**Step 8b (observations/exceptions):** one observation filed
+(`observations.md`) — this resolves the open "how does a stacked ticket
+reach `main`" question with a concrete data point (a fresh PR from the
+stacked tip, by hand), and names this as the first `watch` pass to catch a
+production merge ahead of the next `scheduled` sweep. No `exception-request:`
+in any ticket log.
+
+**Step 8c (journal):** both rows described under step 5 above.
+
+**Board update:** this entry appended; rolled the oldest of the three live
+dated entries (`decision (ENG-029's P0 incident)`) to `_index-archive.md`
+per the keep-three rule, verified the seam clean on both files before
+appending here. In-flight table: `ENG-009`, `ENG-010` and `ENG-033` rows
+removed (terminal). Header narrative, the "Waiting on the approver"
+section, and the closing terminal-tickets paragraphs all updated in place
+to mark the three resolved rather than left to contradict the table — see
+each ticket's own paragraph above.
+
+Post-pass `lib/eng-gate-check.sh`, whole-board and scoped (`ENG-009`,
+`ENG-010`, `ENG-033`): all exit 0, clean.
+
+`chained: ENG-034` — not any of the three tickets this pass shipped
+(`verified` is terminal, the chaining guard never fires on it), but the
+sibling their shipping unblocked.
+
+business-os itself left uncommitted — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+This pass's own diff is large (three tickets shipped, two release records,
+a board-index rewrite across four sections) — worth the approver's own
+attention regardless of which pass eventually commits it.
+
+## 2026-09-04 — decision (`ENG-036`'s P0 incident): premise checked against the design, no ticket filed — still `designed`, still held by the `ENG-016` family's machine-WIP cap
+
+`decision` event pass, context `2026-09-03-eng036-p0-incident.md`. Reading
+map for `decision`: steps 4 and 8c, plus the not-negotiable set (1, 7, 8b, 9,
+10; *Enforced vs instructed*, *The four lanes*, *Guards*) — step 5 doesn't
+apply (not an L1 merge request), step 8's `blocked_from` paragraphs don't
+apply (ticket isn't leaving `blocked`), and neither does *The chain* (this
+incident is about a ticket, not the loop/queue itself). Mode check clean
+(repo-root `.env` → `MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, whole-board and scoped
+(`ENG-036`): both exit 0, clean.
+
+**Unlike its two siblings this pass processed already.** `ENG-029`'s and
+`ENG-035`'s own P0 incidents were both bare `approved`, nothing to act on.
+`ENG-036`'s was answered `changed` at `2026-09-04T14:58:46.245104+00:00`,
+verbatim: "When you add auth to this edge function any code using it will
+break, that needs a ticket to update all the code that used it." Step 6's
+"does the answer advance the ticket into a machine-owned state" question
+doesn't fit cleanly here either — the right response was to check the claim
+against the ticket's own design, not transition anything.
+
+**Checked, not assumed either way.** `ENG-036`'s own design and `ADR-017`
+already enumerate every caller of `outgoing-communications` across all five
+of this instance's registered repos, done at design time because the PRD
+named exactly this as a risk. Three call sites set `systemTriggered: true`
+— the only ones this fix's new `else` branch gates — and all three already
+send the exact credential the gate requires, confirmed by reading each call
+site's own source. The other three known callers don't set that flag and
+stay on the function's existing, untouched user-session path, unaffected
+either way. No caller this codebase's own source shows needs a code change.
+
+**Action: no ticket filed** — there is no callers-to-update work to put in
+one. Named plainly rather than quietly declined, same footing as `ENG-027`'s
+own vacuous "if not cancelled or deleted" condition earlier on this board:
+a mismatch between a reasonable general expectation and this specific
+diff's already-verified effect, stated openly rather than silently
+overridden. The one real residual risk here (deployed `SUPABASE_SERVICE_ROLE_KEY`
+drift between the Cloudflare Worker and Supabase's own secret store) is
+already covered by the design's own mandatory post-deploy log check, not
+left uncovered by this decision — and if a caller this enumeration missed
+turns up later, that's a new finding at that time, not something foreclosed
+by closing this item now.
+
+Processed note appended to the incident item and moved to
+`inbox/_handled/2026-09-03-eng036-p0-incident.md`, per `eng_build_loop.md`
+step 4's Incident handling. **Journal (step 8c):** row added to
+`decision-journal.md`, approver's words verbatim plus this interpretation
+labelled as interpretation. **Step 8b:** one observation filed
+(`observations.md`) — an incident notice is necessarily written before
+design happens, so it can't yet carry the design's own caller-safety
+evidence; a "won't this break things" reply to one is expected, not a sign
+of anything rushed. Full reasoning: `ENG-036`'s own board-file log.
+
+**Machine WIP re-checked fresh, not assumed unchanged:** `ENG-016`
+`building`, `ENG-031`/`ENG-032` `verified`, `ENG-033` `blocked` (`owner:
+approver`), `ENG-034` `ready` — still `1/1`, the family still holds the
+slot. `ENG-036` stays `designed`, `owner: architect`, no design change.
+
+**Notify sweep (step 7):** swept `inbox/` fresh (`date -u`:
+`2026-09-04T15:25:51Z`). `ENG-009`/`ENG-010`/`ENG-027` already carry a
+`nudged:` timestamp; `ENG-028`'s G1 (~23h15m since `notified:`) and
+`ENG-033`'s merge request (~13h43m) both still sit under the 24h threshold.
+**`ENG-030`'s P0 incident crossed 24h this pass** (notified
+`2026-09-03T15:24:21`, ~24h01m elapsed, no `nudged:`, no `decision:`) —
+nudged (`lib/eng-notify.sh nudge`), stamped `nudged: 2026-09-04T15:26:20`.
+The nudge call logged `sent: active`, not `sent: nudge`
+(`traces/eng-notify-2026-09-04.log`) — the same standing `MODE`-clobber bug
+`proposals.md`'s 2026-08-25 row already carries and this instance's own
+`scheduled` pass already reconfirmed once today; a third same-day
+recurrence with no new signal, not re-amended into that row again.
+
+business-os itself left uncommitted, same standing default the last several
+passes have each restated; not re-decided here.
+
+**Board update (step 10):** In-flight row's `ENG-036` `Updated` date bumped
+(2026-09-03 → 2026-09-04), state/owner unaffected. The live file held three
+dated pass entries before this one; rolled the oldest (`scheduled: no gate
+answered, two 24h nudges sent...`) to `_index-archive.md` first, then
+appended this entry, keeping three per the keep-three rule.
+
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, whole-board and
+scoped `ENG-036`: both exit 0, clean.
+
+`chained: none` — `ENG-036` stays held by the machine-WIP cap (`1/1`, the
+`ENG-016` family), re-confirmed fresh, not assumed. Not blocked, not
+terminal, not waiting on the approver — only the cap.
+
 ## 2026-09-04 — decision (`ENG-035`'s P0 incident): acknowledged, ticket unchanged — still `designed`, still held by the `ENG-016` family's machine-WIP cap
 
 `decision` event pass, context `2026-09-03-eng035-p0-incident.md`. Reading
