@@ -29,9 +29,12 @@ Both are chmod 0600 and gitignored.
 
 ROLES
 -----
-  admin    no restrictions. Sees every instance, the Partners page, and Logs.
-  partner  sees only the instances assigned to them, and must supply their own
-           Claude OAuth token before any agent work runs on their behalf.
+  admin    no restrictions. Sees every instance, every department, the
+           Partners page, and Logs.
+  partner  sees only the departments (tabs) and — for Engineering specifically,
+           see visible_instances() — the business instances assigned to them,
+           and must supply their own Claude OAuth token before any agent work
+           runs on their behalf.
 """
 
 import json
@@ -49,6 +52,15 @@ USERS_FILE = HERE / "users.json"
 CONFIG_FILE = HERE / "partner-config.json"
 
 ROLES = ("admin", "partner")
+
+# The tabs a partner can be scoped to. Cost and Logs aside — Logs stays
+# admin-only outright — every one of these has its own tab and its own
+# instance-scoped roster (business_instances / eng_instances / mkt_instances),
+# so "departments" is a second, independent axis from "instances": which tabs
+# exist for this partner at all, versus which businesses those tabs show.
+DEPARTMENTS = ("marketing", "sales", "eng", "cost")
+DEPARTMENT_LABELS = {"marketing": "Marketing", "sales": "Sales",
+                     "eng": "Engineering", "cost": "Cost"}
 
 # Which email becomes the admin when the store is seeded from .env. Overridable
 # so a fresh install elsewhere is not stuck with this repo's owner. Read at
@@ -130,6 +142,8 @@ def _seed_from_env():
             "pin": pin,
             "role": "admin" if is_admin else "partner",
             "instances": [] if is_admin else list(existing),
+            # Same reasoning as instances: nobody loses a tab on upgrade.
+            "departments": [] if is_admin else list(DEPARTMENTS),
             "created_at": _now(),
             "last_login": "",
         })
@@ -201,7 +215,19 @@ def _clean_instances(value):
     return out
 
 
-def _validate(email, pin, role, instances, *, require_pin):
+def _clean_departments(value):
+    if not isinstance(value, list):
+        return list(DEPARTMENTS)
+    seen, out = set(), []
+    for v in value:
+        v = str(v).strip().lower()
+        if v and v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
+
+
+def _validate(email, pin, role, instances, departments, *, require_pin):
     if not email or not EMAIL_RE.match(email):
         return "a valid email is required"
     if require_pin or pin:
@@ -209,8 +235,18 @@ def _validate(email, pin, role, instances, *, require_pin):
             return "PIN must be 4–12 digits"
     if role not in ROLES:
         return f"role must be one of {', '.join(ROLES)}"
-    if role == "partner" and not instances:
-        return "a partner needs at least one instance assigned"
+    if role == "partner" and not departments:
+        return "a partner needs at least one department assigned"
+    unknown_dept = [d for d in departments if d not in DEPARTMENTS]
+    if unknown_dept:
+        return f"unknown department(s): {', '.join(unknown_dept)}"
+    # Instances scope which businesses a department's tab shows — real
+    # engineering work is organised per business instance, so that's the one
+    # department where a partner with no instance assigned would see nothing
+    # useful. The other departments show every business the partner has no
+    # narrower reason to be kept out of; see visible_instances().
+    if role == "partner" and "eng" in departments and not instances:
+        return "a partner doing engineering needs at least one instance assigned"
     known = {i.name for i in (ROOT / "instances").glob("*") if i.is_dir()}
     unknown = [i for i in instances if i not in known]
     if unknown:
@@ -223,9 +259,10 @@ def create_user(fields):
     pin = (fields.get("pin") or "").strip()
     role = (fields.get("role") or "partner").strip().lower()
     instances = _clean_instances(fields.get("instances"))
+    departments = _clean_departments(fields.get("departments"))
     if role == "admin":
-        instances = []
-    err = _validate(email, pin, role, instances, require_pin=True)
+        instances, departments = [], []
+    err = _validate(email, pin, role, instances, departments, require_pin=True)
     if err:
         return None, err
     with _LOCK:
@@ -234,7 +271,7 @@ def create_user(fields):
             return None, f"{email} already exists"
         user = {"email": email, "name": (fields.get("name") or "").strip(),
                 "phone": (fields.get("phone") or "").strip(), "pin": pin,
-                "role": role, "instances": instances,
+                "role": role, "instances": instances, "departments": departments,
                 "created_at": _now(), "last_login": ""}
         store["users"].append(user)
         _save(store)
@@ -255,11 +292,14 @@ def update_user(email, fields):
         role = (fields.get("role") or user["role"]).strip().lower()
         instances = (_clean_instances(fields["instances"])
                      if "instances" in fields else user.get("instances", []))
+        departments = (_clean_departments(fields["departments"])
+                       if "departments" in fields
+                       else user.get("departments", list(DEPARTMENTS)))
         if role == "admin":
-            instances = []
+            instances, departments = [], []
         pin = (fields.get("pin") or "").strip()
 
-        err = _validate(email, pin, role, instances, require_pin=False)
+        err = _validate(email, pin, role, instances, departments, require_pin=False)
         if err:
             return None, err
 
@@ -277,6 +317,7 @@ def update_user(email, fields):
             user["pin"] = pin
         user["role"] = role
         user["instances"] = instances
+        user["departments"] = departments
         _save(store)
     return public_user(user), None
 
@@ -306,6 +347,10 @@ def public_user(u):
     return {"email": u["email"], "name": u.get("name", ""),
             "phone": u.get("phone", ""), "role": u.get("role", "partner"),
             "instances": list(u.get("instances", [])),
+            # Missing entirely (every user created before this field existed)
+            # means "all of them" — the same upgrade rule _seed_from_env used.
+            "departments": list(u.get("departments") if "departments" in u
+                               else DEPARTMENTS),
             "created_at": u.get("created_at", ""),
             "last_login": u.get("last_login", ""),
             "pin_set": bool(u.get("pin")),
@@ -327,11 +372,36 @@ def is_admin(user=None):
     return bool(u) and u.get("role") == "admin"
 
 
-def visible_instances(user=None):
-    """The instance ids this user may see. None means 'no restriction' — a
-    distinct value from the empty list, which means 'assigned nothing'."""
+def visible_departments(user=None):
+    """The department ids (tab names) this user may see. None means 'no
+    restriction', same convention as visible_instances(). A partner with no
+    `departments` field at all (every account saved before this existed)
+    reads as every department, not none — see public_user()."""
     u = user if user is not None else current()
     if u is None or is_admin(u):
+        return None
+    return set(u.get("departments") if "departments" in u else DEPARTMENTS)
+
+
+def can_see_department(department_id, user=None):
+    allowed = visible_departments(user)
+    return allowed is None or department_id in allowed
+
+
+def visible_instances(user=None):
+    """The instance ids this user may see. None means 'no restriction' — a
+    distinct value from the empty list, which means 'assigned nothing'.
+
+    Instances scope a business-specific board, and the only department that
+    is actually organised per business instance is engineering (a ticket
+    board per codebase). A partner not doing engineering has no narrower
+    business scope to enforce, so their `instances` assignment — which the
+    Partners page hides for them entirely — is not consulted at all."""
+    u = user if user is not None else current()
+    if u is None or is_admin(u):
+        return None
+    depts = visible_departments(u)
+    if depts is not None and "eng" not in depts:
         return None
     return set(u.get("instances") or [])
 
@@ -409,7 +479,21 @@ def config_email_for_instance(instance_id, acting_email=None, requested_owner=No
 # come from. Keyed by email, so it follows the account rather than the instance
 # — the token is the person's, not the business's.
 
-SECRET_FIELDS = ("claude_oauth_token", "sms_password", "pg_dsn", "crm_api_key")
+SECRET_FIELDS = ("claude_oauth_token", "sms_password", "pg_dsn", "crm_api_key",
+                 "ghl_api_key")
+
+# Where a partner's customers can come from. sms.py holds the readers; this is
+# the list write_config() will accept and the Config page offers.
+CUSTOMER_SOURCES = ("aiorders", "crm", "ghl")
+
+# Every field the customer-database connection test actually reads, split by
+# whether it is a secret (blank means "unchanged", so only a non-blank value or
+# an explicit clear counts as an edit). `customer_source` is in here on
+# purpose: switching source invalidates a pass as surely as editing a
+# credential does.
+SOURCE_PLAIN_FIELDS = ("customer_source", "brand_id", "crm_url",
+                       "ghl_location_id")
+SOURCE_SECRET_FIELDS = ("pg_dsn", "crm_api_key", "ghl_api_key")
 
 DEFAULT_CONFIG = {
     "claude_oauth_token": "",
@@ -418,12 +502,16 @@ DEFAULT_CONFIG = {
     "sms_username": "",
     "sms_password": "",
     "sms_tested_ok": False,    # set by a successful /api/config/test-sms; cleared on edit
-    "customer_source": "",     # "aiorders" | "crm"
+    "customer_source": "",     # "aiorders" | "crm" | "ghl"
     "brand_id": "",            # aiorders only
     "pg_dsn": "",              # aiorders only
-    "pg_dsn_tested_ok": False,  # set by a successful /api/config/test-db; cleared on edit
     "crm_url": "",             # crm only — Twenty workspace base URL
     "crm_api_key": "",         # crm only
+    "ghl_location_id": "",     # ghl only — the sub-account the contacts live in
+    "ghl_api_key": "",         # ghl only — private integration token
+    # One flag covering whichever source is picked, set by a successful
+    # /api/config/test-source and cleared by any edit to the fields above.
+    "source_tested_ok": False,
     "updated_at": "",
 }
 
@@ -473,8 +561,8 @@ def write_config(email, fields):
         return None, "no user"
 
     source = (fields.get("customer_source") or "").strip().lower()
-    if source and source not in ("aiorders", "crm"):
-        return None, "customer source must be 'aiorders' or 'crm'"
+    if source and source not in CUSTOMER_SOURCES:
+        return None, "customer source must be one of " + ", ".join(CUSTOMER_SOURCES)
 
     url = (fields.get("sms_url") or "").strip()
     if url and not url.startswith(("http://", "https://")):
@@ -500,10 +588,17 @@ def write_config(email, fields):
                 sms_changed = True
         if (fields.get("sms_password") or "").strip() or "sms_password" in clear:
             sms_changed = True
-        pg_changed = bool((fields.get("pg_dsn") or "").strip()) or "pg_dsn" in clear
+        source_changed = False
+        for key in SOURCE_PLAIN_FIELDS:
+            if key in fields and (fields.get(key) or "").strip() != cfg[key]:
+                source_changed = True
+        for key in SOURCE_SECRET_FIELDS:
+            if (fields.get(key) or "").strip() or key in clear:
+                source_changed = True
 
         for key in ("business_blurb", "sms_url", "sms_username",
-                   "customer_source", "brand_id", "crm_url"):
+                   "customer_source", "brand_id", "crm_url",
+                   "ghl_location_id"):
             if key in fields:
                 cfg[key] = (fields.get(key) or "").strip()
         for key in SECRET_FIELDS:
@@ -518,11 +613,13 @@ def write_config(email, fields):
             return None, "the AIOrders source needs a brand id"
         if cfg["customer_source"] == "crm" and not cfg["crm_url"]:
             return None, "the CRM source needs the Twenty workspace URL"
+        if cfg["customer_source"] == "ghl" and not cfg["ghl_location_id"]:
+            return None, "the HighLevel source needs a location id"
 
         if sms_changed:
             cfg["sms_tested_ok"] = False
-        if pg_changed:
-            cfg["pg_dsn_tested_ok"] = False
+        if source_changed:
+            cfg["source_tested_ok"] = False
 
         cfg["updated_at"] = _now()
         data["configs"][email] = cfg
@@ -533,10 +630,10 @@ def write_config(email, fields):
 def set_tested_ok(email, which):
     """Records a successful connection test so the Config page can show
     'working' without re-testing on every visit. `which` is 'sms' or
-    'pg_dsn'. write_config() clears the matching flag the moment the tested
+    'source'. write_config() clears the matching flag the moment the tested
     fields actually change, so this never goes stale silently."""
     email = (email or "").strip().lower()
-    key = "sms_tested_ok" if which == "sms" else "pg_dsn_tested_ok"
+    key = "sms_tested_ok" if which == "sms" else "source_tested_ok"
     with _LOCK:
         data = _load_configs()
         cfg = dict(DEFAULT_CONFIG)
@@ -576,6 +673,11 @@ def config_missing(email):
             missing.append("Twenty URL")
         if not cfg["crm_api_key"]:
             missing.append("Twenty API key")
+    elif cfg["customer_source"] == "ghl":
+        if not cfg["ghl_location_id"]:
+            missing.append("HighLevel location id")
+        if not cfg["ghl_api_key"]:
+            missing.append("HighLevel API token")
     return missing
 
 

@@ -2281,10 +2281,11 @@ def read_log(name):
 # ── SMS — the fifth marketing channel ────────────────────────────────────────
 # A view under Marketing rather than a tab, for the same reason Reddit is one:
 # it is one channel, not the department. Two halves under it — CAMPAIGNS (bulk,
-# human-gated) and SMART REACTIVATION (autonomous, no copy and no segment to
-# choose). Everything that decides what either can do lives in the acting
-# user's own config: their SMS gateway, their Claude OAuth token, and which
-# customer database their segments read from. See control-center/sms.py.
+# human-gated) and SMART REACTIVATION (no copy and no segment to choose, and
+# autonomous or human-gated as the operator picks per run). Everything that
+# decides what either can do lives in the acting user's own config: their SMS
+# gateway, their Claude OAuth token, and which customer database their segments
+# read from. See control-center/sms.py.
 
 
 def list_sms(instance_id=None, email=None, config_owner=None):
@@ -2330,6 +2331,7 @@ def list_sms(instance_id=None, email=None, config_owner=None):
             "cap": sms.REACTIVATION_MAX_RECIPIENTS,
             "cooldown_days": sms.REACTIVATION_COOLDOWN_DAYS,
             "lapsed_days": sms.REACTIVATION_LAPSED_DAYS,
+            "modes": list(sms.REACTIVATION_MODES),
         },
     }
 
@@ -2346,7 +2348,7 @@ def sms_action(path, body, email):
     # created_by/approved_by — stays the acting user, `email`, unchanged.
     cfg_email = accounts.config_email_for_instance(inst_id, email, body.get("config_owner"))
     cfg = accounts.read_config(cfg_email)
-    campaign_id = body.get("id")
+    record_id = body.get("id")   # a campaign or a reactivation run — one field
     whose = "your" if cfg_email == (email or "").strip().lower() else f"{cfg_email}'s"
 
     if path == "/api/sms/test":
@@ -2356,23 +2358,34 @@ def sms_action(path, body, email):
     if path == "/api/sms/campaign":
         return sms.create_campaign(inst_id, cfg, body, email)
     if path == "/api/sms/campaign/update":
-        return sms.update_campaign(inst_id, campaign_id, body)
+        return sms.update_campaign(inst_id, record_id, body)
     if path == "/api/sms/campaign/approve":
-        return sms.approve_campaign(inst_id, campaign_id, email)
+        return sms.approve_campaign(inst_id, record_id, email)
     if path == "/api/sms/campaign/discard":
-        return sms.discard_campaign(inst_id, campaign_id)
+        return sms.discard_campaign(inst_id, record_id)
     if path == "/api/sms/campaign/send":
         # The gateway is the only part of the config a campaign needs. A
         # partner with no Claude token can still run campaigns — refusing
         # them for a credential this path never touches would be theatre.
         if not cfg.get("sms_url"):
             return None, f"add {whose} SMS server in Config first"
-        return sms.send_campaign(inst_id, campaign_id, cfg)
+        return sms.send_campaign(inst_id, record_id, cfg)
     if path == "/api/sms/reactivate":
         missing = accounts.config_missing(cfg_email)
         if missing:
             return None, f"finish {whose} configuration first — missing: " + ", ".join(missing)
-        return sms.run_reactivation(inst_id, cfg, email, body.get("offer"))
+        return sms.run_reactivation(inst_id, cfg, email, body.get("offer"), body.get("mode"))
+    if path == "/api/sms/reactivation/send":
+        # Same reasoning as a campaign send: the Claude pass already ran and
+        # wrote these words, so the only credential still in play is the
+        # gateway. `messages` names which of the run's pending messages to
+        # send; absent, it means all of them.
+        if not cfg.get("sms_url"):
+            return None, f"add {whose} SMS server in Config first"
+        return sms.send_reactivation(inst_id, record_id, cfg, email, body.get("messages"))
+    if path == "/api/sms/reactivation/discard":
+        # Needs no credentials at all — it only stops messages from being sent.
+        return sms.discard_reactivation(inst_id, record_id, body.get("messages"))
     return None, "unknown SMS action"
 
 
@@ -2449,6 +2462,16 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
         self.send_json(403, {"error": "admins only"})
         return False
 
+    def require_department(self, department_id):
+        """Guard for every Marketing/Sales/Engineering/Cost route. Hiding the
+        tab client-side is a courtesy — see loadMe() in index.html — this is
+        the actual gate, the same pattern require_admin already sets for the
+        Partners page and Logs."""
+        if accounts.can_see_department(department_id):
+            return True
+        self.send_json(403, {"error": "that department is not assigned to you"})
+        return False
+
     def require_instance(self, instance_id):
         """Guard for every write that names an instance. The read path is
         already scoped by _instance_dirs, but a POST resolves its instance by
@@ -2519,6 +2542,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             "phone": user.get("phone", ""),
             "role": user.get("role", "partner"),
             "instances": list(user.get("instances", [])),
+            "departments": list(user.get("departments") if "departments" in user
+                                else accounts.DEPARTMENTS),
             "config_ready": accounts.config_ready(user["email"]),
             "config_missing": accounts.config_missing(user["email"]),
         })
@@ -2556,26 +2581,38 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/engineering":
+            if not self.require_department("eng"):
+                return
             self.send_json(200, list_engineering(qs.get("instance", [None])[0]))
             return
 
         if parsed.path == "/api/sales":
+            if not self.require_department("sales"):
+                return
             self.send_json(200, list_sales(qs.get("instance", [None])[0]))
             return
 
         if parsed.path == "/api/marketing":
+            if not self.require_department("marketing"):
+                return
             self.send_json(200, list_marketing(qs.get("instance", [None])[0]))
             return
 
         if parsed.path == "/api/content":
+            if not self.require_department("marketing"):
+                return
             self.send_json(200, list_content(qs.get("instance", [None])[0]))
             return
 
         if parsed.path == "/api/settings":
+            if not self.require_department("marketing"):
+                return
             self.send_json(200, list_settings(qs.get("instance", [None])[0]))
             return
 
         if parsed.path == "/api/reddit":
+            if not self.require_department("marketing"):
+                return
             try:
                 self.send_json(200, list_reddit(qs.get("status", [None])[0]))
             except Exception as e:
@@ -2583,6 +2620,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/costs":
+            if not self.require_department("cost"):
+                return
             try:
                 days = int(qs.get("days", ["30"])[0])
             except (TypeError, ValueError):
@@ -2596,6 +2635,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             self.send_json(200, {
                 "users": [accounts.public_user(u) for u in accounts.all_users()],
                 "instances": business_instances(),
+                "departments": [{"id": d, "label": accounts.DEPARTMENT_LABELS[d]}
+                                for d in accounts.DEPARTMENTS],
                 "roles": list(accounts.ROLES),
             })
             return
@@ -2616,6 +2657,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/sms":
+            if not self.require_department("marketing"):
+                return
             inst_id = qs.get("instance", [None])[0]
             if not self.require_instance(inst_id):
                 return
@@ -2730,26 +2773,33 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             self.send_json(200, result)
             return
 
-        if parsed.path == "/api/config/test-db":
+        if parsed.path == "/api/config/test-source":
+            # One endpoint for every customer database source: a real sample
+            # read against the saved config, so "connected" on the Config page
+            # means the credentials reached actual customers.
             who = self._config_target(self._body)
             if who is None:
                 return
             cfg = accounts.read_config(who)
-            result, err = sms.test_db_connection(cfg)
+            result, err = sms.test_customer_source(cfg)
             if err:
                 self.send_json(400, {"error": err})
                 return
             if result.get("ok"):
-                accounts.set_tested_ok(who, "pg_dsn")
+                accounts.set_tested_ok(who, "source")
             self.send_json(200, result)
             return
 
         if parsed.path.startswith("/api/sms/"):
+            if not self.require_department("marketing"):
+                return
             result, err = sms_action(parsed.path, self._body, self.current_email())
             self.send_json(400 if err else 200, {"error": err} if err else result)
             return
 
         if parsed.path == "/api/eng/intake":
+            if not self.require_department("eng"):
+                return
             body = self._body
             inst_id = body.get("instance")
             path, err = eng_intake(body.get("title"), body.get("description"), inst_id)
@@ -2761,6 +2811,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/eng/priority":
+            if not self.require_department("eng"):
+                return
             body = self._body
             inst_id = body.get("instance")
             result, err = eng_priority(body.get("ticket"), body.get("priority"), inst_id)
@@ -2773,6 +2825,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/eng/merge-check":
+            if not self.require_department("eng"):
+                return
             body = self._body
             result, err = eng_merge_check(body.get("ticket"), force=bool(body.get("force")),
                                           instance_id=body.get("instance"))
@@ -2783,6 +2837,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/eng/decide":
+            if not self.require_department("eng"):
+                return
             body = self._body
             inst_id = body.get("instance")
             result, err = eng_decide(body.get("file"), body.get("decision"),
@@ -2795,6 +2851,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/sales/lead":
+            if not self.require_department("sales"):
+                return
             body = self._body
             result, err = sales_create_lead(body.get("instance"), body)
             if err:
@@ -2804,6 +2862,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/sales/lead/update":
+            if not self.require_department("sales"):
+                return
             body = self._body
             result, err = sales_update_lead(body.get("instance"), body.get("slug"),
                                             body.get("fields") or {}, body.get("note"))
@@ -2814,6 +2874,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/sales/move-lead":
+            if not self.require_department("sales"):
+                return
             body = self._body
             result, err = sales_move_lead(body.get("instance"), body.get("slug"),
                                           body.get("to_stage"))
@@ -2824,12 +2886,16 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/mkt/approve":
+            if not self.require_department("marketing"):
+                return
             body = self._body
             result, err = mkt_approve(body.get("path"), body.get("instance"))
             self.send_json(400 if err else 200, {"error": err} if err else result)
             return
 
         if parsed.path == "/api/mkt/topic":
+            if not self.require_department("marketing"):
+                return
             body = self._body
             result, err = mkt_topic(body.get("topic"), body.get("note"),
                                     body.get("instance"))
@@ -2837,6 +2903,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/settings/channel":
+            if not self.require_department("marketing"):
+                return
             body = self._body
             result, err = set_channel_field(body.get("channel"), body.get("field"),
                                             body.get("value"), body.get("instance"))
@@ -2844,6 +2912,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/reddit/action":
+            if not self.require_department("marketing"):
+                return
             body = self._body
             try:
                 result, err = reddit_action(body.get("id"), body.get("action"),

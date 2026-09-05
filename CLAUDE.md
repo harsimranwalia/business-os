@@ -22,12 +22,20 @@ them as non-negotiable when writing or modifying any agent/skill:
   `approved` or `posted` themselves.
   - **One sanctioned exception: SMS Smart Reactivation** (`control-center/sms.py`,
     `run_reactivation`), approved by Harry on 2026-09-03. It picks lapsed customers, drafts a
-    message each on the partner's own Claude token, and sends with no human gate — being hands-off
-    is the feature. It is not a precedent: SMS *campaigns* in the same file keep the gate, and
-    nothing else may auto-send without the same explicit decision. The guardrails standing in for
-    the human are a per-run recipient cap, a 30-day per-customer cooldown, and the `MODE` quiet
-    switch; do not remove them, and do not "fix" reactivation into a gated flow — that would be
-    reverting a decision, not correcting a bug.
+    message each on the partner's own Claude token, and — in `mode="auto"` — sends with no human
+    gate. Being hands-off is the feature. It is not a precedent: SMS *campaigns* in the same file
+    keep the gate, and nothing else may auto-send without the same explicit decision. The
+    guardrails standing in for the human are a per-run recipient cap, a 30-day per-customer
+    cooldown, and the `MODE` quiet switch; do not remove them, and do not "fix" reactivation into
+    a gated-only flow — that would be reverting a decision, not correcting a bug.
+    - **Amended by Harry on 2026-09-04:** the operator now picks per run, at the point they start
+      it, between `auto` (unchanged, above) and `review`, which holds every drafted message at
+      `pending` with the number it is bound for until a human sends it — one at a time, all at
+      once, or not at all. This *adds* a gate as an option; it does not retire `auto`, which stays
+      available on every run and stays the sanctioned auto-send path. The guardrails apply to both
+      modes. `review` is the UI's default because it is the answer that can be undone; that
+      default is a UI preference (`sms-react-mode` in localStorage), not a constitutional
+      position, and flipping it back does not need a new decision.
 - **Quiet mode.** If repo-root `.env` sets `MODE=sabbath|retreat|quiet`, every component (listener,
   notifier, poster, agent) exits immediately/silently. Cron keeps firing; the check happens inside
   each component.

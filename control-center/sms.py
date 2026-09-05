@@ -7,12 +7,31 @@ cannot leave `draft` without someone clicking Approve, and only an approved
 campaign can be sent.
 
 SMART REACTIVATION takes no copy and no segment. It reads the lapsed end of
-the customer database, runs a headless Claude pass on the partner's own OAuth
-token to decide who is worth reaching and what to say to each of them, and
-sends. Approved by Harry (2026-09-03) as the one auto-send path in the system:
-the whole point is that it is hands-off. The guardrails that replace the human
-gate are all in run_reactivation() — quiet mode, a per-run recipient cap, and a
-30-day per-customer cooldown read out of the previous runs' records.
+the customer database and runs a headless Claude pass on the partner's own
+OAuth token to decide who is worth reaching and what to say to each of them.
+What happens next is chosen per run, at the point the operator starts it:
+
+  auto    Send straight away, with nobody reading the messages first.
+          Approved by Harry (2026-09-03) as the one auto-send path in the
+          system: the whole point is that it is hands-off. The guardrails
+          that replace the human gate are all in run_reactivation() — quiet
+          mode, a per-run recipient cap, and a 30-day per-customer cooldown
+          read out of the previous runs' records.
+  review  Stop at `pending` with every drafted message and the number it is
+          bound for, and send nothing until a human presses Send — one
+          message at a time, or all of them at once (send_reactivation), or
+          none of them (discard_reactivation).
+
+`auto` is not deprecated by `review` existing: both remain available every
+run, and the guardrails above apply to both — `review` adds a human on top of
+them rather than replacing them.
+
+A `review` run is the one record here that holds real phone numbers, because
+the operator has to see which number each message is bound for and the send
+still needs it. Each number is masked the instant its message reaches a
+terminal state (sent, or skipped), so only messages still waiting on a human
+carry one. Discarding a run is therefore also how you make it stop holding
+numbers.
 
 WHERE THE CUSTOMERS COME FROM is the partner's own config (see accounts.py):
 
@@ -22,7 +41,11 @@ WHERE THE CUSTOMERS COME FROM is the partner's own config (see accounts.py):
   aiorders  The AIOrders Postgres/Supabase database, direct, scoped to the
             partner's brand id. Needs psycopg — the only non-stdlib import
             anywhere in the control center, imported lazily so a partner on
-            the CRM source never pays for it.
+            another source never pays for it.
+  ghl       HighLevel (GoHighLevel) contacts, over the marketplace HTTP API,
+            scoped to one location. Like the CRM it carries no order history,
+            so it gets the same date-based segments and none of the
+            order-based ones.
 
 THE ASSUMED AIORDERS SCHEMA is named once, in SEGMENT_SQL below. If the real
 columns differ, that dict is the single place to correct it and the error a
@@ -56,12 +79,25 @@ REACTIVATION_COOLDOWN_DAYS = 30
 REACTIVATION_LAPSED_DAYS = 60
 CLAUDE_TIMEOUT_SECONDS = 300
 
+# What a run does once the Claude pass has written the messages. Chosen per
+# run by the operator who starts it; "auto" is the historical behaviour and
+# stays the sanctioned auto-send path, "review" holds everything at `pending`
+# for a human. Anything else is a bug in the caller, not a third mode.
+REACTIVATION_MODES = ("auto", "review")
+
 SMS_TIMEOUT_SECONDS = 20
 MAX_SMS_CHARS = 320   # two GSM segments; longer is a billing surprise
 
 
 def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _mask(phone):
+    """What a phone number looks like once it is written to a record for
+    keeps. The records are an audit trail, not a second copy of the customer
+    database."""
+    return "…" + (phone or "")[-4:]
 
 
 def _slug(text, fallback="campaign"):
@@ -86,6 +122,17 @@ CRM_SEGMENTS = [
      "note": "createdAt within 30 days"},
     {"id": "quiet_90d", "label": "No CRM activity in 90 days",
      "note": "updatedAt older than 90 days — a record-touch proxy, not an order signal"},
+]
+
+# HighLevel contacts carry a created and an updated timestamp and no order
+# history, so they get the CRM's segments and the same honest caveat — an
+# updated-at gap is a record-touch proxy, not a customer going quiet.
+GHL_SEGMENTS = [
+    {"id": "all", "label": "Everyone", "note": "every HighLevel contact with a phone number"},
+    {"id": "new_30d", "label": "Added in the last 30 days",
+     "note": "dateAdded within 30 days"},
+    {"id": "quiet_90d", "label": "No HighLevel activity in 90 days",
+     "note": "dateUpdated older than 90 days — a record-touch proxy, not an order signal"},
 ]
 
 AIORDERS_SEGMENTS = [
@@ -133,13 +180,30 @@ SEGMENT_SQL = {
 }
 
 
+# What each source is called on screen, and the set of them load_customers()
+# knows how to read. accounts.CUSTOMER_SOURCES is the config-side copy.
+SOURCE_LABELS = {"aiorders": "AIOrders", "crm": "CRM (Twenty)", "ghl": "HighLevel"}
+
+
 def segments_for(cfg):
     src = (cfg or {}).get("customer_source") or ""
     if src == "crm":
         return CRM_SEGMENTS
+    if src == "ghl":
+        return GHL_SEGMENTS
     if src == "aiorders":
         return AIORDERS_SEGMENTS
     return []
+
+
+def _iso_age_days(value, now):
+    """Days since an ISO-8601 timestamp, or None if it is missing or unparseable.
+    The one date rule shared by both sources that have no order history."""
+    raw = (value or "").replace("Z", "+00:00")
+    try:
+        return (now - datetime.fromisoformat(raw)).days
+    except ValueError:
+        return None
 
 
 def _twenty_people(cfg, limit=500):
@@ -183,11 +247,7 @@ def _crm_customers(cfg, segment):
                                     (p.get("name") or {}).get("lastName")] if x).strip()
 
         def age(field):
-            raw = (p.get(field) or "").replace("Z", "+00:00")
-            try:
-                return (now - datetime.fromisoformat(raw)).days
-            except ValueError:
-                return None
+            return _iso_age_days(p.get(field), now)
 
         if segment == "new_30d" and (age("createdAt") is None or age("createdAt") > 30):
             continue
@@ -197,6 +257,103 @@ def _crm_customers(cfg, segment):
                     "phone": (code + number) if code and not number.startswith("+") else number,
                     "last_order_at": None,
                     "days_since_order": age("updatedAt")})
+    return out
+
+
+# ── HighLevel (GoHighLevel) ─────────────────────────────────────────────────
+# POST {GHL_API_BASE}/contacts/search
+#      Authorization: Bearer <token>
+#      Version: v3
+#      Content-Type: application/json
+#      {"locationId": "…", "pageLimit": 500[, "searchAfter": [...]]}
+# https://marketplace.gohighlevel.com/docs/ghl/contacts/search-contacts-advanced
+#
+# 500 is HighLevel's own ceiling on pageLimit, not a setting — asking for more
+# just gets 500 back. Every contact carries its own "searchAfter" cursor;
+# reading the whole list means feeding the last contact's cursor from one page
+# into the next request, and stopping once a page comes back short of 500.
+GHL_API_BASE = "https://services.leadconnectorhq.com"
+GHL_API_VERSION = "v3"
+GHL_PAGE_SIZE = 500
+
+
+def _ghl_search(cfg, search_after=None):
+    body = {"locationId": (cfg.get("ghl_location_id") or "").strip(),
+            "pageLimit": GHL_PAGE_SIZE}
+    if search_after is not None:
+        body["searchAfter"] = search_after
+    # services.leadconnectorhq.com sits behind Cloudflare, which 403s urllib's
+    # default "Python-urllib/x.y" User-Agent as a bot signature (error code
+    # 1010) — same credentials, same body, only the UA differs from a working
+    # curl.
+    req = urllib.request.Request(
+        f"{GHL_API_BASE}/contacts/search", data=json.dumps(body).encode(),
+        headers={"Authorization": f"Bearer {(cfg.get('ghl_api_key') or '').strip()}",
+                 "Version": GHL_API_VERSION,
+                 "Content-Type": "application/json",
+                 "User-Agent": "business-os-sms/1.0"})
+    # Longer than the Twenty read's 30s: each page can carry up to 500 contacts.
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace").strip()[:300]
+        raise RuntimeError(f"HighLevel returned {e.code}: {detail or e.reason}")
+
+
+def _ghl_all_contacts(cfg):
+    """Every contact at this location, walking pages with the searchAfter
+    cursor until one comes back short of GHL_PAGE_SIZE — HighLevel's signal
+    that there is nothing left to walk."""
+    contacts = []
+    search_after = None
+    while True:
+        page = _ghl_search(cfg, search_after).get("contacts") or []
+        contacts.extend(page)
+        if len(page) < GHL_PAGE_SIZE:
+            break
+        search_after = page[-1].get("searchAfter")
+        if not search_after:
+            break
+    return contacts
+
+
+def _ghl_row(contact, now):
+    """One HighLevel contact in the shape every source here returns. The search
+    endpoint publishes no response schema, so the name and phone are read
+    across the field names a contact actually carries rather than one assumed
+    spelling."""
+    phone = (contact.get("phone") or "").strip()
+    if not phone:
+        return None
+    name = (contact.get("contactName") or "").strip()
+    if not name:
+        name = " ".join(x for x in [(contact.get("firstName") or "").strip(),
+                                    (contact.get("lastName") or "").strip()] if x)
+    touched = _iso_age_days(contact.get("dateUpdated") or contact.get("dateAdded"), now)
+    return {"id": contact.get("id") or "", "name": name, "phone": phone,
+            "last_order_at": None, "days_since_order": touched,
+            "added_days": _iso_age_days(contact.get("dateAdded"), now)}
+
+
+def _ghl_contacts(cfg, segment):
+    for key, what in (("ghl_location_id", "location id"),
+                      ("ghl_api_key", "API token")):
+        if not (cfg.get(key) or "").strip():
+            raise RuntimeError(f"HighLevel {what} is not set — add it in Config")
+
+    now = datetime.now(timezone.utc)
+    out = []
+    for contact in _ghl_all_contacts(cfg):
+        row = _ghl_row(contact, now)
+        if row is None:
+            continue
+        if segment == "new_30d" and (row["added_days"] is None or row["added_days"] > 30):
+            continue
+        if segment == "quiet_90d" and (row["days_since_order"] is None
+                                       or row["days_since_order"] < 90):
+            continue
+        out.append({k: v for k, v in row.items() if k != "added_days"})
     return out
 
 
@@ -227,27 +384,42 @@ def _aiorders_customers(cfg, segment):
     return rows
 
 
-def test_db_connection(cfg):
-    """A one-off connect-and-ping, triggered by a human clicking Test — proof
-    the saved DSN actually reaches a database, not a query for customer data.
-    Returns (result, error): result is {"ok", "detail"} on any answer from
-    the attempt itself; error is only set for something that means we never
-    got to try (no DSN, driver missing)."""
-    dsn = (cfg.get("pg_dsn") or "").strip()
-    if not dsn:
-        return None, "a database connection string is required"
-    try:
-        import psycopg
-    except ImportError:
-        return None, ("the AIOrders source needs the psycopg driver — "
-                      "`pip install \"psycopg[binary]\"` on the machine running the control center")
-    try:
-        with psycopg.connect(dsn, connect_timeout=10) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1")
-        return {"ok": True, "detail": "connected"}, None
-    except Exception as e:
-        return {"ok": False, "detail": str(e)}, None
+TEST_SAMPLE_ROWS = 2
+
+
+def test_customer_source(cfg):
+    """A real sample read of whichever source is configured, triggered by a
+    human clicking Test. Every source answers the same way, because "does this
+    connect" means the same thing for all three: credentials that reach the
+    partner's own customers, not a socket that answers.
+
+    Returns (result, error): result is {"ok", "detail", "count", "sample"} for
+    anything the attempt itself produced — a refused login is a result, not an
+    error — and error is only for never getting to try at all.
+
+    The sample carries names so the operator can recognise their own data, but
+    the phone numbers are masked like every other number this file writes out:
+    confirming a connection is no reason to paint customers' numbers across a
+    dashboard."""
+    src = (cfg or {}).get("customer_source") or ""
+    if not src:
+        return None, "pick a customer database source first"
+    if src not in SOURCE_LABELS:
+        return None, f"unknown customer database source '{src}'"
+
+    customers, err = load_customers(cfg, "all")
+    if err:
+        return {"ok": False, "detail": err}, None
+
+    label = SOURCE_LABELS[src]
+    if not customers:
+        return {"ok": True, "count": 0, "sample": [],
+                "detail": f"connected to {label}, but it returned no customer "
+                          "with a phone number"}, None
+    return {"ok": True, "count": len(customers),
+            "sample": [{"name": c["name"] or "(no name)", "phone": _mask(c["phone"])}
+                       for c in customers[:TEST_SAMPLE_ROWS]],
+            "detail": f"connected to {label}"}, None
 
 
 def load_customers(cfg, segment):
@@ -257,6 +429,8 @@ def load_customers(cfg, segment):
     try:
         if src == "crm":
             return _crm_customers(cfg, segment), None
+        if src == "ghl":
+            return _ghl_contacts(cfg, segment), None
         if src == "aiorders":
             return _aiorders_customers(cfg, segment), None
         return [], "no customer database source configured"
@@ -366,6 +540,16 @@ def _write_record(instance_id, kind, rec):
 
 def _find_campaign(instance_id, campaign_id):
     path = INSTANCES_DIR / instance_id / "marketing" / "sms" / "campaigns" / f"{campaign_id}.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _find_reactivation(instance_id, run_id):
+    path = INSTANCES_DIR / instance_id / "marketing" / "sms" / "reactivation" / f"{run_id}.json"
     if not path.exists():
         return None
     try:
@@ -488,9 +672,8 @@ def send_campaign(instance_id, campaign_id, cfg):
 # ── Smart reactivation ───────────────────────────────────────────────────────
 
 REACTIVATION_PROMPT = """\
-You are drafting one-to-one reactivation SMS messages. These go out \
-automatically — no human reviews them before they send — so every message \
-must be one you would be comfortable sending unreviewed.
+You are drafting one-to-one reactivation SMS messages. {review_note} Either \
+way, write every message as one you would be comfortable sending unreviewed.
 
 About the business:
 {business_blurb}
@@ -526,9 +709,15 @@ Reply with JSON and nothing else — no prose, no code fence:
 
 
 def _recent_reactivation_refs(instance_id):
-    """Customer ids texted by a reactivation run inside the cooldown window.
+    """Customer ids a reactivation run has claimed inside the cooldown window.
     Read from the run records themselves rather than a separate ledger — one
-    file to be consistent, and the history is the audit trail anyway."""
+    file to be consistent, and the history is the audit trail anyway.
+
+    A message still waiting for a human (a `review` run's `pending`) counts as
+    claimed, not as free. It has not reached anyone yet, but it is about to,
+    and letting the next run draft a second message to the same person would
+    put two in front of the operator and no cooldown between them once both
+    are approved."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=REACTIVATION_COOLDOWN_DAYS)
     recent = set()
     for run in list_reactivations(instance_id):
@@ -539,7 +728,7 @@ def _recent_reactivation_refs(instance_id):
         if when < cutoff:
             continue
         for m in run.get("messages") or []:
-            if m.get("sent"):
+            if m.get("sent") or m.get("state") == "pending":
                 recent.add(m.get("customer_id"))
     return recent
 
@@ -583,18 +772,52 @@ def _parse_messages(raw):
     return msgs, None
 
 
-def run_reactivation(instance_id, cfg, actor_email, offer):
-    """Pick lapsed customers, have Claude decide who and what, and send.
+def _settle(run):
+    """Recompute a review run's counters and status from its own messages.
 
-    Auto-send, so the guardrails are here rather than in a human: quiet mode
-    stops it, the cooldown keeps anyone from being texted twice in a month, and
-    the cap bounds the blast radius of a bad pass. Every decision is written to
-    the run record whether or not anything sent.
+    The run stays `pending` while anything is still waiting, and a send the
+    gateway refused leaves that message pending with its number intact — so
+    the operator can press Send again once whatever the gateway complained
+    about is fixed, instead of the message being stranded in a terminal state
+    with nothing left to send it with. `results.failed` is therefore a count
+    of messages still waiting that carry an error, not a permanent tally."""
+    msgs = run.get("messages") or []
+    sent = [m for m in msgs if m.get("state") == "sent"]
+    waiting = [m for m in msgs if m.get("state") == "pending"]
+    errors = [{"phone": (m.get("phone") or "")[-4:], "error": m.get("detail") or ""}
+              for m in waiting if m.get("detail")]
+    run["results"] = {"sent": len(sent), "failed": len(errors), "errors": errors[:20]}
+    if waiting:
+        run["status"] = "pending"
+    elif sent:
+        run["status"] = "sent"
+    else:
+        run["status"] = "discarded" if msgs else "no-one"
+    return run
+
+
+def run_reactivation(instance_id, cfg, actor_email, offer, mode="auto"):
+    """Pick lapsed customers, have Claude decide who and what, then either
+    send (`mode="auto"`) or hold everything for a human (`mode="review"`).
+
+    The guardrails are the same either way, because in auto they are all
+    there is: quiet mode stops the run, the cooldown keeps anyone from being
+    texted twice in a month, and the cap bounds the blast radius of a bad
+    pass. Every decision is written to the run record whether or not anything
+    sent. `review` adds a person on top of those; it does not replace them,
+    and it does not retire `auto` — the mode is chosen fresh each run.
 
     `offer` is asked fresh each run — reactivation has no standing campaign
     copy, so without it the model has nothing concrete to write about and
     could only invent one, which the prompt explicitly forbids. The business
     blurb, by contrast, is standing context and comes from cfg."""
+    mode = (mode or "auto").strip().lower()
+    if mode not in REACTIVATION_MODES:
+        return None, f"unknown reactivation mode '{mode}'"
+    # Quiet mode stops the drafting pass too, not just the send. A campaign
+    # can still be written during a pause because writing one costs nothing;
+    # a reactivation run spends the partner's Claude token, which is exactly
+    # the kind of activity the switch is there to stop.
     if quiet_mode():
         return None, f"MODE={os.environ.get('MODE')} — everything is paused"
     if not cfg.get("claude_oauth_token"):
@@ -605,7 +828,10 @@ def run_reactivation(instance_id, cfg, actor_email, offer):
     if not offer:
         return None, "an offer is required to run reactivation"
 
-    segment = "quiet_90d" if cfg.get("customer_source") == "crm" else "lapsed_60d"
+    # A source with no order history can only offer the record-touch proxy;
+    # asking it for "lapsed" would be a number that looks real and is not.
+    segment = ("quiet_90d" if cfg.get("customer_source") in ("crm", "ghl")
+               else "lapsed_60d")
     customers, err = load_customers(cfg, segment)
     if err:
         return None, f"could not read the customer database: {err}"
@@ -621,6 +847,7 @@ def run_reactivation(instance_id, cfg, actor_email, offer):
         "instance": instance_id,
         "created_by": actor_email,
         "created_at": _now(),
+        "mode": mode,
         "offer": offer,
         "segment": segment,
         "candidates": len(customers),
@@ -631,6 +858,9 @@ def run_reactivation(instance_id, cfg, actor_email, offer):
         "messages": [],
         "results": {"sent": 0, "failed": 0, "errors": []},
         "error": "",
+        # Only a review run gets these — they are the same stamp an approved
+        # campaign carries, for the same reason.
+        "approved_by": "", "approved_at": "", "sent_at": "",
     }
     if not pool:
         run.update({"status": "no-one", "error": ""})
@@ -648,8 +878,13 @@ def run_reactivation(instance_id, cfg, actor_email, offer):
                         "days_since_order": c.get("days_since_order")})
 
     blurb = (cfg.get("business_blurb") or "").strip() or f"({instance_id} — no business description on file)"
+    review_note = (
+        "A person reviews each one and presses send, so nothing here reaches a "
+        "phone without their approval." if mode == "review" else
+        "These go out automatically — no human reviews them before they send.")
     prompt = REACTIVATION_PROMPT.format(
-        business_blurb=blurb, offer=offer, customers=json.dumps(payload, indent=2))
+        business_blurb=blurb, offer=offer, review_note=review_note,
+        customers=json.dumps(payload, indent=2))
     raw, err = _run_claude(prompt, cfg["claude_oauth_token"])
     if err:
         run.update({"status": "failed", "error": err})
@@ -661,20 +896,36 @@ def run_reactivation(instance_id, cfg, actor_email, offer):
         return _write_record(instance_id, "reactivation", run), None
 
     chosen = []
+    used = set()
     for m in msgs:
-        c = refs.get((m or {}).get("ref"))
+        ref = (m or {}).get("ref")
+        c = refs.get(ref)
         text = ((m or {}).get("message") or "").strip()
-        if not c or not text:
+        if not c or not text or ref in used:
+            # A repeated ref is the model writing to the same person twice.
+            # Taking both would text them twice in one run and, in review
+            # mode, give two rows one Send button each.
             continue
+        used.add(ref)
         if len(text) > MAX_SMS_CHARS:
             text = text[:MAX_SMS_CHARS]
-        chosen.append({"customer_id": c["id"], "name": c.get("name", ""),
+        # The opaque ref the model was given is also the message id: already
+        # unique within the run, and already meaningless outside it.
+        chosen.append({"id": ref, "customer_id": c["id"], "name": c.get("name", ""),
                        "phone": c["phone"], "message": text, "sent": False,
-                       "detail": ""})
+                       "state": "pending", "detail": ""})
+
+    if mode == "review":
+        # Nothing sends. The numbers stay in the record because the operator
+        # has to see which phone each message is bound for and the send needs
+        # it; each is masked as its message settles (see send/discard below).
+        run.update({"messages": chosen, "chosen": len(chosen)})
+        return _write_record(instance_id, "reactivation", _settle(run)), None
 
     for m in chosen:
         ok, detail = send_one(cfg, m["phone"], m["message"])
         m["sent"], m["detail"] = ok, detail
+        m["state"] = "sent" if ok else "failed"
         if ok:
             run["results"]["sent"] += 1
         else:
@@ -685,9 +936,72 @@ def run_reactivation(instance_id, cfg, actor_email, offer):
     # Phone numbers are not kept in the record — the run is an audit trail, not
     # a second copy of the customer database.
     for m in chosen:
-        m["phone"] = "…" + m["phone"][-4:]
+        m["phone"] = _mask(m["phone"])
 
-    run.update({"messages": chosen, "chosen": len(chosen),
+    run.update({"messages": chosen, "chosen": len(chosen), "sent_at": _now(),
                 "status": "sent" if run["results"]["sent"] else
                           ("no-one" if not chosen else "failed")})
     return _write_record(instance_id, "reactivation", run), None
+
+
+def _pending_targets(run, message_ids):
+    """The messages an action applies to: the named ones, or — with nothing
+    named — every one still waiting. That is the whole difference between the
+    per-message buttons and the run-wide ones."""
+    wanted = set(message_ids or [])
+    return [m for m in (run.get("messages") or [])
+            if m.get("state") == "pending" and (not wanted or m.get("id") in wanted)]
+
+
+def send_reactivation(instance_id, run_id, cfg, actor_email, message_ids=None):
+    """Send some or all of a review run's pending messages — the human gate.
+
+    `message_ids` names specific messages (the per-row Send); omitted or empty
+    means every message still waiting (Send all). Sending is the approval, so
+    the record gets the same approved_by/approved_at stamp an approved
+    campaign carries."""
+    if quiet_mode():
+        return None, f"MODE={os.environ.get('MODE')} — everything is paused"
+    run = _find_reactivation(instance_id, run_id)
+    if not run:
+        return None, "no such reactivation run"
+    if run.get("status") != "pending":
+        return None, f"this run is {run.get('status')} — nothing is waiting to be sent"
+    targets = _pending_targets(run, message_ids)
+    if not targets:
+        return None, "those messages have already been sent or skipped"
+
+    for m in targets:
+        ok, detail = send_one(cfg, m["phone"], m["message"])
+        m["detail"] = detail
+        if ok:
+            m.update({"sent": True, "state": "sent", "phone": _mask(m["phone"])})
+        # A refused send deliberately stays pending, number intact, so the
+        # operator can try it again — see _settle().
+    # The stamp goes on the first press regardless of what the gateway said —
+    # approval is the human act, not the delivery. `sent_at` is the opposite:
+    # it means something actually left, so a run where every attempt was
+    # refused keeps it empty.
+    if not run.get("approved_at"):
+        run.update({"approved_by": actor_email, "approved_at": _now()})
+    if any(m.get("state") == "sent" for m in targets):
+        run["sent_at"] = _now()
+    return _write_record(instance_id, "reactivation", _settle(run)), None
+
+
+def discard_reactivation(instance_id, run_id, message_ids=None):
+    """Drop pending messages without sending them: one the operator does not
+    like (the per-row Skip), or the whole run. Discarding masks the numbers it
+    was holding, so it is also how a run stops holding any."""
+    run = _find_reactivation(instance_id, run_id)
+    if not run:
+        return None, "no such reactivation run"
+    if run.get("status") != "pending":
+        return None, f"this run is {run.get('status')} — nothing is waiting to be skipped"
+    targets = _pending_targets(run, message_ids)
+    if not targets:
+        return None, "those messages have already been sent or skipped"
+    for m in targets:
+        m.update({"state": "discarded", "sent": False, "detail": "",
+                  "phone": _mask(m["phone"])})
+    return _write_record(instance_id, "reactivation", _settle(run)), None

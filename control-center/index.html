@@ -114,6 +114,7 @@
     .h { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-mid);
       margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
     .h .count { color: var(--muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
+    .h .cfg-set { margin-top: 0; letter-spacing: 0; text-transform: none; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
       margin-bottom: 10px; }
     .card.accent { border-color: rgba(139,92,246,.45); background: rgba(139,92,246,.05); }
@@ -246,7 +247,7 @@
     .mkt-link { font-size: 11px; color: #60a5fa; margin-top: 6px; display: inline-block; }
 
     /* ── Partners + Config ── */
-    .user-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr .7fr 1.2fr auto;
+    .user-row { display: grid; grid-template-columns: 1.4fr .9fr 1fr 1fr .6fr 1.1fr auto;
       gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border);
       border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; font-size: 12px; }
     .user-row .who { color: var(--text); font-weight: 600; font-size: 13px;
@@ -258,7 +259,7 @@
       text-transform: uppercase; letter-spacing: .04em; }
     .role-pill.admin { background: rgba(139,92,246,.16); color: #a78bfa; }
     .role-pill.partner { background: rgba(59,130,246,.14); color: #60a5fa; }
-    .user-head { display: grid; grid-template-columns: 1.6fr 1fr 1fr .7fr 1.2fr auto;
+    .user-head { display: grid; grid-template-columns: 1.4fr .9fr 1fr 1fr .6fr 1.1fr auto;
       gap: 12px; padding: 0 14px 6px; font-size: 9.5px; font-weight: 700;
       text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
     @media (max-width: 860px) {
@@ -271,6 +272,9 @@
     .cfg-grid input, .cfg-grid select { width: 100%; }
     .cfg-hint { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
     .cfg-set { font-size: 10.5px; color: #34d399; margin-top: 4px; }
+    .cfg-sample { font-size: 10.5px; color: var(--muted-mid); margin-top: 6px;
+      border-left: 2px solid #34d399; padding-left: 8px; line-height: 1.7; }
+    .cfg-sample b { color: var(--text); font-weight: 600; }
     .missing { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.35);
       border-radius: 8px; padding: 11px 14px; font-size: 12px; color: #fbbf24;
       line-height: 1.6; margin-bottom: 18px; }
@@ -284,6 +288,7 @@
     .status-pill.failed { background: rgba(239,68,68,.14); color: #f87171; }
     .status-pill.discarded { background: rgba(120,120,140,.14); color: var(--muted-mid); }
     .status-pill.running { background: rgba(245,158,11,.14); color: #fbbf24; }
+    .status-pill.pending { background: rgba(245,158,11,.14); color: #fbbf24; }
     .status-pill.no-one { background: rgba(120,120,140,.14); color: var(--muted-mid); }
     .sms-msg { font-size: 12.5px; color: var(--muted-mid); line-height: 1.6; margin-top: 10px;
       white-space: pre-wrap; padding: 10px 12px; background: var(--surface);
@@ -294,6 +299,19 @@
     .sms-out .one { font-size: 11.5px; color: var(--muted-mid); line-height: 1.5;
       border-left: 2px solid var(--border-light); padding-left: 9px; }
     .sms-out .one.bad { border-color: rgba(239,68,68,.5); color: #f87171; }
+    /* A review run's messages are read before they are sent, so each one is a
+       row you can act on rather than a line of log output. */
+    .sms-out .one.pending { border-color: rgba(245,158,11,.55); }
+    .sms-out .one.discarded { opacity: .5; }
+    .rmsg-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+    .rmsg-to { color: var(--text); font-weight: 600; }
+    .rmsg-num { font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--muted); }
+    .rmsg-state { font-size: 9.5px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted); }
+    .rmsg-body { margin-top: 3px; white-space: pre-wrap; color: var(--muted-mid); }
+    .rmsg-err { margin-top: 3px; color: #f87171; }
+    .rmsg-acts { display: flex; gap: 6px; margin-top: 7px; }
+    .btn.sm { padding: 3px 10px; font-size: 11px; }
     .auto-note { font-size: 11.5px; color: var(--muted); line-height: 1.65;
       max-width: 660px; margin-bottom: 16px; }
 
@@ -544,11 +562,20 @@
           <option value="admin">Admin</option>
         </select>
       </div>
+      <div class="form-field full" id="um-dept-wrap">
+        <label>Departments this partner may work on</label>
+        <div class="set-days" id="um-departments"></div>
+        <div class="note-text" style="margin-top:6px">Only these tabs will
+          show up for them. An admin has no restrictions, so this list
+          applies to partners only.</div>
+      </div>
       <div class="form-field full" id="um-inst-wrap">
         <label>Instances this partner may work on</label>
         <div class="set-days" id="um-instances"></div>
-        <div class="note-text" style="margin-top:6px">An admin has no
-          restrictions, so this list applies to partners only.</div>
+        <div class="note-text" style="margin-top:6px">Only matters for
+          Engineering — a business-specific ticket board. The other
+          departments show every business this partner isn't otherwise kept
+          out of, so this stays hidden until Engineering is checked above.</div>
       </div>
       <div class="form-field full"><div class="set-err" id="um-err"></div></div>
     </div>
@@ -672,7 +699,13 @@ async function logout() {
 // Who is signed in, and what they may see. `me` is advisory — the server
 // re-checks the role on every request that matters — but it decides which tabs
 // are drawn, so nothing offers a partner a page that would only 403.
-let me = { email: '', role: 'partner', instances: [], config_ready: false, config_missing: [] };
+let me = { email: '', role: 'partner', instances: [], departments: [],
+          config_ready: false, config_missing: [] };
+
+// Tab id -> department id. Logs, Partners and Config aren't departments —
+// Logs/Partners stay admin-only outright, and Config is every account's own
+// credentials page, so all three are exempt from department gating below.
+const TAB_DEPARTMENT = { marketing: 'marketing', sales: 'sales', eng: 'eng', cost: 'cost' };
 
 async function loadMe() {
   try {
@@ -684,6 +717,19 @@ async function loadMe() {
     const admin = d.role === 'admin';
     document.getElementById('tab-partners').hidden = !admin;
     document.getElementById('tab-logs').hidden = !admin;
+    // An admin has no restrictions; a partner sees only the tabs for the
+    // departments they were assigned (missing entirely, on an older account,
+    // reads as every department — see accounts.public_user()).
+    const depts = new Set(admin ? [] : (me.departments || []));
+    let firstVisible = null;
+    Object.entries(TAB_DEPARTMENT).forEach(([tab, dept]) => {
+      const visible = admin || depts.has(dept);
+      document.getElementById('tab-' + tab).hidden = !visible;
+      if (visible && !firstVisible) firstVisible = tab;
+    });
+    if (!admin && document.getElementById('tab-' + activeTab).hidden && firstVisible) {
+      switchTab(firstVisible);
+    }
     // A partner whose config is incomplete cannot do SMS work at all, so say
     // so on the tab rather than letting them find out at the send button. Not
     // for admins: an admin who never intends to run a campaign would carry a
@@ -2249,17 +2295,30 @@ function instLabel(id) {
   return i ? i.label : id;
 }
 
+function deptLabel(id) {
+  const d = (partnersData?.departments || []).find(x => x.id === id);
+  return d ? d.label : id;
+}
+
 function renderPartners() {
   const el = document.getElementById('partners-scroll');
   const users = partnersData.users || [];
   const head = '<div class="user-head"><div>User</div><div>Phone</div>' +
-    '<div>Instances</div><div>Role</div><div>Last sign-in</div><div></div></div>';
+    '<div>Departments</div><div>Instances</div><div>Role</div>' +
+    '<div>Last sign-in</div><div></div></div>';
   el.innerHTML = head + users.map(u => {
+    const depts = u.role === 'admin'
+      ? '<span class="dim">all (no restrictions)</span>'
+      : (u.departments.length
+          ? u.departments.map(d => `<span class="chip">${esc(deptLabel(d))}</span>`).join(' ')
+          : '<span class="dim">none assigned</span>');
     const insts = u.role === 'admin'
       ? '<span class="dim">all (no restrictions)</span>'
-      : (u.instances.length
-          ? u.instances.map(i => `<span class="chip">${esc(instLabel(i))}</span>`).join(' ')
-          : '<span class="dim">none assigned</span>');
+      : (!u.departments.includes('eng')
+          ? '<span class="dim">n/a — no Engineering</span>'
+          : (u.instances.length
+              ? u.instances.map(i => `<span class="chip">${esc(instLabel(i))}</span>`).join(' ')
+              : '<span class="dim">none assigned</span>'));
     // Config completeness is a partner's problem — an admin has no SMS
     // gateway to be missing, so saying so on their row would be noise.
     const cfg = u.role === 'partner' && !u.config_ready
@@ -2271,6 +2330,7 @@ function renderPartners() {
         ${cfg}
       </div>
       <div class="dim">${esc(u.phone) || '—'}</div>
+      <div>${depts}</div>
       <div>${insts}</div>
       <div><span class="role-pill ${esc(u.role)}">${esc(u.role)}</span></div>
       <div class="dim">${esc((u.last_login || '').slice(0, 10)) || 'never'}</div>
@@ -2294,6 +2354,9 @@ function openUserModal(email) {
   document.getElementById('um-role').value = u ? u.role : 'partner';
   document.getElementById('um-delete').style.display = u ? '' : 'none';
   document.getElementById('um-err').textContent = '';
+  // Default is all — a brand-new partner starts unrestricted rather than
+  // locked out of every tab until an admin remembers to check boxes.
+  renderDepartmentPicker(u ? u.departments : partnersData.departments.map(d => d.id));
   renderInstancePicker(u ? u.instances : []);
   onRoleChange();
   document.getElementById('user-modal').classList.add('open');
@@ -2301,6 +2364,15 @@ function openUserModal(email) {
 
 function closeUserModal() {
   document.getElementById('user-modal').classList.remove('open');
+}
+
+function renderDepartmentPicker(selected) {
+  const sel = new Set(selected || []);
+  document.getElementById('um-departments').innerHTML =
+    (partnersData.departments || []).map(d =>
+      `<button type="button" class="set-day${sel.has(d.id) ? ' on' : ''}"
+        data-dept="${escAttr(d.id)}" onclick="this.classList.toggle('on'); onDeptChange()">${esc(d.label)}</button>`
+    ).join('');
 }
 
 function renderInstancePicker(selected) {
@@ -2313,10 +2385,26 @@ function renderInstancePicker(selected) {
 }
 
 function onRoleChange() {
-  // An admin has no restrictions, so the picker is not just irrelevant for
-  // them — showing it would imply an assignment that is never consulted.
+  // An admin has no restrictions, so neither picker is just irrelevant for
+  // them — showing one would imply an assignment that is never consulted.
+  const isAdmin = document.getElementById('um-role').value === 'admin';
+  document.getElementById('um-dept-wrap').style.display = isAdmin ? 'none' : '';
+  onDeptChange();
+}
+
+function onDeptChange() {
+  // Instances scope a business-specific board, and Engineering is the only
+  // department actually organised that way — see visible_instances() in
+  // accounts.py. Hiding this doesn't clear it: a prior assignment survives
+  // under the hood in case Engineering gets checked again later.
+  const isAdmin = document.getElementById('um-role').value === 'admin';
   document.getElementById('um-inst-wrap').style.display =
-    document.getElementById('um-role').value === 'admin' ? 'none' : '';
+    (isAdmin || !pickedDepartments().includes('eng')) ? 'none' : '';
+}
+
+function pickedDepartments() {
+  return Array.from(document.querySelectorAll('#um-departments .set-day.on'))
+    .map(b => b.dataset.dept);
 }
 
 function pickedInstances() {
@@ -2333,6 +2421,7 @@ async function saveUser() {
     phone: document.getElementById('um-phone').value.trim(),
     pin: document.getElementById('um-pin').value.trim(),
     role: document.getElementById('um-role').value,
+    departments: pickedDepartments(),
     instances: pickedInstances(),
   };
   err.textContent = '';
@@ -2403,6 +2492,14 @@ async function loadConfig(who) {
   }
 }
 
+// The green "this was actually tested" tick. It lives in the section header
+// rather than beside the button that sets it, so glancing down the page answers
+// "is this working?" without reading each section's controls. The id is what
+// the test handlers write to, so the two stay in step wherever it is drawn.
+function configBadge(id, tested, label) {
+  return `<span class="cfg-set" id="${id}">${tested ? '\u2713 ' + label : ''}</span>`;
+}
+
 function secretField(id, label, hintText) {
   const isSet = configData[id + '_set'];
   return `<label for="cfg-${id}">${esc(label)}</label>
@@ -2455,7 +2552,7 @@ function renderConfig() {
     </div>
 
     <div class="section">
-      <div class="h">SMS server</div>
+      <div class="h">SMS server ${configBadge('cfg-sms-test-badge', d.sms_tested_ok, 'Working')}</div>
       <div class="note-text" style="margin-bottom:12px">An HTTP gateway. The control
         center authenticates with HTTP Basic Auth using this username and password, and
         POSTs JSON: <code>{"textMessage":{"text":…},"phoneNumbers":[…]}</code> — one
@@ -2476,7 +2573,7 @@ function renderConfig() {
     </div>
 
     <div class="section">
-      <div class="h">Customer database</div>
+      <div class="h">Customer database ${configBadge('cfg-source-test-badge', d.source_tested_ok, 'Connected')}</div>
       <div class="note-text" style="margin-bottom:12px">Where campaign segments and
         reactivation candidates are read from.</div>
       <div class="cfg-grid">
@@ -2487,10 +2584,11 @@ function renderConfig() {
             <option value=""${source ? '' : ' selected'}>— pick one —</option>
             <option value="aiorders"${source === 'aiorders' ? ' selected' : ''}>AIOrders</option>
             <option value="crm"${source === 'crm' ? ' selected' : ''}>CRM (Twenty)</option>
+            <option value="ghl"${source === 'ghl' ? ' selected' : ''}>HighLevel (GoHighLevel)</option>
           </select>
           <div class="cfg-hint">AIOrders reads your brand's customers directly and
-            gives you order-based segments. The CRM has no order history, so it offers
-            only date-based ones.</div>
+            gives you order-based segments. The CRM and HighLevel carry no order
+            history, so they offer only date-based ones.</div>
         </div>
         <div id="cfg-aiorders" style="display:${source === 'aiorders' ? 'contents' : 'none'}">
           <label for="cfg-brand_id">Brand id</label>
@@ -2499,7 +2597,6 @@ function renderConfig() {
           ${secretField('pg_dsn', 'Database connection',
             'Postgres/Supabase connection string, e.g. postgresql://user:pass@host:5432/db. ' +
             'Needs the psycopg driver installed on the machine running this server.')}
-          ${configDbTestRow(d)}
         </div>
         <div id="cfg-crm" style="display:${source === 'crm' ? 'contents' : 'none'}">
           <label for="cfg-crm_url">Twenty URL</label>
@@ -2511,6 +2608,20 @@ function renderConfig() {
           ${secretField('crm_api_key', 'API key',
             'From Twenty: Settings → APIs & Webhooks → generate a key.')}
         </div>
+        <div id="cfg-ghl" style="display:${source === 'ghl' ? 'contents' : 'none'}">
+          <label for="cfg-ghl_location_id">Location id</label>
+          <div><input type="text" id="cfg-ghl_location_id" autocomplete="off"
+                      value="${escAttr(d.ghl_location_id || '')}" placeholder="e.g. C2QujeCh8ZnC7al2InWR" />
+            <div class="cfg-hint">The sub-account the contacts live in — HighLevel shows
+              it under Settings → Business Profile, and it is also in the dashboard URL.</div>
+          </div>
+          ${secretField('ghl_api_key', 'API token',
+            'A Private Integration token with the contacts read scope, from ' +
+            'HighLevel: Settings → Private Integrations. Sent as a bearer token.')}
+        </div>
+        <div id="cfg-source-test" style="display:${source ? 'contents' : 'none'}">
+          ${configSourceTestRow(d)}
+        </div>
       </div>
     </div>
 
@@ -2521,12 +2632,43 @@ function renderConfig() {
     </div>
     ${forSelf ? '' : `<div class="note-text" style="margin-top:14px">
       You are editing <b>${esc(configWho)}</b>'s configuration as an admin.</div>`}`;
+
+  wireSourceTestInvalidation();
 }
+
+// Which config fields each source's connection test actually reads. Editing
+// any of them is what retires a "Connected" badge — the server-side copy of
+// this list is accounts.SOURCE_PLAIN_FIELDS / SOURCE_SECRET_FIELDS.
+const SOURCE_FIELDS = ['source', 'brand_id', 'pg_dsn', 'crm_url', 'crm_api_key',
+                       'ghl_location_id', 'ghl_api_key'];
 
 function onSourceChange() {
   const v = document.getElementById('cfg-source').value;
-  document.getElementById('cfg-aiorders').style.display = v === 'aiorders' ? 'contents' : 'none';
-  document.getElementById('cfg-crm').style.display = v === 'crm' ? 'contents' : 'none';
+  for (const src of ['aiorders', 'crm', 'ghl']) {
+    document.getElementById('cfg-' + src).style.display = v === src ? 'contents' : 'none';
+  }
+  document.getElementById('cfg-source-test').style.display = v ? 'contents' : 'none';
+  markSourceUntested();
+}
+
+// A pass belongs to the exact values it ran against, so the moment one of them
+// is edited the badge comes down and the row says what to do about it. Saving
+// clears the stored flag server-side for the same reason (accounts.write_config);
+// this is only the half that reacts before a save.
+function markSourceUntested() {
+  const badge = document.getElementById('cfg-source-test-badge');
+  if (!badge || !badge.textContent) return;
+  badge.textContent = '';
+  const out = document.getElementById('cfg-source-test-out');
+  if (out) out.innerHTML = 'Configuration changed — save it, then test again.';
+  if (configData) configData.source_tested_ok = false;
+}
+
+function wireSourceTestInvalidation() {
+  for (const id of SOURCE_FIELDS) {
+    const elem = document.getElementById('cfg-' + id);
+    if (elem && id !== 'source') elem.addEventListener('input', markSourceUntested);
+  }
 }
 
 function configPayload(extra) {
@@ -2543,6 +2685,8 @@ function configPayload(extra) {
     pg_dsn: val('pg_dsn'),
     crm_url: val('crm_url'),
     crm_api_key: val('crm_api_key'),
+    ghl_location_id: val('ghl_location_id'),
+    ghl_api_key: val('ghl_api_key'),
   }, extra || {});
 }
 
@@ -2559,7 +2703,6 @@ function configSmsTestRow(d) {
         <input type="text" id="cfg-sms-test-phone" placeholder="+15551234567" style="max-width:170px" />
         <button class="btn" onclick="sendConfigTestSms()">Send test</button>
         ${me.phone ? '<button class="btn" onclick="sendConfigTestSms(me.phone)">Send to me</button>' : ''}
-        <span class="cfg-set" id="cfg-sms-test-badge">${d.sms_tested_ok ? '✓ Working' : ''}</span>
       </div>
       <div class="cfg-hint" id="cfg-sms-test-out">Tests the saved configuration above, not unsaved edits.</div>
     </div>`;
@@ -2592,40 +2735,45 @@ async function sendConfigTestSms(toOverride) {
 }
 
 // Same "persists until config changes" behavior as the SMS test above, for
-// the AIOrders Postgres/Supabase connection string.
-function configDbTestRow(d) {
-  if (!d.pg_dsn_set) return '';
-  return `<label for="cfg-db-test-btn">Test connection</label>
+// whichever customer database source is picked. One row rather than one per
+// source, because the question is the same for all three and so is the proof:
+// a real read that comes back with the partner's own customers in it.
+function configSourceTestRow(d) {
+  return `<label for="cfg-source-test-btn">Test configuration</label>
     <div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button class="btn" id="cfg-db-test-btn" onclick="sendConfigTestDb()">Test connection</button>
-        <span class="cfg-set" id="cfg-db-test-badge">${d.pg_dsn_tested_ok ? '✓ Working' : ''}</span>
+        <button class="btn" id="cfg-source-test-btn" onclick="testCustomerSource()">Test configuration</button>
       </div>
-      <div class="cfg-hint" id="cfg-db-test-out">Tests the saved connection string above, not unsaved edits.</div>
+      <div class="cfg-hint" id="cfg-source-test-out">Reads a couple of real customers
+        back from the saved configuration above, not unsaved edits.</div>
     </div>`;
 }
 
-async function sendConfigTestDb() {
-  const btn = document.getElementById('cfg-db-test-btn');
-  const out = document.getElementById('cfg-db-test-out');
-  const badge = document.getElementById('cfg-db-test-badge');
+async function testCustomerSource() {
+  const btn = document.getElementById('cfg-source-test-btn');
+  const out = document.getElementById('cfg-source-test-out');
+  const badge = document.getElementById('cfg-source-test-badge');
   btn.disabled = true;
-  out.textContent = 'Testing…';
+  badge.textContent = '';
+  out.textContent = 'Reading…';
   try {
-    const r = await fetch('/api/config/test-db', {
+    const r = await fetch('/api/config/test-source', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: configWho || me.email }),
     });
     const d = await r.json();
     btn.disabled = false;
     if (!r.ok) { out.textContent = d.error || 'Failed'; return; }
-    if (d.ok) {
-      out.textContent = 'Connected.';
-      badge.textContent = '✓ Working';
-      if (configData) configData.pg_dsn_tested_ok = true;
-    } else {
-      out.textContent = d.detail || 'Connection failed';
-    }
+    if (!d.ok) { out.textContent = d.detail || 'Connection failed'; return; }
+    badge.textContent = '✓ Connected';
+    if (configData) configData.source_tested_ok = true;
+    // Numbers come back masked (sms.py) — the names are what tell the operator
+    // this is their own database and not somebody else's workspace.
+    const rows = (d.sample || []).map(c =>
+      `<div><b>${esc(c.name)}</b> · ${esc(c.phone)}</div>`).join('');
+    out.innerHTML = esc(d.detail) + ' — ' + d.count +
+      ` customer${d.count === 1 ? '' : 's'} with a phone number.` +
+      (rows ? `<div class="cfg-sample">${rows}</div>` : '');
   } catch (e) {
     btn.disabled = false;
     out.textContent = String(e);
@@ -2666,10 +2814,12 @@ function clearSecret(field) {
 // Two halves, and they are not symmetric. A CAMPAIGN is bulk copy you write
 // and then approve; nothing sends until you do. SMART REACTIVATION takes no
 // copy and no segment — it reads the lapsed end of your customer database,
-// decides who is worth reaching, writes each message, and sends. That is the
-// one auto-send path in the system, so the guardrails (a per-run cap, a
-// 30-day per-person cooldown, and the global pause switch) are stated on the
-// view rather than buried in the server.
+// decides who is worth reaching, and writes each message. Whether it then
+// sends is picked per run: `auto` sends unreviewed (the one auto-send path in
+// the system) and `review` stops with every message and its number on screen
+// until you press Send. The guardrails apply to both and are stated on the
+// view rather than buried in the server: a per-run cap, a 30-day per-person
+// cooldown, and the global pause switch.
 
 let smsData = null;
 let smsView = localStorage.getItem('sms-view') || 'campaigns';
@@ -2678,6 +2828,14 @@ let editingCampaign = null;
 // database) this business's SMS work runs on. '' means the server's own
 // default (the business's assigned partner) rather than a forced choice.
 let smsOwner = localStorage.getItem('sms-owner') || '';
+// Auto or review, remembered between visits. Review is the default: it is the
+// answer you can undo, and auto is one dropdown away for anyone who wants the
+// hands-off run this feature started as.
+let reactMode = localStorage.getItem('sms-react-mode') || 'review';
+// One SMS write at a time. The server refuses a second send of the same
+// message anyway (it is no longer pending); this is so a double-click does not
+// produce an alert about it.
+let reactBusy = false;
 
 function setSmsView(v) {
   smsView = v;
@@ -2769,6 +2927,12 @@ function renderSms() {
 
 function fmtWhen(ts) { return (ts || '').replace('T', ' ').replace('Z', '') || '—'; }
 
+const SOURCE_LABELS = { aiorders: 'AIOrders', crm: 'CRM', ghl: 'HighLevel' };
+
+function sourceLabel(id) {
+  return SOURCE_LABELS[id] || id;
+}
+
 function segLabel(id) {
   const s = (smsData.segments || []).find(x => x.id === id);
   return s ? s.label : id;
@@ -2780,7 +2944,7 @@ function renderCampaigns() {
     <button class="btn yes" onclick="openCampModal(null)"${noSource ? ' disabled' : ''}>+ New campaign</button>
     <span class="note-text">${noSource
       ? 'Pick a customer database source in Config before writing a campaign.'
-      : 'Segments read from your ' + esc(smsData.customer_source === 'crm' ? 'CRM' : 'AIOrders') +
+      : 'Segments read from your ' + esc(sourceLabel(smsData.customer_source)) +
         ' customer database.'}</span>
   </div>`;
 
@@ -2819,19 +2983,78 @@ function renderCampaigns() {
   }).join('');
 }
 
+// What each mode means, in the two places the operator meets it: the note
+// under the dropdown, and the button that starts the run.
+const REACT_MODES = {
+  review: {
+    label: 'Preview each message, then I approve',
+    button: 'Draft messages for review',
+    note: 'The run stops with every message, and the number it is bound for, on ' +
+          'screen. Nothing sends until you press Send.',
+  },
+  auto: {
+    label: 'Send automatically, no review',
+    button: 'Run and send now',
+    note: 'Nobody reads them first. The cap, the cooldown and the pause switch ' +
+          'are the only things standing in for you.',
+  },
+};
+
+function setReactMode(v) {
+  reactMode = REACT_MODES[v] ? v : 'review';
+  localStorage.setItem('sms-react-mode', reactMode);
+  const btn = document.getElementById('react-btn');
+  const note = document.getElementById('react-mode-note');
+  if (btn) btn.textContent = REACT_MODES[reactMode].button;
+  if (note) note.textContent = REACT_MODES[reactMode].note;
+}
+
+// A message's state, tolerating the runs written before review mode existed:
+// those carry only `sent`, and were always already finished.
+function reactState(m) {
+  return m.state || (m.sent ? 'sent' : 'failed');
+}
+
+function reactPending(run) {
+  return (run.messages || []).filter(m => reactState(m) === 'pending');
+}
+
+function reactRow(run, m) {
+  const st = reactState(m);
+  const shown = st === 'discarded' ? 'skipped' : st;
+  return `<div class="one ${esc(st)}${st === 'failed' ? ' bad' : ''}">
+    <div class="rmsg-head">
+      <span class="rmsg-to">${esc(m.name || 'No name on file')}</span>
+      <span class="rmsg-num">${esc(m.phone || '')}</span>
+      <span class="rmsg-state">${esc(shown)}</span>
+    </div>
+    <div class="rmsg-body">${esc(m.message)}</div>
+    ${m.detail && st !== 'sent'
+      ? `<div class="rmsg-err">${st === 'pending' ? 'Last attempt failed: ' : 'Not sent: '}${
+          esc(m.detail)}</div>` : ''}
+    ${st === 'pending' ? `<div class="rmsg-acts">
+      <button class="btn yes sm" onclick="reactMsg('send','${escAttr(run.id)}','${escAttr(m.id)}')">
+        Send this one</button>
+      <button class="btn no sm" onclick="reactMsg('discard','${escAttr(run.id)}','${escAttr(m.id)}')">
+        Skip</button>
+    </div>` : ''}
+  </div>`;
+}
+
 function renderReactivation() {
   const r = smsData.reactivation || {};
   const blocked = !!((smsData.config_missing || []).length || smsData.quiet_mode);
+  const mode = REACT_MODES[reactMode] ? reactMode : 'review';
   const bar = `<div class="auto-note">
     Smart reactivation takes no segment — it reads the lapsed end of your customer
     database itself. It still needs an offer each run: the one piece of copy a human
     provides. From your business blurb (Config) and that offer, it runs a pass on
     <b>your</b> Claude OAuth token to choose who is worth reaching and write to each
-    of them, and sends — with no approval step. Guardrails, since nobody is
-    reviewing: at most <b>${r.cap}</b> people per run, nobody texted twice within
-    <b>${r.cooldown_days} days</b>, and the run stops entirely while the global pause
-    switch is set. Phone numbers are never sent to the model — it sees a first name
-    and how long it has been, nothing else.
+    of them. You decide per run whether it sends straight away or shows you every
+    message first. Guardrails either way: at most <b>${r.cap}</b> people per run,
+    nobody texted twice within <b>${r.cooldown_days} days</b>, and the run stops
+    entirely while the global pause switch is set. Phone numbers are never sent to
+    the model — it sees a first name and how long it has been, nothing else.
   </div>
   <div class="sms-bar" style="align-items:flex-start">
     <div style="flex:1;min-width:220px">
@@ -2842,33 +3065,64 @@ function renderReactivation() {
         oninput="document.getElementById('react-btn').disabled = ${blocked} || !this.value.trim()"
       ></textarea>
     </div>
+    <div style="min-width:250px;max-width:320px">
+      <label for="react-mode" class="cfg-hint" style="display:block;margin-bottom:4px">
+        Once the messages are written</label>
+      <select id="react-mode" class="instance-select" style="width:100%"
+        onchange="setReactMode(this.value)">
+        ${Object.keys(REACT_MODES).map(k =>
+          `<option value="${k}"${k === mode ? ' selected' : ''}>${esc(REACT_MODES[k].label)}</option>`
+        ).join('')}
+      </select>
+      <div class="cfg-hint" id="react-mode-note">${esc(REACT_MODES[mode].note)}</div>
+    </div>
   </div>
   <div class="sms-bar">
     <button class="btn yes" id="react-btn" onclick="runReactivation()" disabled>
-      Run reactivation now</button>
+      ${esc(REACT_MODES[mode].button)}</button>
     <span class="note-text" id="react-status"></span>
   </div>`;
 
   const runs = smsData.reactivations || [];
   if (!runs.length) return bar + '<div class="empty">No reactivation runs yet.</div>';
 
-  return bar + runs.map(run => `<div class="mkt-card">
+  return bar + runs.map(run => {
+    const waiting = reactPending(run);
+    return `<div class="mkt-card">
     <div class="mkt-head">
       <div class="mkt-title-wrap">
         <div class="mkt-title">Run ${esc(fmtWhen(run.created_at))}</div>
         <div class="mkt-sub">${run.candidates} lapsed · ${run.skipped_cooldown || 0} in cooldown ·
-          ${run.considered} considered · ${run.chosen == null ? 0 : run.chosen} chosen</div>
+          ${run.considered} considered · ${run.chosen == null ? 0 : run.chosen} chosen${
+          run.mode === 'review' ? ' · reviewed before sending' : ''}</div>
         ${run.offer ? `<div class="mkt-sub">Offer: ${esc(run.offer)}</div>` : ''}
       </div>
       <span class="status-pill ${esc(run.status)}">${esc(run.status)}</span>
     </div>
     ${run.error ? `<div class="set-err" style="margin-top:8px">${esc(run.error)}</div>` : ''}
-    ${(run.messages || []).length ? `<div class="sms-out">${run.messages.map(m =>
-      `<div class="one${m.sent ? '' : ' bad'}"><b>${esc(m.name || m.phone)}</b> —
-        ${esc(m.message)}${m.sent ? '' : ' · not sent: ' + esc(m.detail)}</div>`).join('')}</div>` : ''}
-    <div class="sms-fact"><b>${run.results ? run.results.sent : 0}</b> sent ·
-      <b>${run.results ? run.results.failed : 0}</b> failed</div>
-  </div>`).join('');
+    ${waiting.length ? `<div class="sms-fact">${waiting.length} message${
+      waiting.length === 1 ? '' : 's'} waiting on you. Nothing below has been sent
+      unless it says so.</div>` : ''}
+    ${(run.messages || []).length
+      ? `<div class="sms-out">${run.messages.map(m => reactRow(run, m)).join('')}</div>` : ''}
+    ${waiting.length ? `<div class="actions">
+      <button class="btn yes" onclick="reactRunAction('send','${escAttr(run.id)}')">
+        Send all ${waiting.length} now</button>
+      <button class="btn no" onclick="reactRunAction('discard','${escAttr(run.id)}')">
+        Skip the rest</button>
+    </div>` : ''}
+    ${run.approved_by ? `<div class="sms-fact">Approved by <b>${esc(run.approved_by)}</b>
+      ${esc(fmtWhen(run.approved_at))}</div>` : ''}
+    <div class="sms-fact"><b>${run.results ? run.results.sent : 0}</b> sent${
+      waiting.length ? ` · <b>${waiting.length}</b> waiting` : ''}${
+      // On a finished run this is how many never got through. On one still
+      // waiting it is how many of the messages below the gateway refused —
+      // they are still in the list, still sendable, so "failed" alone would
+      // read as if they were gone.
+      (run.results && run.results.failed)
+        ? ` · <b>${run.results.failed}</b> ${waiting.length ? 'refused so far' : 'failed'}` : ''}</div>
+  </div>`;
+  }).join('');
 }
 
 function openCampModal(id) {
@@ -2956,16 +3210,23 @@ async function sendCampaign(id) {
 async function runReactivation() {
   const offer = (document.getElementById('react-offer').value || '').trim();
   if (!offer) return;
-  if (!confirm('Run smart reactivation now? Messages send automatically — nobody ' +
-               'reviews them first.')) return;
+  const mode = REACT_MODES[reactMode] ? reactMode : 'review';
+  // Only auto needs a confirmation: it is the click that reaches real phones.
+  // In review mode this button writes drafts and stops, and the confirmation
+  // that matters comes later, once there is something to read.
+  if (mode === 'auto' &&
+      !confirm('Run smart reactivation and send now? Messages go out automatically — ' +
+               'nobody reviews them first.')) return;
   const btn = document.getElementById('react-btn');
   const status = document.getElementById('react-status');
   btn.disabled = true;
-  status.textContent = 'Running — the Claude pass takes a minute or two…';
+  status.textContent = (mode === 'auto' ? 'Running' : 'Drafting') +
+    ' — the Claude pass takes a minute or two…';
   try {
     const r = await fetch('/api/sms/reactivate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instance: mktInstance, offer, config_owner: smsOwner || undefined }),
+      body: JSON.stringify({ instance: mktInstance, offer, mode,
+                             config_owner: smsOwner || undefined }),
     });
     const d = await r.json();
     if (!r.ok) { status.textContent = ''; alert(d.error || 'Failed'); btn.disabled = false; return; }
@@ -2979,6 +3240,47 @@ async function runReactivation() {
   loadSms();
 }
 
+// ── A review run's gate ──────────────────────────────────────────────────
+// `messages` names which of the run's pending messages to act on; leaving it
+// out means all of them, which is what the run-wide buttons want.
+
+async function reactAction(action, id, messages) {
+  if (reactBusy) return;
+  reactBusy = true;
+  try {
+    const r = await fetch('/api/sms/reactivation/' + action, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instance: mktInstance, id, messages,
+                             config_owner: smsOwner || undefined }),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || 'Failed'); return; }
+  } catch (e) {
+    alert(String(e));
+    return;
+  } finally {
+    reactBusy = false;
+  }
+  loadSms();
+}
+
+// One row. No confirmation: reading the message is what the row is for, and a
+// dialog per message would make sending twelve of them twenty-four clicks.
+function reactMsg(action, runId, messageId) {
+  reactAction(action, runId, [messageId]);
+}
+
+// Every remaining row at once, which does deserve one.
+function reactRunAction(action, runId) {
+  const run = (smsData.reactivations || []).find(x => x.id === runId);
+  const n = run ? reactPending(run).length : 0;
+  const ok = action === 'send'
+    ? confirm(`Send all ${n} remaining message${n === 1 ? '' : 's'} now? This cannot be recalled.`)
+    : confirm(`Skip the ${n} message${n === 1 ? '' : 's'} still waiting? They will not be sent, ` +
+              `and this run will stop holding their phone numbers.`);
+  if (ok) reactAction(action, runId, null);
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────
 // Tabs before data: a partner must not see the Partners tab flicker into view
 // for the length of one round trip.
@@ -2988,7 +3290,10 @@ renderChannelTabs();   // reflects the remembered channel before the first fetch
 // check (redirect included) once there's data and the page is past that.
 document.getElementById('mkt-decide-btn').style.display = decideAppliesToChannel() ? '' : 'none';
 document.getElementById('mkt-settings-btn').style.display = settingsAppliesToChannel() ? '' : 'none';
-loadMe().then(loadMarketing);
+// loadMe() may have already switched to a different first-visible tab (a
+// partner with no Marketing department lands elsewhere) and loaded it —
+// don't also fetch Marketing's data into a view nobody will see.
+loadMe().then(() => { if (activeTab === 'marketing') loadMarketing(); });
 </script>
 </body>
 </html>
