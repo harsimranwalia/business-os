@@ -9,14 +9,14 @@ time_spent:
 time_remaining:
 severity: P2
 priority: now
-state: designed
-owner: architect
+state: verified
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-03
+updated: 2026-09-05
 branch:
 depends_on: []
 blocks: []
@@ -97,6 +97,26 @@ and the revenue behind them.
   better consent footing, but still worth a real legal check. Baseline:
   every send carries an unsubscribe path regardless (acceptance criterion
   6).
+
+## Breakdown
+
+Decomposed 2026-09-04 (`work-breakdown/SKILL.md`) into three sub-tickets, one
+per surface, sequenced by the design's own Rollout order (migration before
+functions before frontend):
+
+| Sub-ticket | Surface | Repo | Depends on | State |
+|---|---|---|---|---|
+| `ENG-037` | database | `aiorders-api` | — | `building` |
+| `ENG-038` | backend | `aiorders-api` | `ENG-037` | `ready` |
+| `ENG-039` | frontend | `restaurant-portal` | `ENG-038` | `ready` |
+
+This parent carries no diff of its own from here on — its evidence is its
+children's (ADR-003-class exemption). It moves directly to `shipped` once
+every child reaches `shipped`/`verified`/`dropped` with at least one
+`shipped`/`verified`, without itself passing through `in-review`/`in-qa`/
+`in-security`. Full reasoning — the surface split, why `backend` wasn't
+split further, ADR/AC mapping per child, and sizing — is in
+`agents/eng-manager/notebook/2026-09-04-eng019-work-breakdown.md`.
 
 ## Log
 
@@ -432,3 +452,206 @@ family), one of the documented no-chain conditions (held by a cap). Firing
 no new work to do. Re-check via a `decision`/`watch`/`scheduled` pass once
 the `ENG-016` family reaches `shipped`, or via a dedicated `continue
 ENG-019` once it does.
+
+## 2026-09-04 — scheduled: dispatched into the freed slot — `designed → ready`
+
+`scheduled` event pass (whole-board safety-net sweep), context `launchd`.
+Reading map for `scheduled`: the whole document. Mode check clean
+(business-os `.env` → `MODE=active`). Pre-pass
+`departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-019`) and
+whole-board: both exit 0, clean.
+
+**Why this ticket, verified fresh rather than trusted from the board
+index's own cached narrative.** Machine WIP re-checked off every ticket's
+own frontmatter this pass: the whole `ENG-016` family (`ENG-016` itself
+plus `ENG-031`–`034`) now reads `verified`, and no other ticket sits inside
+the counted `ready`..`ready-to-ship` range — **machine WIP `0/1`, free**.
+To-do-column scan (`intake`/`shaped`/`awaiting-scope`) found nothing
+eligible to start fresh (`ENG-018` is `priority: hold`; `ENG-027`/`ENG-028`
+are `awaiting-scope`/`owner: approver`, both genuinely waiting on the
+approver, not machine-actionable). Per this ticket's own prior entry
+(2026-09-03, immediately above), it is not a *new* start but a **deferred**
+one: design already complete, no one-way door, routing already determined
+(`tech-design/SKILL.md` step 11) — held only by the cap. Among the
+`priority: now` pool held in the same position (`ENG-019`, `ENG-020`,
+`ENG-021` per this ticket's own prior entry; `ENG-026` also currently
+carries `priority: now` but was not part of that enumerated pool — not
+chased further, since it is a higher id than all three and so does not
+change the outcome either way), lowest id decides: `ENG-019`.
+
+**Re-verified the design is still what it was, not re-derived.**
+`links.design` still points at
+`agents/architect/designs/ENG-019-restaurant-marketing-broadcasts.md`,
+`links.adrs: [ADR-018, ADR-019, ADR-020]` still populated, file still
+present on disk. No edits to the ticket's scope, PRD, or design this pass —
+this is the deferred bookkeeping transition the 2026-09-03 entry already
+earned, not a fresh design review.
+
+**State/owner: `designed`/`architect` → `ready`/`eng-manager`.** Per
+`tech-design/SKILL.md` step 11 ("Otherwise: state `ready`, owner
+`eng-manager` (work-breakdown next)") — no G2, no one-way door, not an L0
+project. **1 transition**, well under the cap of 4. **Consequence:**
+machine WIP `0/1 → 1/1`, occupied by `ENG-019` alone. Approver-facing WIP
+unaffected (uncapped; `ready` was never counted there).
+
+**Stops here, deliberately — does not attempt work-breakdown or building
+inline.** Both are new implementation work (or the judgment call that leads
+directly to it), and this board's own established precedent throughout
+today (`ENG-031`→`ENG-032`→`ENG-033`→`ENG-034`→`ENG-016`, each a `continue`
+dispatch rather than inline building on a `scheduled`/`watch` pass) treats
+that as out of scope for this event type. Chained instead — see below.
+
+**Dead-end sweep (whole board, per this event's own contract):** found and
+fixed two stale `owner` fields (`ENG-014`, `ENG-025`, both `eng-manager` →
+`architect` — see their own board files and this pass's `_index.md` entry
+for the full finding); no ticket sits without an owner; no ticket is
+`blocked` at all right now (confirmed off every ticket's own frontmatter);
+no broken chain found — `traces/eng-loop-2026-09-04.log` shows a clean,
+continuous chain through today with no `DROPPED` lines and no
+`*-eng-events-dropped.md` file for today, and an earlier pass today
+(`traces/eng-loop-2026-09-04.log` ~line 1173) already re-verified all
+twelve `designed`-state tickets are genuinely in the
+"design-complete-but-capped" sub-state, not stalled.
+
+**Notify sweep:** `inbox/`'s three open items (`ENG-027`, `ENG-028`,
+`ENG-016`'s Piece-2 question) re-checked against the 24h threshold —
+`ENG-027`/`ENG-028` already carry their one-time `nudged:`; the `ENG-016`
+question is ~13 minutes old (`notified: 2026-09-04T10:58:06` vs. this
+pass's start), nowhere near due. Nothing raised or nudged this pass — this
+ticket's own transition opened no gate.
+
+**Observations/exceptions (8b):** none new beyond the two owner-field
+corrections logged above and on `_index.md`. No `exception-request:` found
+on any ticket log.
+
+**Journal (8c):** n/a — no G1/G2/G3 or merge request answered this pass.
+
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-019`) and whole-board: both exit 0, clean.
+
+`chained: ENG-019` — `ready` is agent-owned (`eng-manager`, work-breakdown
+next), not the approver, not blocked, not terminal, not held by a cap
+(this ticket now holds the cap itself). Fired `/bin/zsh
+/Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+continue ENG-019` before this pass exits.
+
+- 2026-09-04 **`ready → building`, work-breakdown run** (eng-manager,
+  `continue` event pass, context `ENG-019`, `work-breakdown/SKILL.md`).
+  Reading map for `continue`: steps 6 and 6b, plus the not-negotiable set (1,
+  7, 8b, 9, 10; *Enforced vs instructed*, *The four lanes*, *Guards*) — step
+  2's mid-PRD checkpoint doesn't apply. Mode check clean (`MODE=active`).
+  Gate-check, scoped (`ENG-019`) and whole-board: both exit 0, clean (run
+  fresh against the resulting board state, including the three new tickets
+  below).
+
+  **Autonomy check:** both touched projects (`aiorders-api`,
+  `restaurant-portal`) are L1. Proceeds. **WIP check:** SKILL.md's own text
+  names a stale config key (`wip.limit`); read the current authoritative
+  value instead — `machine_limit: 1`, `1/1`, held by this ticket's own
+  family, not a second occupant. Observation filed (stale key name in a
+  skill file — not edited here, skill files go through Fable only).
+
+  Split into three sub-tickets by surface, sequenced per the design's own
+  Rollout order (migration → functions → frontend): `ENG-037` (database, no
+  dep, dispatched to `building`), `ENG-038` (backend, depends_on `ENG-037`),
+  `ENG-039` (frontend, depends_on `ENG-038`) — both held at `ready`. Considered
+  and rejected splitting `backend` further (CRUD vs. dispatch/unsubscribe) —
+  same agent, same WIP slot either way, no parallelism gained. See
+  `## Breakdown` above; full reasoning, ADR/AC mapping per child, and sizing
+  in `agents/eng-manager/notebook/2026-09-04-eng019-work-breakdown.md`.
+
+  **1 transition** on this ticket (`ready → building`). Machine WIP: still
+  `1/1`, same family (`ENG-019` + `ENG-037`..`039`), not 2/1 — applying the
+  `ENG-016`/`ENG-031` precedent, not re-litigating it. No G1/G2/G3, no
+  one-way door, nothing raised to the approver.
+
+  `chained: ENG-037` — the only child with a met dependency and something
+  agent-actionable now. Fired `/bin/zsh
+  /Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh
+  continue ENG-037` before this pass exits. `chained: none` on `ENG-019`
+  itself (parent has no action until a child reports back) and on
+  `ENG-038`/`ENG-039` (each waiting on an unmet dependency) — recorded on
+  each ticket's own log.
+
+  business-os itself left uncommitted — same standing default every pass on
+  this board has used; the commit-convention question remains open, not
+  re-decided here.
+
+- `2026-09-05` **`building → shipped → verified`** (eng-manager/
+  product-manager, `continue` event pass, context `ENG-019`,
+  `acceptance-check/SKILL.md`). Reading map for `continue`: steps 6 and 6b,
+  plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*,
+  *The four lanes*, *Guards*) — step 2's mid-PRD checkpoint doesn't apply,
+  the PRD has been `approved` since 2026-09-03. Mode check clean
+  (repo-root `.env` → `MODE=active`). Pre-pass `lib/eng-gate-check.sh`,
+  scoped (`ENG-019`) and whole-board: both exit 0, clean.
+
+  **All three children verified**, re-checked fresh off each one's own
+  frontmatter rather than trusted from `_index.md`'s cached narrative:
+  `ENG-037`, `ENG-038`, `ENG-039` all `state: verified`, all `parent:
+  ENG-019`, none dropped. `ADR-003`-class exemption met (every child
+  settled, all three actually shipped — well past the "at least one"
+  floor). `building → shipped`, no diff, review, QA, or security hop of its
+  own — same handoff shape `ENG-016`'s own parent transition used
+  2026-09-04.
+
+  **Ran `acceptance-check/SKILL.md` in full despite the exemption** — the
+  skill's trigger has no parent carve-out. Re-fetched both repos fresh
+  rather than trusting either child's own notebook date: `aiorders-api`
+  `origin/main` → `89c6fdb1`, `restaurant-portal` `origin/main` → `aeeb7b9`
+  — both identical to the commits `ENG-038`'s and `ENG-039`'s own
+  acceptance-checks already walked, zero drift. Unlike `ENG-016`'s family
+  (3 of 4 children shipped via the receipt-bookkeeping shortcut, leaving
+  criteria never individually walked until the parent's own check), both of
+  this family's non-schema children already ran acceptance-check in full at
+  their own shipping point, so this pass is a rollup and a fresh no-drift
+  confirmation, not a gap-fill. All 7 PRD criteria pass (cross-referenced
+  from `ENG-038`'s and `ENG-039`'s own notebooks); no scope creep found in
+  a whole-family non-goals sweep; cost `$0/month` as estimated, confirmed
+  independently on all three children's own release records. `shipped →
+  verified`. Full reasoning:
+  `agents/product-manager/notebook/2026-09-05-eng019-acceptance.md`.
+
+  **2 transitions**, under the cap of 4. **Machine WIP: `1/1 → 0/1`, free**
+  — the whole `ENG-019` family (parent plus `ENG-037`–`039`) is now
+  terminal.
+
+  **Step 6b: neither condition met** — the PRD's Non-goals section names
+  deferred ideas in prose (deeper ROI/attribution, a fuller segment
+  builder, AI-generated content) but no "Feature shape and sequencing"
+  section with a named next ticket, and the G1 answer was a bare
+  "approved" with no explicit sequence sign-off. Nothing filed.
+
+  **Two observations filed** (`observations.md`): this family as the first
+  on the board where the parent's own acceptance-check found zero backfill
+  work (contrast with `ENG-016`), not treated as closing the standing
+  receipt-bookkeeping proposal; and a stale citation in
+  `lib/eng-gate-check.sh`'s own comments pointing at
+  `agents/architect/decisions/ADR-003-parent-ticket-receipts.md`, which
+  does not exist on this instance (this instance's real `ADR-003` is
+  `aiorders-api-authoritative-for-migrations`, an unrelated decision) —
+  likely a life-os-origin citation that never resolves for any instance
+  forked from that template. Not fixed inline — out of scope for this
+  ticket's own `continue` pass, and `lib/` scripts are outside the
+  Fable-only authoring rule but still not this pass's work to do.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched, per
+  this event's own narrower contract.
+
+  **Notify sweep:** no gate item raised this pass (no one-way door, no G1/
+  G2/G3, no merge request). Nothing nudged — out of this event's own scope.
+
+  **Journal (8c):** n/a — no G1/G2/G3 or merge request answered this pass.
+
+  Post-pass `lib/eng-gate-check.sh`, scoped (`ENG-019`) and whole-board:
+  both exit 0, clean.
+
+  `chained: none` — terminal (`verified`), `blocks: []`. The freed machine-
+  WIP slot is for the next dispatch-scoped pass (`scheduled`, or a
+  qualifying `decision`/`watch`) to pick up, not this one — `continue`'s
+  own single-ticket scope, same precedent `ENG-016`'s own shipping pass
+  already set.
+
+  business-os itself left uncommitted — same standing default every pass on
+  this board has used; the commit-convention question remains open, not
+  re-decided here.
