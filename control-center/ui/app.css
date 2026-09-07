@@ -243,6 +243,9 @@ textarea { resize: vertical; min-height: 44px; line-height: 1.55; }
 .card-kind .ic { width: 13px; height: 13px; color: var(--text-3); }
 .card-kind .ago { margin-left: auto; font-family: var(--mono); letter-spacing: 0; text-transform: none; font-weight: 500; color: var(--text-4); }
 .card-kind .ago.late { color: var(--accent); }
+.card-kind .copy { width: 24px; height: 24px; margin: -6px 0 -6px auto; color: var(--text-4); }
+.card-kind .ago + .copy { margin-left: 0; }
+.card-kind .copy:hover { color: var(--text); }
 .card-head { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .card-title { font-size: 15px; font-weight: 600; letter-spacing: -.01em; line-height: 1.35; color: var(--text); min-width: 0; flex: 1 1 280px; }
 .card-title .id { font-family: var(--mono); font-weight: 500; color: var(--text-2); font-size: 13px; margin-right: 8px; }

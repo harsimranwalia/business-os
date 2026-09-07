@@ -3,7 +3,7 @@
 // meet it. bindActions() is the one click handler for every [data-act]
 // button; it calls the same endpoints the old page did, with the same
 // payloads. Nothing here auto-sends: every action is a human clicking.
-import { icon, esc, attr, cssId, relTime, fmtDur, fmtWhen, dueLabel, fmtDate, api, toast, fail, confirm, promptText, navigate, renderDecisionBody, renderMarkdown, eventVerb, plural, prefs, dialog, isAdmin } from '../core.js';
+import { icon, esc, attr, cssId, relTime, fmtDur, fmtWhen, dueLabel, fmtDate, api, toast, fail, confirm, promptText, navigate, renderDecisionBody, renderMarkdown, eventVerb, plural, prefs, dialog, isAdmin, copyText } from '../core.js';
 
 export const GATE_LABEL = { merge: 'Merge gate', scope: 'Scope gate', 'intake-question': 'Question', incident: 'Incident', decision: 'Decision', release: 'Release gate', 'one-way-door': 'One-way door', 'g1-proposals': 'Proposals' };
 export const PIPE_LABELS = { '1-signal': 'Signal', '2-qualified': 'Qualified', '3-contacted': 'Contacted', '4-engaged': 'Engaged',
@@ -12,7 +12,7 @@ export const PIPE_LABELS = { '1-signal': 'Signal', '2-qualified': 'Qualified', '
 export const tag = (t, cls = '') => `<span class="tag ${cls}">${esc(t)}</span>`;
 export const pill = s => `<span class="pill ${esc(String(s || '').toLowerCase())}">${esc(s)}</span>`;
 export function kindHead(ic, label, ago = '', late = false, extra = '') {
-  return `<div class="card-kind">${icon(ic)}<span>${label}</span>${extra}${ago ? `<span class="ago ${late ? 'late' : ''}">${esc(ago)}</span>` : ''}</div>`;
+  return `<div class="card-kind">${icon(ic)}<span>${label}</span>${ago ? `<span class="ago ${late ? 'late' : ''}">${esc(ago)}</span>` : ''}${extra}</div>`;
 }
 function firstHeading(body, ticket) { const m = String(body || '').match(/^\s*#{1,2}\s+(.+)$/m); let t = m ? m[1].trim() : ''; if (ticket) t = t.replace(new RegExp('\\s*[(\\[]?' + ticket + '[)\\]]?\\s*$'), '').replace(new RegExp('^' + ticket + '\\s*[—:-]\\s*'), ''); return t; }
 function stripFirstHeading(body) { return String(body || '').replace(/^\s*#{1,2}\s+.+\n?/, ''); }
@@ -23,13 +23,25 @@ export function prLinks(links) {
 const act = (label, cls, ic, data, key) => `<button class="btn ${cls}" ${Object.entries(data).map(([k, v]) => `data-${k}="${attr(v)}"`).join(' ')}${key ? ` data-key="${key}"` : ''}>${ic ? icon(ic) : ''}${label}${key ? `<span class="kbd">${key.toUpperCase()}</span>` : ''}</button>`;
 
 // ── Engineering ───────────────────────────────────────────────────────────
+// The whole item as plain text — header line, recommendation, estimate, the
+// full body, PR links — for pasting into a chat, a doc, or another model.
+export function gateText(w) {
+  const lines = [[w.ticket, GATE_LABEL[w.gate] || w.gate, w.project, w.raised ? 'raised ' + w.raised : ''].filter(Boolean).join(' · ')];
+  if (w.recommendation) lines.push(`Recommendation: ${w.recommendation}`);
+  if (w.time_estimate) lines.push(`Estimate: ${w.time_estimate}${w.time_impact ? ' (+' + w.time_impact + ')' : ''}`);
+  lines.push('', String(w.body || '').trim());
+  (w.pr_links || []).forEach(l => lines.push(`PR${l.repo ? ' (' + l.repo + ')' : ''}: ${l.url}`));
+  return lines.join('\n') + '\n';
+}
+const copyBtn = text => `<button class="btn btn-ghost btn-sm btn-icon copy" data-act="copy" data-text="${attr(text)}" title="Copy this item, in full" aria-label="Copy this item">${icon('copy')}</button>`;
+
 export function engGateCard(w, o = {}) {
   const gate = w.gate || 'decision';
   const title = firstHeading(w.body, w.ticket);
   const noteId = 'note-' + cssId(w.file);
   const base = { act: 'eng-decide', file: w.file, note: noteId, instance: o.instance || '' };
   return `<article class="card need item" data-item="${attr('eng:' + w.file)}" data-kind="eng">
-    ${kindHead('branch', (o.inbox ? 'Engineering · ' : '') + (GATE_LABEL[gate] || gate), w.raised ? 'raised ' + relTime(w.raised) : '')}
+    ${kindHead('branch', (o.inbox ? 'Engineering · ' : '') + (GATE_LABEL[gate] || gate), w.raised ? 'raised ' + relTime(w.raised) : '', false, copyBtn(gateText(w)))}
     <div class="card-head"><div class="card-title"><span class="id">${esc(w.ticket)}</span>${esc(title || w.ticket)}</div>
       <div class="card-tags">${w.project ? tag(w.project) : ''}${w.time_estimate ? tag('est. ' + w.time_estimate, 'tag-text') : ''}${w.time_impact ? tag('+' + w.time_impact, 'tag-accent tag-text') : ''}</div></div>
     ${w.recommendation ? `<div class="rec"><span class="lbl">Recommendation</span>${esc(w.recommendation)}</div>` : ''}
@@ -250,6 +262,7 @@ export function bindActions(root, onChange) {
     try {
       switch (d.act) {
         case 'go': { const { act, to, ...params } = d; delete params.key; navigate(to, params); return; }
+        case 'copy': { const ok = await copyText(d.text); toast(ok ? 'Copied to the clipboard.' : 'Could not copy — the browser blocked clipboard access.', ok ? 'ok' : 'bad'); return; }
         case 'eng-decide': {
           const noteEl = document.getElementById(d.note);
           const note = noteEl ? noteEl.value.trim() : '';

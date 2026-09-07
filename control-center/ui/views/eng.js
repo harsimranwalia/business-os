@@ -2,7 +2,7 @@
 // is the state of play; Bugs is the open list. Polls while open so "Right
 // now" stays current — but only re-draws the page when something other than
 // the live activity changed, so an open card or a half-written note survives.
-import { api, setTop, seg, selectHtml, refreshBtn, esc, attr, icon, empty, skeleton, prefs, navigate, toast, fail, relTime, setViewKeys, makePoller, errorBox, plural, setAgent, setPaletteCommands, copyText, eventVerb } from '../core.js';
+import { api, setTop, seg, selectHtml, refreshBtn, esc, attr, icon, empty, skeleton, prefs, navigate, toast, fail, relTime, setViewKeys, makePoller, errorBox, plural, setAgent, setPaletteCommands, eventVerb } from '../core.js';
 import { engGateCard, engBlockedCard, engDecidingCard, activityCard, bindActions, afterRender, captureInputs, restoreInputs, tag, GATE_LABEL } from './cards.js';
 
 const WORKING = ['ready', 'building', 'in-review', 'in-qa', 'in-security', 'ready-to-ship'];
@@ -48,22 +48,6 @@ function statsHtml(s) {
 // ── Decide ────────────────────────────────────────────────────────────────
 const shownWaiting = d => d.waiting.filter(w => waitingFilter === 'all' || w.gate === waitingFilter);
 
-// Everything on screen under "Waiting on you", as plain text with the full
-// bodies — for pasting into a chat, a doc, or another model.
-function waitingText(d) {
-  const parts = [];
-  if (waitingFilter === 'all') (d.blocked_on_harry || []).forEach(t => parts.push([`${t.id} · Blocked on you${t.project ? ' · ' + t.project : ''}`, t.title, t.pr_url ? `PR: ${t.pr_url}` : ''].filter(Boolean).join('\n')));
-  shownWaiting(d).forEach(w => {
-    const lines = [[w.ticket, GATE_LABEL[w.gate] || w.gate, w.project, w.raised ? 'raised ' + w.raised : ''].filter(Boolean).join(' · ')];
-    if (w.recommendation) lines.push(`Recommendation: ${w.recommendation}`);
-    if (w.time_estimate) lines.push(`Estimate: ${w.time_estimate}${w.time_impact ? ' (+' + w.time_impact + ')' : ''}`);
-    lines.push('', String(w.body || '').trim());
-    (w.pr_links || []).forEach(l => lines.push(`PR${l.repo ? ' (' + l.repo + ')' : ''}: ${l.url}`));
-    parts.push(lines.join('\n'));
-  });
-  return parts.join('\n\n---\n\n') + '\n';
-}
-
 function decideHtml(d) {
   const blocked = d.blocked_on_harry || [];
   const total = d.waiting.length + blocked.length;
@@ -71,7 +55,7 @@ function decideHtml(d) {
   const chipRow = [['all', 'All', total], ...FILTERS.map(([v, l]) => [v, l, gateCount(v)])]
     .map(([v, l, n]) => `<button class="chip ${waitingFilter === v ? 'on' : ''}" data-wf="${v}">${l}<span class="n">${n}</span></button>`).join('');
   let h = `<section class="section"><div class="section-h"><h2>Waiting on you</h2><span class="n ${total ? 'hot' : ''}">${total}</span>
-    ${total ? `<span class="right"><div class="chips">${chipRow}</div><button class="btn btn-ghost btn-sm btn-icon" data-copy-waiting title="Copy everything shown here, in full" aria-label="Copy everything shown here">${icon('copy')}</button></span>` : ''}</div>`;
+    ${total ? `<span class="right"><div class="chips">${chipRow}</div></span>` : ''}</div>`;
   const showBlocked = waitingFilter === 'all';
   const shown = shownWaiting(d);
   if (!shown.length && !(showBlocked && blocked.length)) {
@@ -229,11 +213,6 @@ function render() {
   restoreInputs(el, kept);
   afterRender(el);
   el.querySelectorAll('[data-wf]').forEach(b => b.onclick = () => { waitingFilter = b.dataset.wf; prefs.set('eng-waiting', waitingFilter); render(); });
-  const cp = el.querySelector('[data-copy-waiting]'); if (cp) cp.onclick = async () => {
-    const n = shownWaiting(data).length + (waitingFilter === 'all' ? (data.blocked_on_harry || []).length : 0);
-    const ok = await copyText(waitingText(data));
-    toast(ok ? `Copied ${plural(n, 'item')} to the clipboard.` : 'Could not copy — the browser blocked clipboard access.', ok ? 'ok' : 'bad');
-  };
   const dr = el.querySelector('[data-dropped]'); if (dr) dr.onclick = () => { showDropped = !showDropped; prefs.set('eng-dropped', showDropped ? '1' : '0'); render(); };
   bindComposer(el);
 }
