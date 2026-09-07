@@ -2173,6 +2173,47 @@ Do NOT chain when the ticket is:
   - at a terminal state (verified, advised, dropped)
   - held by a cap (WIP or approvals) — it waits, and that wait is the design
 
+Those guards are about THAT ticket. They have never meant the department
+stops. The approver, 2026-09-06: "It should not wait for a ticket to be
+merged before building another one. You can build all tickets and keep
+sending it for PR merge that I can do at my own convenience."
+
+SLOT FREED — chain the next ticket. Machine WIP counts ready, building,
+in-review, in-qa, in-security and ready-to-ship, and nothing else. When the
+ticket this pass touched parks on the approver — blocked with blocked_on:
+approver because its PR is open, or awaiting-release — it has left that range
+and its machine slot is free NOW, not after the merge. Before you exit: draw
+the top of To-do (priority, then severity, then ticket id), confirm it is
+startable (not hold, not blocked on a dependency or an unanswered question),
+and fire
+
+    $ENG_SHELL $SELF continue {NEXT-ID}
+
+recording in the PARKED ticket's log:
+    chained: {NEXT-ID} — slot freed by {TICKET-ID}
+
+Do not wait for the merge. Merging is the approver's, at their convenience; a
+pile of unmerged PRs is the design, not a failure. The parked ticket counts
+against the approver limit only, never the machine limit. The next ticket
+branches from the repo's default branch — or, if it needs code that exists
+only in an unmerged PR, from that PR's branch (a stacked PR), with the new
+PR's base set to it and the merge request saying which PR must merge first.
+
+NOTHING STARTABLE — say why. If the machine slot is free and nothing can
+start (To-do empty, or every candidate is hold, blocked on a dependency, on
+an unanswered scope/decision, or on something outside the machine's
+control), write ONE item to inbox/ for the approver: type: eng-decision,
+agent: eng-manager, gate: intake-question (it shows under "Question" in the
+control center), ticket: the blocking ticket id if there is exactly one,
+else a dated id such as IDLE-2026-09-06, project: this instance. Title:
+"Nothing I can start". Body: each candidate ticket, what precisely blocks
+it, what would clear it. Recommendation: the single most useful thing the
+approver could do. One item per idle episode — never a second while one is
+still undecided in inbox/. The moment something becomes startable, start it
+without waiting for the answer; the stale item is handled like any other
+answered or obsolete gate item. Log:
+    chained: none — idle: {reason}
+
 Chaining is how a finished build reaches review in minutes instead of at the
 next scheduled pass. Chaining a ticket that is genuinely waiting is just burning
 usage — the guard rails above are not optional.

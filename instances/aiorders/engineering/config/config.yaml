@@ -24,15 +24,41 @@ mode:
 
 # Delivery caps. Raising these is the approver's call.
 wip:
-  machine_limit: 1      # states ready..ready-to-ship. Corrected 2026-08-29,
+  machine_limit: 1      # states ready..ready-to-ship — the machine's range,
+                        # nothing else. Corrected 2026-08-29,
                         # same day: was raised to 12 (the max_5x tier value)
                         # that morning, then the approver overrode the whole
                         # tier-scaled model — 12 in flight meant every pass
                         # advanced six-plus tickets by one shallow step each
-                        # and nothing shipped. One ticket in flight, completed
-                        # end to end (through `shipped`), before the next
-                        # starts. See departments/engineering/agents/eng-manager/config.yaml
+                        # and nothing shipped. One ticket in flight on the
+                        # machine, worked end to end to a raised PR, before
+                        # the next starts. See departments/engineering/agents/eng-manager/config.yaml
                         # → wip.machine_limit for the full rationale.
+                        # Amended 2026-09-06 by the approver — never idle:
+                        # "It should not wait for a ticket to be merged before
+                        # building another one. You can build all tickets and
+                        # keep sending it for PR merge that I can do at my own
+                        # convenience." Until then "before the next starts"
+                        # meant through `shipped`, so the department idled for
+                        # as long as a PR sat unmerged waiting on Harry. Now
+                        # the moment a ticket parks on him (blocked_on:
+                        # approver with its PR open, or awaiting-release) its
+                        # machine slot is free and the same pass chains the
+                        # top of To-do into it (priority → severity → ticket
+                        # id; log `chained: {NEXT-ID} — slot freed by
+                        # {TICKET-ID}`). A pile of unmerged PRs is the design.
+                        # The parked ticket counts against approver_limit
+                        # (unlimited here, below), never against this. A next
+                        # ticket that needs code only in an unmerged PR
+                        # branches from that PR's branch as a stacked PR and
+                        # says so in its merge request. When nothing can
+                        # start, the EM raises ONE "Nothing I can start"
+                        # question item in inbox/ (gate: intake-question)
+                        # saying what blocks each candidate and what would
+                        # clear it — "Give me a reason if something is really
+                        # blocked on and you can not continue." — never a
+                        # second while one is undecided, and logs
+                        # `chained: none — idle: {reason}`.
   approver_limit: unlimited   # was 2. Raised to no-cap 2026-09-02 by the approver: the
   # anti-burnout intent (don't bury Harry in finished-but-unapproved work) is
   # explicitly waived by the one person it protects, because the department

@@ -153,11 +153,51 @@ wip:
   # So machine WIP is now 1, unconditionally, at every plan tier: only one
   # ticket may sit in `ready`..`ready-to-ship` at a time. The next ticket is
   # drawn from To-do — priority first, then severity, then ticket id (the
-  # order it was added) — only once the current one leaves that range by
-  # reaching `shipped`. Tickets already over this cap when it took effect are
+  # order it was added) — the moment the current one leaves that range.
+  # Tickets already over this cap when it took effect are
   # not force-reverted; they drain naturally and no *new* ticket starts until
   # the count is back at or under 1. The plan tier still scales hops/day,
   # hops/ticket, and review depth — just not how many tickets move at once.
+  #
+  # "Leaves that range" read "reaches `shipped`" until 2026-09-06, and that
+  # idled the department for as long as a PR sat unmerged, because `shipped`
+  # only happens once the merge is detected. The approver's words,
+  # 2026-09-06 — never idle: "It should not wait for a ticket to be merged
+  # before building another one. You can build all tickets and keep sending
+  # it for PR merge that I can do at my own convenience." So the range is
+  # the machine's alone — ready, building, in-review, in-qa, in-security,
+  # ready-to-ship — and the moment a ticket leaves it for the approver
+  # (`blocked` with blocked_on: approver because its PR is open, or
+  # `awaiting-release`) its machine slot is free and the next ticket starts
+  # in the same pass: the pass that parked it draws the top of To-do and
+  # fires `continue` on it before exiting, logging
+  # `chained: {NEXT-ID} — slot freed by {TICKET-ID}` on the parked ticket.
+  # "Finish before you start" now means finished on the machine side — PR
+  # raised — not merged. Merging is the approver's, at their convenience; a
+  # pile of unmerged PRs is the design, not a failure. The parked ticket
+  # counts against approver_limit only, never against machine_limit.
+  # Everything else about the 2026-08-29 correction stands.
+  #
+  # The next ticket branches from the repo's default branch. If it needs
+  # code that exists only in an unmerged PR, it branches from that PR's
+  # branch (a stacked PR), sets its PR base to it, and the merge request says
+  # which PR must merge first — see gates.merge_request.detect_merged_by for
+  # what that does to merge detection.
+  #
+  # When nothing can start — To-do empty, or every candidate `hold`, blocked
+  # on a dependency, on an unanswered scope/decision, or on something
+  # outside the machine's control — the EM writes ONE inbox item
+  # (type: eng-decision, agent: eng-manager, gate: intake-question — so it
+  # shows under "Question"; ticket: the single blocking ticket id, else a
+  # dated IDLE-YYYY-MM-DD; project: the instance; title "Nothing I can
+  # start") naming each candidate, what precisely blocks it, what would
+  # clear it, and — the recommendation — the one most useful thing the
+  # approver could do. One per idle episode: never a second while one is
+  # still undecided in inbox/; once something is startable the department
+  # resumes without waiting for the answer and the stale item is handled
+  # like any answered/obsolete gate item. Ticket log:
+  # `chained: none — idle: {reason}`. "Give me a reason if something is
+  # really blocked on and you can not continue." — the approver, 2026-09-06.
   #
   # approver_limit does NOT move with the tier. The approver's attention is
   # the one thing no subscription buys more of.
@@ -172,6 +212,11 @@ wip:
   # wip.approver_limit and still holds its WIP slot — it must never silently
   # escape counting the way `blocked` once did, freeing a slot while finished
   # work piled up unseen.
+  # The slot it holds is an APPROVER slot (2026-09-06): it counts against
+  # approver_limit and never against machine_limit, which it left the moment
+  # it parked. Freeing the machine slot is not the 2026-07-27 escape — the
+  # ticket is still counted, still notified, still nudged, still resurfaced;
+  # only the machine no longer waits for it before starting the next ticket.
   blocked_escalation_days: 5      # blocked_on: agent — escalates to the weekly report
   blocked_on_approver_reminder_days: 3   # a human-blocked ticket resurfaces sooner
 
@@ -222,6 +267,14 @@ gates:
     # ticket reaches `shipped` only when EVERY repo's branch is merged. One
     # repo merged first is a partial state, not done — the ticket stays
     # `blocked` and keeps holding its WIP slot.
+    # Stacked PRs (2026-09-06 — the next ticket now starts while the last
+    # one's PR is still open, so a ticket that needed code only in an
+    # unmerged PR branches from that PR's branch and sets its base to it):
+    # ancestry against the default branch cannot see that merge. Check the
+    # PR's own state as well — gh pr view --json state,baseRefName. A stack
+    # merged into its parent is not shipped until the parent is; a parent
+    # squash-merged leaves the stack's tip an ancestor of nothing, so
+    # ancestry alone would read it as unmerged forever.
   inbox_dir: inbox/
   # Never infer approval from silence. Explicit confirmation only.
 

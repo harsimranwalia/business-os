@@ -147,11 +147,27 @@ report.
    reason, learned the hard way: at a higher limit, a build-loop pass advanced
    every in-flight ticket by one shallow step each and moved on, so the board
    carried six or more tickets simultaneously mid-pipeline and none of them
-   ever reached `shipped`. **Finish before you start, literally: one ticket
-   runs `ready → ready-to-ship → shipped` before the next one enters `ready`.**
-   Draw the next start from To-do in order — priority, then severity, then the
-   order it was added — only once the current one ships. When something must
-   jump the queue, say what it displaced.
+   ever reached `shipped`. **Finish before you start — on the machine side.
+   One ticket runs `ready → ready-to-ship` and raises its PR before the next
+   one enters `ready`.** Draw the next start from To-do in order — priority,
+   then severity, then the order it was added — the moment the current one
+   leaves the machine's range. When something must jump the queue, say what
+   it displaced.
+
+   "Finished" used to mean merged, and that is amended (2026-09-06). The
+   machine's range is `ready, building, in-review, in-qa, in-security,
+   ready-to-ship` and nothing else. The moment a ticket leaves it for the
+   approver — `blocked` with `blocked_on: approver` because its PR is open,
+   or `awaiting-release` — its machine slot is free and the next ticket
+   starts **in the same pass**. Merging is the approver's, at their
+   convenience, and a pile of unmerged PRs is the design, not a failure. The
+   approver's words: *"It should not wait for a ticket to be merged before
+   building another one. You can build all tickets and keep sending it for
+   PR merge that I can do at my own convenience."* Before this the
+   department idled for as long as a PR sat unmerged, because `shipped` only
+   happens once the merge is detected — that idling is what they retired.
+   Everything else about the 2026-08-29 correction stands: one ticket on the
+   machine at a time, worked end to end, not twelve each a little done.
 
    **The fast lane** runs alongside it: an XS bug or chore that touches no
    sensitive surface skips the PRD file, the design, the separate test plan, and
@@ -195,6 +211,53 @@ report.
    detects the merge by git ancestry and advances it on its own. (There is no
    cap on how many decisions may queue for the approver at once — one existed,
    a life-os holdover, and the approver had it removed 2026-08-29.)
+
+   **It does not hold a machine slot** (2026-09-06). `wip.machine_limit`
+   counts `ready` through `ready-to-ship` only; a ticket parked on the
+   approver has left that range, and the slot it vacated belongs to the next
+   ticket, in the same pass. The two counts protect different things: the
+   approver-side count is what stops finished work piling up unseen, the
+   machine-side count is what stops six tickets being half-done at once.
+   Neither is a reason to sit still. Freeing the machine slot is not the
+   2026-07-27 escape — the parked ticket is still counted, notified, nudged
+   and resurfaced; only the machine no longer waits for it.
+
+   **Chain into the freed slot.** When the ticket a pass touched parks on the
+   approver — PR open, or `awaiting-release` — and that frees the machine
+   slot, the same pass draws the top of To-do and fires
+   `continue {NEXT-ID}` itself before exiting, recording
+   `chained: {NEXT-ID} — slot freed by {TICKET-ID}` in the parked ticket's
+   log. The standing guard — never chain a ticket that is itself waiting on
+   the approver — still applies to *that* ticket; it has never meant the
+   department stops.
+
+   **Branching while PRs sit unmerged.** The next ticket branches from the
+   repo's default branch. If it needs code that exists only in an unmerged
+   PR, branch from that PR's branch — a stacked PR — set the new PR's base to
+   it, and say in the merge request which PR must merge first. The
+   merge-detection sweep must then check a stacked PR by the PR's own state
+   (`gh pr view --json state,baseRefName`), not only by branch-tip ancestry
+   against the default branch: a stack merged into its parent and then
+   squash-merged with it never becomes an ancestor of the default branch, so
+   ancestry alone reads it as unmerged forever — and a PR whose base branch
+   was merged away may silently not have shipped at all.
+
+   **Give a reason when stuck.** When nothing can start — To-do empty, or
+   every candidate `hold`, blocked on a dependency, on an unanswered scope or
+   decision, or on something outside the machine's control — write ONE
+   inbox item for the approver in `inbox/`: `type: eng-decision`,
+   `agent: eng-manager`, `gate: intake-question` (so it lands under
+   "Question" in the Control Center), `ticket:` the blocking ticket id if
+   there is a single one, else a dated id such as `IDLE-2026-09-06`,
+   `project:` the instance. Title it "Nothing I can start". The body lists
+   each candidate, what precisely blocks it and what would clear it; the
+   recommendation is the single most useful thing the approver could do.
+   One item per idle episode — never raise a second while one is still
+   undecided in `inbox/`. When work becomes startable, resume without
+   waiting for the answer; the stale item is handled like any other
+   answered or obsolete gate item. Log `chained: none — idle: {reason}`.
+   The approver asked for exactly this: *"Give me a reason if something is
+   really blocked on and you can not continue."*
 
    Blocked on an agent, past 5 working days, becomes a decision in the weekly
    report — kill it or unblock it. Nothing sits silently either way.

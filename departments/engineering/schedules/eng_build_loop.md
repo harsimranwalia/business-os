@@ -251,6 +251,18 @@ Each pass, in order:
    names which repo(s) are still outstanding so the next pass doesn't
    re-derive it. Local git only: no API call, no cost.
 
+   **Stacked PRs are the one exception to "local git only"** (2026-09-06,
+   since the next ticket now starts while the previous one's PR is still
+   open). A ticket that needed code only in an unmerged PR branched from that
+   PR's branch and set its base to it; its merge request names which PR must
+   merge first. For such a PR, ancestry against the default branch is not
+   enough — a stack merged into its parent and then squash-merged with it is
+   never an ancestor of the default branch. Check the PR's own state:
+   `gh pr view --json state,baseRefName`. `MERGED` with the base now merged
+   into the default branch → shipped; `MERGED` into a parent that has not
+   → still `blocked`, and the log says so; a base that was merged away
+   under an `OPEN` PR → say so in the ticket log, it may not have shipped.
+
    **One gate item per ticket, never one per repo.** A ticket spanning N
    repos still gets exactly one merge-request item in `inbox/`, listing every
    repo's PR as its own distinct line — never N separate items for what is,
@@ -682,18 +694,48 @@ the time actually goes".)
   approver, including a ticket `blocked` on `blocked_on: approver` (an L1 PR
   awaiting merge, a risk acceptance, a question only the approver can
   answer) — it holds its slot there too, not just while a gate is open
-  (fixed 2026-07-27, after an L1 PR once freed a slot and sat invisible). At
+  (fixed 2026-07-27, after an L1 PR once freed a slot and sat invisible). It
+  is an approver slot only: a ticket parked on the approver holds no machine
+  slot (2026-09-06, next bullet). At
   the limit, nothing new starts that will need them. There is no separate
   cap on how many decisions may be queued at once — one existed
   (`awaiting_approver_cap`), a life-os holdover removed 2026-08-29 at the
   approver's request; this WIP limit is the one lever on their side now.
 - **Machine WIP limit (1)** — tickets moving purely between agents, counting
-  states `ready` through `ready-to-ship`. **The approver's correction,
-  2026-08-29.** At the
-  limit, nothing new enters `ready` until the one ticket in flight reaches
-  `shipped`. One ticket, completed end to end, then the next — not several,
-  each a little bit done. (It used to scale with the plan tier, up to 12, and
-  what that produced: `eng_build_loop-rationale.md` §"Machine WIP limit".)
+  states `ready` through `ready-to-ship` and nothing else. **The approver's
+  correction, 2026-08-29.** At the limit, nothing new enters `ready` until
+  the one ticket in flight leaves that range. One ticket, worked end to end
+  on the machine side, then the next — not several, each a little bit done.
+  (It used to scale with the plan tier, up to 12, and what that produced:
+  `eng_build_loop-rationale.md` §"Machine WIP limit".)
+
+  **Amended 2026-09-06 — never idle.** "Leaves that range" used to read
+  "reaches `shipped`", and that idled the department for as long as a PR sat
+  unmerged. The approver: *"It should not wait for a ticket to be merged
+  before building another one. You can build all tickets and keep sending
+  it for PR merge that I can do at my own convenience."* So: the moment a
+  ticket parks on the approver — `blocked` with `blocked_on: approver`
+  because its PR is open, or `awaiting-release` — its machine slot is free
+  and the pass that parked it draws the top of To-do (priority → severity →
+  ticket id) and fires `continue {NEXT-ID}` before exiting, logging
+  `chained: {NEXT-ID} — slot freed by {TICKET-ID}` on the parked ticket. The
+  parked ticket counts against the approver limit only. A pile of unmerged
+  PRs is the design, not a failure. The next ticket branches from the
+  default branch; if it needs code that exists only in an unmerged PR, it
+  branches from that PR's branch (a stacked PR — base set to it, and the
+  merge request says which PR must merge first), and step 5's merge
+  detection then checks the PR's own state, not only ancestry. When nothing
+  can start — To-do empty, or every candidate `hold`, blocked on a
+  dependency, on an unanswered scope/decision, or on something outside the
+  machine's control — the EM writes ONE "Nothing I can start" item to
+  `inbox/` (`type: eng-decision`, `agent: eng-manager`,
+  `gate: intake-question`; `ticket:` the single blocking id, else
+  `IDLE-{YYYY-MM-DD}`; `project:` the instance; body: each candidate, what
+  precisely blocks it, what would clear it; recommendation: the one most
+  useful thing the approver could do), never raises a second while one is
+  still undecided, resumes without waiting for the answer once something is
+  startable, and logs `chained: none — idle: {reason}`. *"Give me a reason
+  if something is really blocked on and you can not continue."*
 - **Release window** — **L2/L3 only.** No production release Friday after
   15:00, weekends, during `sabbath`/`retreat`, or while `ENG_RELEASE_FREEZE`
   is set. The Friday 15:30 pass therefore never releases an L2/L3 ticket; it
