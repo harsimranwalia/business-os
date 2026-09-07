@@ -501,6 +501,18 @@ bindGlobalKey('g c', () => navigate('config'));
 // Live-ish refresh while the view is open. Skips a tick when the operator is
 // mid-typing in the view (a re-render would eat their text), and stops when
 // the tab is hidden — a dashboard nobody is looking at should not poll.
+// Clipboard: the async API needs a secure context (localhost or https). Over a
+// LAN address on a phone it is absent, so fall back to a selected textarea.
+export async function copyText(text) {
+  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch (e) {}
+  try {
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch (e) { return false; }
+}
+
 export function makePoller(fn, ms) {
   let t = null;
   const tick = () => { if (document.hidden) return; if (isTyping() || dialogOpen()) return; fn(); };

@@ -5,7 +5,7 @@
 // payloads. Nothing here auto-sends: every action is a human clicking.
 import { icon, esc, attr, cssId, relTime, fmtDur, fmtWhen, dueLabel, fmtDate, api, toast, fail, confirm, promptText, navigate, renderDecisionBody, renderMarkdown, eventVerb, plural, prefs, dialog, isAdmin } from '../core.js';
 
-export const GATE_LABEL = { merge: 'Merge gate', scope: 'Scope gate', 'intake-question': 'Question', decision: 'Decision', release: 'Release gate' };
+export const GATE_LABEL = { merge: 'Merge gate', scope: 'Scope gate', 'intake-question': 'Question', incident: 'Incident', decision: 'Decision', release: 'Release gate', 'one-way-door': 'One-way door', 'g1-proposals': 'Proposals' };
 export const PIPE_LABELS = { '1-signal': 'Signal', '2-qualified': 'Qualified', '3-contacted': 'Contacted', '4-engaged': 'Engaged',
   '5-proposal-sent': 'Proposal sent', '6-negotiating': 'Negotiating', '7-closed/won': 'Won', '7-closed/lost': 'Lost' };
 
@@ -206,13 +206,32 @@ export function leadFollowCard(item) {
 }
 
 // ── After render: clamps, note auto-grow ──────────────────────────────────
+// Which cards the reader has opened with "Read everything", by item id. Views
+// re-render on every poll; without this the body snapped shut mid-read.
+const expanded = new Set();
+const itemId = el => { const c = el.closest('[data-item]'); return c ? c.dataset.item : ''; };
+const moreLabel = open => `${icon('chevronDown')}${open ? 'Collapse' : 'Read everything'}`;
 export function afterRender(root) {
   root.querySelectorAll('[data-clamp]').forEach(el => {
     // Short bodies do not need a "read everything": drop the fade and button.
-    if (el.scrollHeight <= el.clientHeight + 8) { el.classList.remove('clamp'); const m = el.parentElement.querySelector('[data-more]'); if (m) m.remove(); }
+    if (el.scrollHeight <= el.clientHeight + 8) { el.classList.remove('clamp'); const m = el.parentElement.querySelector('[data-more]'); if (m) m.remove(); return; }
+    if (expanded.has(itemId(el))) { el.classList.remove('clamp'); const m = el.parentElement.querySelector('[data-more]'); if (m) m.innerHTML = moreLabel(true); }
   });
 }
 function grow(t) { t.style.height = 'auto'; t.style.height = Math.min(320, t.scrollHeight + 2) + 'px'; }
+
+// Notes typed into cards survive a re-render: capture every input/textarea
+// with an id before the view rebuilds its HTML, put the text back after. The
+// store outlives a single render so a note on a card a filter hid for a
+// moment is still there when the card comes back.
+const kept = {};
+export function captureInputs(root) {
+  root.querySelectorAll('input[id], textarea[id]').forEach(el => { if (el.type === 'file') return; if (el.value) kept[el.id] = el.value; else delete kept[el.id]; });
+  return kept;
+}
+export function restoreInputs(root) {
+  Object.entries(kept).forEach(([id, v]) => { const el = root.querySelector('#' + CSS.escape(id)); if (el && !el.value) { el.value = v; if (el.tagName === 'TEXTAREA') grow(el); } });
+}
 
 // ── Actions ───────────────────────────────────────────────────────────────
 // One delegated handler per root. `onChange` re-loads the view (and pings the
@@ -222,7 +241,7 @@ export function bindActions(root, onChange) {
   root.addEventListener('input', e => { if (e.target.matches('[data-note]')) grow(e.target); });
   root.addEventListener('click', async e => {
     const more = e.target.closest('[data-more]');
-    if (more) { const c = more.parentElement.querySelector('[data-clamp]'); c.classList.toggle('clamp'); more.innerHTML = c.classList.contains('clamp') ? `${icon('chevronDown')}Read everything` : `${icon('chevronDown')}Collapse`; return; }
+    if (more) { const c = more.parentElement.querySelector('[data-clamp]'); const open = c.classList.toggle('clamp') === false; more.innerHTML = moreLabel(open); const id = itemId(c); if (id) { open ? expanded.add(id) : expanded.delete(id); } return; }
     const b = e.target.closest('[data-act]');
     if (!b || b.disabled) return;
     const d = b.dataset;

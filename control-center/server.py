@@ -611,16 +611,103 @@ def list_engineering(instance_id=None):
     }
 
 
-def eng_intake(title, description, instance_id=None):
+# Files the approver may pin to an intake request for the PM to read.
+# Images and PDFs the PM's Read tool opens directly; a Word document gets its
+# text pulled out beside it (see _docx_text) so the PM is not handed a zip.
+INTAKE_ATTACH_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic",
+                       ".pdf", ".doc", ".docx", ".txt", ".md"}
+INTAKE_ATTACH_MAX_FILES = 10
+INTAKE_ATTACH_MAX_FILE = 15 * 1024 * 1024
+INTAKE_ATTACH_MAX_TOTAL = 30 * 1024 * 1024
+
+
+def _docx_text(data):
+    """The paragraphs of a .docx, as plain text. Stdlib only: a .docx is a zip
+    whose word/document.xml carries every run in <w:t>. Returns "" when the
+    file is not a readable docx — the original is kept either way."""
+    import io
+    import zipfile
+    import xml.etree.ElementTree as ET
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            xml = z.read("word/document.xml")
+    except (zipfile.BadZipFile, KeyError, OSError):
+        return ""
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return ""
+    W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    paras = []
+    for p in root.iter(W + "p"):
+        runs = [t.text or "" for t in p.iter(W + "t")]
+        paras.append("".join(runs))
+    return "\n".join(paras).strip()
+
+
+def _intake_attachments(raw):
+    """Validate the attachment list a request carries before anything is
+    written: [{name, type, data}] with data base64. Returns (files, err) where
+    files is [(safe_name, mime, bytes)]."""
+    import base64
+    if not raw:
+        return [], None
+    if not isinstance(raw, list):
+        return None, "attachments must be a list"
+    if len(raw) > INTAKE_ATTACH_MAX_FILES:
+        return None, f"at most {INTAKE_ATTACH_MAX_FILES} attachments per request"
+    files, seen, total = [], set(), 0
+    for a in raw:
+        if not isinstance(a, dict):
+            return None, "bad attachment"
+        name = str(a.get("name") or "").strip()
+        ext = Path(name).suffix.lower()
+        if ext not in INTAKE_ATTACH_TYPES:
+            return None, (f"{name or 'a file'}: not a supported type "
+                          f"(images, PDF, Word, text)")
+        try:
+            data = base64.b64decode(str(a.get("data") or ""), validate=True)
+        except (ValueError, TypeError):
+            return None, f"{name}: could not decode"
+        if not data:
+            return None, f"{name}: empty file"
+        if len(data) > INTAKE_ATTACH_MAX_FILE:
+            return None, f"{name}: over {INTAKE_ATTACH_MAX_FILE // (1024 * 1024)} MB"
+        total += len(data)
+        if total > INTAKE_ATTACH_MAX_TOTAL:
+            return None, f"attachments add up to more than {INTAKE_ATTACH_MAX_TOTAL // (1024 * 1024)} MB"
+        stem = re.sub(r"[^A-Za-z0-9._-]+", "-", Path(name).stem).strip("-.")[:80] or "file"
+        safe = f"{stem}{ext}"
+        n = 2
+        while safe in seen:
+            safe = f"{stem}-{n}{ext}"
+            n += 1
+        seen.add(safe)
+        files.append((safe, str(a.get("type") or ""), data))
+    return files, None
+
+
+def _fmt_size(n):
+    return f"{n / (1024 * 1024):.1f} MB" if n >= 1024 * 1024 else f"{max(1, n // 1024)} KB"
+
+
+def eng_intake(title, description, instance_id=None, attachments=None):
     """Write a business need to the Product Manager's inbox for one instance.
     The PM is the department's front door — it shapes the request into a
-    ticket. Nothing here creates a ticket directly."""
+    ticket. Nothing here creates a ticket directly.
+
+    Attachments (images, PDFs, Word/text files) land beside the request under
+    inbox/_attachments/<request-stem>/ and are listed at the foot of the
+    request with their paths, so the PM reads them as part of shaping it."""
     title = (title or "").strip()
     if not title:
         return None, "title required"
     inst = eng_instance(instance_id)
     if not inst:
         return None, "no engineering instance"
+    files, err = _intake_attachments(attachments)
+    if err:
+        return None, err
     pm_inbox = inst["pm_inbox"]
     pm_inbox.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:60] or "request"
@@ -630,14 +717,42 @@ def eng_intake(title, description, instance_id=None):
     while path.exists():
         path = pm_inbox / f"{stamp}-{slug}-{n}.md"
         n += 1
+
+    attach_section = ""
+    stored = []
+    if files:
+        adir = pm_inbox / "_attachments" / path.stem
+        adir.mkdir(parents=True, exist_ok=True)
+        lines = []
+        for safe, mime, data in files:
+            target = adir / safe
+            target.write_bytes(data)
+            rel = target.relative_to(inst["root"])
+            note = mime or Path(safe).suffix.lstrip(".")
+            lines.append(f"- `{rel}` ({note}, {_fmt_size(len(data))})")
+            stored.append(safe)
+            if target.suffix.lower() == ".docx":
+                text = _docx_text(data)
+                if text:
+                    txt = target.with_name(safe + ".txt")
+                    txt.write_text(text + "\n")
+                    lines.append(f"  - text extracted to `{txt.relative_to(inst['root'])}`")
+        attach_section = (
+            "\n## Attachments\n\n"
+            "Read these before shaping — they carry context the request text does not.\n\n"
+            + "\n".join(lines) + "\n"
+        )
+
     path.write_text(
         "---\n"
         "source: approver\n"
         "via: control-center\n"
         f"received: {datetime.now(timezone.utc).isoformat()}\n"
-        "---\n\n"
+        + (f"attachments: {len(stored)}\n" if stored else "")
+        + "---\n\n"
         f"# {title}\n\n"
         f"{(description or '').strip()}\n"
+        + attach_section
     )
     return str(path.relative_to(inst["root"])), None
 
@@ -2399,6 +2514,11 @@ def sms_action(path, body, email):
 
 # ── HTTP handler ─────────────────────────────────────────────────────────────
 
+# Ceiling on any JSON POST. Only /api/eng/intake carries payloads of note
+# (base64 attachments, 30 MB raw ≈ 40 MB encoded); everything else is tiny.
+MAX_POST_BODY = 44 * 1024 * 1024
+
+
 class ControlCenterHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -2742,6 +2862,9 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
         # assignments before it reaches a handler, once, here — rather than
         # trusting a dozen handlers to each remember.
         if parsed.path.startswith("/api/") and self.headers.get("Content-Length"):
+            if int(self.headers.get("Content-Length") or 0) > MAX_POST_BODY:
+                self.send_json(413, {"error": "request too large"})
+                return
             self._body = self.read_body()
             if not self.require_instance(self._body.get("instance")):
                 return
@@ -2837,7 +2960,8 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
                 return
             body = self._body
             inst_id = body.get("instance")
-            path, err = eng_intake(body.get("title"), body.get("description"), inst_id)
+            path, err = eng_intake(body.get("title"), body.get("description"), inst_id,
+                                   body.get("attachments"))
             if err:
                 self.send_json(400, {"error": err})
                 return

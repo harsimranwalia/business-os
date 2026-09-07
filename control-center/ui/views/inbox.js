@@ -3,9 +3,9 @@
 // skip inline; drill into a department only when you want its context.
 import { setTop, refreshBtn, chips, empty, skeleton, esc, attr, icon, todayLabel, setViewKeys, setPaletteCommands, navigate, plural, makePoller, errorBox, relTime, canSee } from '../core.js';
 import { gather, countsByView, KIND } from './inbox-data.js';
-import { engGateCard, engBlockedCard, mktPieceCard, redditCard, smsCampaignCard, smsRunCard, leadFollowCard, activityCard, bindActions, afterRender, GATE_LABEL, shortCtx } from './cards.js';
+import { engGateCard, engBlockedCard, mktPieceCard, redditCard, smsCampaignCard, smsRunCard, leadFollowCard, activityCard, bindActions, afterRender, captureInputs, restoreInputs, GATE_LABEL, shortCtx } from './cards.js';
 
-let root, data = null, filter = 'all', focus = -1, poller = null, loading = false;
+let root, data = null, filter = 'all', focus = -1, poller = null, loading = false, lastSig = '';
 
 function itemHtml(it) {
   switch (it.kind) {
@@ -53,9 +53,11 @@ function render() {
   if (n && !shown.length) h += empty('Nothing here for this filter', '', 'inbox', true);
   if (!n) h += `<div class="empty">${icon('check')}<div><b>All clear</b><p>Anything written and dated further out waits under its department until it comes due.</p></div></div>`;
   h += motionHtml(data.motion, data.eng);
-  if (data.eng && data.eng.activity) h += `<section class="section"><div class="section-h"><h2>Right now</h2><span class="right"><button class="btn btn-ghost btn-sm" data-act="go" data-to="eng">Engineering ${icon('chevronRight', 'ic-sm')}</button></span></div>${activityCard(data.eng.activity)}</section>`;
+  if (data.eng && data.eng.activity) h += `<section class="section"><div class="section-h"><h2>Right now</h2><span class="right"><button class="btn btn-ghost btn-sm" data-act="go" data-to="eng">Engineering ${icon('chevronRight', 'ic-sm')}</button></span></div><div data-activity>${activityCard(data.eng.activity)}</div></section>`;
   if (n) h += `<div class="hint-bar"><span><span class="kbd">J</span><span class="kbd">K</span> move</span><span><span class="kbd">A</span> approve</span><span><span class="kbd">C</span> changes</span><span><span class="kbd">X</span> reject</span><span><span class="kbd">Enter</span> expand</span><span><span class="kbd">N</span> note</span><span><span class="kbd">?</span> all shortcuts</span></div>`;
+  const kept = captureInputs(el);
   el.innerHTML = h;
+  restoreInputs(el, kept);
   afterRender(el);
   el.querySelectorAll('[data-chip]').forEach(c => c.onclick = () => { filter = c.dataset.chip; focus = -1; render(); });
   setFocus(focus, false);
@@ -73,19 +75,29 @@ function setFocus(i, scroll = true) {
 function focused() { const els = itemEls(); return focus >= 0 ? els[focus] : null; }
 function pressKey(k) { const f = focused(); if (!f) return; const b = f.querySelector(`[data-key="${k}"]`); if (b) b.click(); }
 
+// Polls re-fetch everything, but only re-draw the list when something other
+// than the live activity changed — so an opened card, a half-typed note and
+// the keyboard focus all survive. Dim only if the refresh is actually slow.
 async function load(quiet = false) {
   if (loading) return; loading = true;
-  const el = root.querySelector('#inbox'); if (!el) return;
-  if (quiet && el) el.classList.add('refreshing');
-  try { data = await gather(); render(); }
-  catch (e) { data = { items: [], errors: [['the inbox', e]], motion: {} }; render(); }
-  finally { loading = false; if (el) el.classList.remove('refreshing'); }
+  const el = root.querySelector('#inbox'); if (!el) { loading = false; return; }
+  const dim = quiet ? setTimeout(() => el.classList.add('refreshing'), 400) : null;
+  try {
+    const next = await gather();
+    const sig = JSON.stringify({ items: next.items, motion: next.motion, errors: (next.errors || []).map(([w, e]) => [w, String(e && e.message || e)]) });
+    const same = quiet && !!data && sig === lastSig;
+    data = next; lastSig = sig;
+    if (same) { const a = el.querySelector('[data-activity]'); if (a && data.eng && data.eng.activity) a.innerHTML = activityCard(data.eng.activity); }
+    else render();
+  }
+  catch (e) { data = { items: [], errors: [['the inbox', e]], motion: {} }; lastSig = ''; render(); }
+  finally { loading = false; clearTimeout(dim); el.classList.remove('refreshing'); }
 }
 
 export default {
   id: 'inbox', title: 'Inbox', short: 'Inbox', icon: 'inbox', hot: true, section: 'main',
   async mount(r) {
-    root = r; data = null; focus = -1;
+    root = r; data = null; focus = -1; lastSig = '';
     root.innerHTML = `<div class="content-inner" id="inbox"></div>`;
     setTop({ title: 'Inbox', right: refreshBtn() });
     document.querySelector('[data-refresh]').onclick = () => load(true);

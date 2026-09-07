@@ -347,6 +347,17 @@ details.disclosure > .body { margin-top: 10px; }
 .composer .foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .composer .foot .hint { font-size: 12.5px; color: var(--text-3); line-height: 1.5; flex: 1; min-width: 200px; }
 
+.composer.drop { border-color: var(--accent); background: var(--surface-2); }
+.attach { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.attach:empty { display: none; }
+.chip-file { height: auto; min-height: 30px; padding: 3px 5px 3px 9px; border-radius: 8px; gap: 7px; max-width: 100%; cursor: default; }
+.chip-file .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; color: var(--text); }
+.chip-file .thumb { width: 22px; height: 22px; object-fit: cover; border-radius: 4px; background: var(--surface-3); }
+.chip-file .rm { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; color: var(--text-3); background: transparent; border: 0; cursor: pointer; }
+.chip-file .rm:hover { color: var(--text); background: var(--surface-3); }
+.attach-sum { font-size: 12px; font-family: var(--mono); }
+.lane-note { font-size: 11.5px; color: var(--text-4); padding: 0 6px 10px; margin-top: -6px; line-height: 1.4; }
+
 /* ── Inbox ──────────────────────────────────────────────────────────────── */
 .inbox-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
 .inbox-hero h1 { font-size: 26px; font-weight: 600; letter-spacing: -.02em; margin: 0; line-height: 1.15; }
