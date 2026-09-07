@@ -63,6 +63,14 @@ import sms
 ROOT = Path(__file__).resolve().parent.parent  # business-os root
 HTML_FILE = Path(__file__).parent / "index.html"
 LOGIN_HTML_FILE = Path(__file__).parent / "login.html"
+# Static assets for the UI: stylesheet, scripts, self-hosted fonts. Served
+# without a session because the login page is drawn from the same files.
+# Nothing under here is data — every fact the page shows comes from /api/.
+UI_DIR = Path(__file__).parent / "ui"
+UI_TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+            ".mjs": "text/javascript; charset=utf-8", ".woff2": "font/woff2",
+            ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon",
+            ".txt": "text/plain; charset=utf-8", ".json": "application/json"}
 PORT = 6789
 
 
@@ -2414,6 +2422,29 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_static(self, url_path):
+        """One file from UI_DIR, or 404. The path is resolved and then checked
+        to still be inside UI_DIR, so `..` segments cannot climb out of it.
+        No-cache rather than a long max-age: like index.html, an edited file
+        should show up on the next reload without a version stamp anywhere."""
+        rel = url_path[len("/ui/"):]
+        target = (UI_DIR / rel).resolve()
+        try:
+            target.relative_to(UI_DIR.resolve())
+        except ValueError:
+            self.send_json(404, {"error": "not found"})
+            return
+        if not target.is_file() or target.suffix not in UI_TYPES:
+            self.send_json(404, {"error": "not found"})
+            return
+        body = target.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", UI_TYPES[target.suffix])
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        self.wfile.write(body)
+
     # ── Auth ─────────────────────────────────────────────────────────────
     # Everything under /api/auth/ is reachable without a session (login has
     # to be, and logout/me are harmless to ask without one); GET /login is
@@ -2567,6 +2598,10 @@ class ControlCenterHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/login":
             self.send_html(LOGIN_HTML_FILE)
+            return
+
+        if parsed.path.startswith("/ui/"):
+            self.send_static(parsed.path)
             return
 
         if parsed.path == "/api/auth/me":
