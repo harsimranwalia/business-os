@@ -1,10 +1,10 @@
 ---
 id: ENG-028
-title: Foodswipe funnel — staff-configurable pipeline stage set
+title: Foodswipe funnel — hardcoded nine-stage pipeline (rescoped from staff-configurable)
 project: aiorders-admin-hub
 type: feature
-size: L
-time_estimate: several days to a week+
+size: M
+time_estimate: half a day to a couple of days
 time_spent:
 time_remaining:
 severity: P2
@@ -16,10 +16,10 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-09-06
 branch:
 depends_on: [ENG-013]
-blocks: []
+blocks: [ENG-042]
 parent:
 links:
   prd: agents/product-manager/specs/ENG-028-foodswipe-custom-pipeline-stages.md
@@ -247,3 +247,115 @@ Append-only. One line per state transition, newest last.
   `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-028`) and
   whole-board: see this pass's own entry on `ENG-013`'s board file and
   `_index.md`.
+
+- `2026-09-06` **no state change — G1 answered `changed`, PRD rescoped in
+  place, fresh G1 raised, one clause split into a new ticket**
+  (product-manager, `decision` event pass, context
+  `inbox/2026-09-03-eng028-g1-scope.md`). Reading map for `decision`: steps
+  4 and 8c, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs
+  instructed*; *the four lanes*; *Guards*). Same shape as `ENG-016`'s and
+  `ENG-027`'s own rescopes: the ticket goes back to the approver, it does
+  not advance. Mode check clean (`.env` has no `MODE` set). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-028`) and
+  whole-board: both exit 0, clean.
+
+  **The answer**, two clauses (`decision: changed`, decided
+  2026-09-06T09:09:08.947929+00:00): *"Lets hard code stages Make new
+  stages waitlisted, contacted, meeting scheduled, Follow Up,Onboarding,Not
+  Interested,On Hold, activated,Upsell. Can we have autopilot email/sms
+  setup on admin panel like brand portal for each stage update"*. The first
+  rejects this ticket's whole premise (a staff-configurable editor) in
+  favour of hardcoding a named list; the second is a new ask this ticket's
+  own Non-goals already pointed at `ENG-017`.
+
+  **Checked against live code before writing anything.** Read the real six
+  stage literals fresh rather than trusting the PRD's own prose summary:
+  `aiorders-api` `admin-portal/handlers/foodswipe.ts`'s `Stage` union/
+  `VALID_STAGES` and the `foodswipe_stage_override` migration's `CHECK`
+  constraint (`account_created`, `profile_updated`, `listing_claimed`,
+  `menu_uploaded`, `gbp_shared`, `website_interest`), and
+  `aiorders-admin-hub`'s `STAGES` display array in
+  `FoodswipeListings.tsx`. **None of the nine new names correspond to any
+  of the six old ones** — confirmed, not assumed, and the reason this
+  rescope proposes retiring `classifyStage()` outright rather than treating
+  the new names as a superset. Also confirmed `agents/eng-manager/config/
+  projects.md` lists no project named "brand portal" — the approver's own
+  name for `restaurant-portal`, whose live `Autopilot` UI
+  (`src/pages/autopilot/*`) is backed by `aiorders-api`'s `autopilot`
+  function; read `supabase/functions/autopilot/utils/triggers.ts` and
+  confirmed its `TriggerType` enum is closed and restaurant/order-shaped,
+  so the second clause cannot plug into it as-is — same finding `ENG-017`'s
+  own design already made for a sibling pipeline.
+
+  **Two things proposed rather than guessed, both flagged prominently on
+  the fresh G1 instead of decided here:** automatic classification is
+  retired outright (nothing in the new nine names maps to a data signal);
+  every existing listing resets to `Waitlisted` on ship day (no honest
+  mapping exists from the old six to the new nine). Either could send this
+  ticket back to a different size or shape if the approver meant something
+  else.
+
+  **Sizing verdict: `M`, down from `L`.** What earned the `L` — a
+  management screen, add/rename/reorder/remove endpoints, and an expected
+  G2 on deletion semantics — is exactly the scope this answer removed.
+  Derived fresh against what's left (rewrite a `CHECK` constraint, delete
+  rather than extend `classifyStage()`, relabel a display array, backfill
+  every row to `Waitlisted`), not rubber-stamped from the old `L`.
+
+  **PRD rescoped in place, original content marked superseded rather than
+  deleted**, per `ENG-016`'s/`ENG-027`'s precedent: a new "Approver's
+  `changed` response" section (the verified facts, the retire/reset
+  proposals, the sizing verdict, the trade-off of reintroducing a
+  deploy-to-change-stages cost); Proposed change, Acceptance criteria,
+  Non-goals, Risks, Cost, Recommendation and the 5-question filter all
+  updated in
+  `agents/product-manager/specs/ENG-028-foodswipe-custom-pipeline-stages.md`.
+
+  **Second clause split into a new ticket, `ENG-042`** (Foodswipe funnel —
+  stage-triggered autopilot email/SMS), same split this board already used
+  once for this exact shape (`ENG-013`'s broadened ask splitting into
+  `ENG-013` plus `ENG-028`) — not folded in here, and not folded into
+  `ENG-017` either, since that ticket is scoped to the separate presignup
+  `leads` pipeline. Ran a full request-readback for `ENG-042` (this PM's
+  reading plus a blind subagent reading of the raw sentence alone, no
+  material divergence) since it's genuinely new raw input, unlike this
+  ticket's own original filing. Full detail on `ENG-042`'s own board file
+  and PRD.
+
+  Fresh G1 raised: `inbox/2026-09-06-eng028-g1-rescope.md`. Old G1 moved to
+  `inbox/_handled/2026-09-03-eng028-g1-scope.md` as-is, no appended note
+  (`ENG-016`/`ENG-027` precedent — the narrative lives in the PRD section,
+  the fresh G1, and the journal row). `ENG-042`'s own first G1 raised
+  alongside it: `inbox/2026-09-06-eng042-g1-scope.md`. Decision-journal row
+  appended for this `changed` verdict.
+
+  **No dissent section on either item** — `agents/critic/agent.md` still
+  doesn't exist at department or instance level, confirmed absent again
+  this pass; not refiled, the open proposal (`proposals.md`, 2026-08-25
+  row) covers it.
+
+  **0 transitions on `ENG-028`** — `awaiting-scope → awaiting-scope`,
+  `owner: approver` throughout. This pass answered the gate return; it did
+  not move the ticket. **2 transitions on `ENG-042`** (`intake → shaped →
+  awaiting-scope`), a new ticket filed this pass, well under the cap of 4.
+  `machine_wip` unaffected by either (both sit outside the counted range).
+  Approver-facing WIP unchanged for `ENG-028` (the same item goes back to
+  the same desk); `ENG-042` joins the uncapped list
+  (`wip.approver_limit: unlimited` since 2026-09-02) — visibility only.
+
+  **Notify sweep:** both fresh G1s are this pass's own gate items —
+  `lib/eng-notify.sh raise` run on each, `notified:` stamped in both
+  items' frontmatter. **Dead-end sweep (scoped to this event):** no other
+  ticket touched, per this event's own narrower contract (act on the
+  answered gate item; advance only the ticket it belongs to plus this
+  direct consequence of that decision).
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+  (`ENG-028`, `ENG-042`) and whole-board: see board index.
+
+  `chained: none` (both tickets) — `awaiting-scope`, owner `approver` on
+  both. The fresh G1s just raised are new items waiting on the approver,
+  not agent-owned states; firing `continue` on either would queue against
+  a ticket with nothing left for a machine to do until answered, same
+  reasoning every other awaiting-scope/G1-raised entry on this board
+  already uses.

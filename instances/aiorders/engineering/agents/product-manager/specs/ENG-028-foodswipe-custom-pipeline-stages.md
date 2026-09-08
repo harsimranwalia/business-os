@@ -2,7 +2,7 @@
 ticket: ENG-028
 project: aiorders-admin-hub
 status: awaiting-scope
-size: L
+size: M
 author: product-manager
 created: 2026-09-03
 decided:
@@ -86,6 +86,117 @@ and answered rather than averaged. The code grounding under "Risks" below
 did the job a second reading normally does — it turned "can custom stages
 be automatic?" from a guess into a checked answer.
 
+## Approver's `changed` response (2026-09-06T09:09:08Z) — hardcode a named stage set, drop the config screen
+
+**The answer** (`inbox/2026-09-03-eng028-g1-scope.md`, `decision: changed`,
+decided 2026-09-06T09:09:08.947929+00:00), in full:
+
+> "Lets hard code stages Make new stages waitlisted, contacted, meeting
+> scheduled, Follow Up,Onboarding,Not Interested,On Hold, activated,Upsell.
+> Can we have autopilot email/sms setup on admin panel like brand portal for
+> each stage update"
+
+Two clauses, doing two different things. The first rejects this ticket's
+whole premise and answers it with something smaller. The second is a new
+ask this ticket's own Non-goals already named and pointed elsewhere.
+
+**Clause one: no config screen. Hardcode this exact list, replacing the six
+that exist today.** "Let's hardcode stages" answers the one question this
+G1's readback asked most plainly — config screen or a literal list — and
+lands on the cheaper side this PRD's own Risks section named as "the
+strongest argument against this ticket." The named set, in the order
+given: **Waitlisted, Contacted, Meeting Scheduled, Follow Up, Onboarding,
+Not Interested, On Hold, Activated, Upsell.**
+
+**Checked against the live code, not assumed.** The six stages this ticket
+was built to make editable are `account_created`, `profile_updated`,
+`listing_claimed`, `menu_uploaded`, `gbp_shared`, `website_interest`
+(`aiorders-api` `admin-portal/handlers/foodswipe.ts`'s `Stage` union and
+`VALID_STAGES`, mirrored in the `foodswipe_stage_override` `CHECK`
+constraint and in `aiorders-admin-hub`'s `STAGES` display array). **None of
+the nine new names correspond to any of the six old ones.** The old set
+names data-completeness milestones a listing passes through automatically
+(has a name and phone, has a restaurant row, has menus, shared their
+Google Business Profile, showed website interest); the new set names
+sales-conversation progress a human has with a lead (contacted, a meeting
+scheduled, followed up, onboarded, gone cold, parked, converted, sold
+further). Nothing in `profiles`, `restaurants`, or the listing data this
+handler already reads could ever detect "a meeting was scheduled." This is
+not a renaming of the same six ideas; it is a different pipeline replacing
+them.
+
+**What that means for `classifyStage()`, said plainly rather than left
+implicit: automatic classification is retired for this funnel.** Proposed:
+every one of the nine new stages is staff-set only;
+`foodswipe_stage_override` (or its successor column — naming is the
+architect's call at `designed`) stops being an *override* of a computed
+default and becomes the only stage a listing has; `classifyStage()`'s
+if/else chain is deleted rather than kept as dark code behind a column
+nobody computes from anymore. This is the most literal reading of "let's
+hardcode stages" — it is also a bigger functional change than it sounds,
+because the funnel page has never operated without automatic
+classification since `ENG-013` shipped it, and it is the single thing on
+this rescope most worth the approver correcting if it's wrong. **If
+instead the six originals should keep auto-classifying alongside the nine
+new manual ones, that's a dual-taxonomy system, not a hardcode** — a
+materially bigger, different ticket, not this one.
+
+**What happens to a listing sitting in one of the six old stages today has
+no principled answer, so one is proposed rather than guessed.** There is no
+honest mapping from "has shared their Google Business Profile" to "Meeting
+Scheduled" — the two vocabularies don't correspond, so any mapping this
+PRD invented would be a guess wearing the shape of a migration. **Proposed:
+every existing Foodswipe listing starts at `Waitlisted`** (the new
+pipeline's own first stage) when this ships, and staff move each one
+forward by hand as they work it. This is a real, visible change on ship
+day — every listing's displayed stage moves, where this PRD's own original
+acceptance criteria promised the opposite ("a migration, not a reset") —
+named here as the second thing most worth correcting rather than folded
+quietly into the acceptance criteria below.
+
+**A trade worth stating outright, since the approver is the one accepting
+it.** The original ticket's entire premise was that a future pipeline
+change would cost nothing — no engineer, no deploy. Hardcoding again
+means a future stage-set change goes back to costing exactly that, same as
+today, for whichever list ships here. That is what "let's hardcode" buys
+and what it gives up; not hidden in the acceptance criteria below.
+
+**Ordering and display**, lower-stakes, decided rather than asked: the nine
+stages are proposed in the order given, as the kanban's column order, with
+`Not Interested` and `On Hold` most likely wanting visual treatment as
+off-ramps rather than sequential steps (design's call, not G1's). Casing in
+the approver's own message is inconsistent (`waitlisted` vs. `Not
+Interested`); proposed as Title Case display labels throughout
+(`Waitlisted`, `Meeting Scheduled`, ...) over snake_case internal keys,
+matching the existing six's own convention — not worth a question.
+
+**Sizing verdict: `M`, down from `L`, one ticket.** What made the original
+ticket `L` — a net-new admin management screen, add/rename/reorder/remove
+endpoints, and a deletion-semantics question large enough to expect its own
+G2 — is exactly the scope this answer removes. What's left is close in
+shape to `ENG-013` itself: change a `CHECK` constraint's literal list,
+delete a classification function instead of extending it, relabel a
+display array, and backfill every existing row to `Waitlisted`. **What
+would push this back to `L`:** the dual-taxonomy reading above (old six
+auto-classify, new nine sit alongside them), since that keeps
+`classifyStage()` alive and adds a real merge/precedence question between
+the two systems.
+
+**Clause two: autopilot email/SMS on stage change is this ticket's own
+already-named non-goal, and stays split out.** This PRD's Non-goals section
+already excluded "automations, notifications, or nurture sequences
+triggered by a stage," pointing at `ENG-017`. `ENG-017` doesn't cover this,
+though — it nurtures the presignup `leads` table (a different pipeline
+with different stages), not Foodswipe `profiles` listings — so the
+approver's ask doesn't fold into it. Filed as a new ticket instead, same
+split this board already used once for exactly this shape (`ENG-013`'s
+broadened ask splitting into `ENG-013` plus `ENG-028`): **`ENG-042`**.
+`ENG-042` needs this ticket's final nine-stage list as its own trigger
+vocabulary and so carries `depends_on: [ENG-028]` for *building*, but its
+own scope is reviewed on its own G1 in parallel — nothing about reviewing
+"which stage changes should fire a message" requires this ticket to have
+shipped first.
+
 ## Problem
 
 Sales and onboarding staff have a Foodswipe funnel page whose columns are
@@ -132,79 +243,100 @@ Not the restaurant side, not the consumer "foodswipe customer" identity
 (an unrelated concept that shares the brand name), and not the
 agency/reseller admin scoping raised separately.
 
-## Proposed change
+## Proposed change (rescoped — hardcode nine named stages)
 
-After this ships, a staff member can open the Foodswipe funnel's stage
+**Superseded by the approver's `changed` answer, kept as history rather
+than deleted:** the original proposal described a staff-configurable stage
+editor — a staff member could open the Foodswipe funnel's stage
 configuration, add a stage, rename an existing one, change the order
-stages appear in, and remove one — and the funnel page immediately
-reflects that set for every staff member, with no engineering change and
-no deploy. The six stages the board shows today are there when it ships,
-in the order they are in now, with the same listings sitting in them, and
-each still classified automatically by the same underlying signal as
-before. A stage staff add beyond those six is reachable by a staff member
-setting a listing's stage by hand, using the control `ENG-013` already
-built. Whatever happens to a stage that has listings in it, no listing is
-ever left assigned to a stage that isn't on the board.
+stages appear in, and remove one, with the funnel page immediately
+reflecting that set for every staff member, no engineering change and no
+deploy. The six stages the board showed at the time of writing would have
+stayed intact, in order, each still classified automatically by the same
+underlying signal as before. The approver's `changed` answer rejected this
+shape outright — see "Approver's `changed` response" above.
 
-## Acceptance criteria
+**What ships instead.** The Foodswipe funnel shows nine stages —
+**Waitlisted, Contacted, Meeting Scheduled, Follow Up, Onboarding, Not
+Interested, On Hold, Activated, Upsell** — hardcoded the same way the
+current six are: one literal list, changed by an engineer on a deploy, not
+a staff-facing config screen. `classifyStage()`'s automatic derivation is
+removed; every listing's stage is set by a staff member using the control
+`ENG-013` already built, and every existing listing starts at `Waitlisted`
+on the day this ships. No new admin screen, no add/rename/reorder/remove
+capability, no deletion-semantics question — the thing that made this
+ticket `L` is exactly the thing this answer said not to build.
 
-1. `[stated]` Given the Foodswipe funnel, when an authorised staff member
-   defines a new stage, then it appears as a stage on the funnel page for
-   all staff, with no code change and no deploy.
-2. `[stated]` Given an existing stage, when an authorised staff member
-   renames it, then the funnel page shows the new name everywhere, and no
-   listing's stage assignment changes as a result.
-3. `[stated]` Given the configured stages, when an authorised staff member
-   changes their order, then the funnel page presents the stages in that
-   order for all staff.
-4. `[proposed]` Given the six stages that exist today, when this ships,
-   then all six are present with their current names, in their current
-   order, and every listing sits in the stage it sat in before — this is
-   a migration, not a reset.
-5. `[proposed]` Given one of the six original stages and a listing with no
-   manual override, when that listing's underlying data meets the
-   condition that stage is classified on today, then the listing is still
-   assigned that stage automatically, exactly as before.
-6. `[proposed]` Given a staff-defined stage that is not one of the
-   original six, when any listing without a manual override is
-   classified, then it is never assigned that stage automatically — such
-   a stage is reachable only by a staff member setting a listing's stage
-   by hand.
+## Acceptance criteria (rescoped)
+
+**Superseded by the approver's `changed` answer** (kept as history — these
+assumed a staff-configurable editor, which was rejected):
+
+1. ~~Given the Foodswipe funnel, when an authorised staff member defines a
+   new stage, then it appears as a stage on the funnel page for all staff,
+   with no code change and no deploy.~~
+2. ~~Given an existing stage, when an authorised staff member renames it,
+   then the funnel page shows the new name everywhere, and no listing's
+   stage assignment changes as a result.~~
+3. ~~Given the configured stages, when an authorised staff member changes
+   their order, then the funnel page presents the stages in that order for
+   all staff.~~
+8. ~~Given a stage that has listings assigned to it, when an authorised
+   staff member attempts to remove it, then either the removal is refused,
+   or every affected listing is moved to a defined stage as part of the
+   same action.~~ (Moot — there is no remove capability in the rescoped
+   ticket; the stage list is fixed in code again.)
+9. ~~Given a staff-defined stage, when the funnel page renders, then it is
+   visually distinguishable as its own column without an engineer having
+   authored anything specific for it.~~ (Moot — every stage is
+   engineer-authored again.)
+
+**What ships instead:**
+
+1. `[stated]` Given the Foodswipe funnel, when this ships, then the nine
+   named stages (Waitlisted, Contacted, Meeting Scheduled, Follow Up,
+   Onboarding, Not Interested, On Hold, Activated, Upsell) are present, in
+   that order, and the six stages that existed before are gone.
+2. `[proposed]` Given any Foodswipe listing that existed before this
+   ships, when it first renders under the new stage set, then it shows
+   `Waitlisted` — not a computed guess at an equivalent old stage.
+3. `[proposed]` Given any Foodswipe listing, when its stage is displayed
+   or changed, then no automatic classification runs — `classifyStage()`
+   no longer determines any listing's stage, staff do.
+4. `[stated]` Given an authorised staff member, when they set a listing to
+   any of the nine stages, then the change sticks and is visible to every
+   staff member, using the write path `ENG-013` already built — unchanged
+   from that ticket.
+5. `[inferred]` Given a request to set a listing's stage from a caller
+   without admin access to this page, then it is rejected by the same
+   authorisation gate the funnel page's existing endpoints already use —
+   unchanged from `ENG-013`.
+6. `[inferred]` Given the nine-stage list hardcoded in this change, when
+   the API's type and validation array, the database constraint, and the
+   frontend's display array are compared, then all agree on the same nine
+   names — and so does `ENG-042`'s own trigger vocabulary, once that
+   ticket builds against this one's shipped list.
 7. `[inferred]` Given a listing whose stage was set manually under
-   `ENG-013`, when the stage set is changed afterwards in any way, then
-   that listing still resolves to a stage that exists on the board — no
-   listing anywhere references or displays a stage that is not defined.
-8. `[proposed]` Given a stage that has listings assigned to it, when an
-   authorised staff member attempts to remove it, then either the removal
-   is refused, or every affected listing is moved to a defined stage as
-   part of the same action — no listing is silently stranded. (*Which* of
-   those two, and whether a third option applies, is a design question,
-   not answered here.)
-9. `[proposed]` Given a staff-defined stage, when the funnel page renders,
-   then it is visually distinguishable as its own column without an
-   engineer having authored anything specific for it.
-10. `[inferred]` Given a request to define, rename, reorder, or remove a
-    stage from a caller without admin access to this page, then it is
-    rejected by the same authorisation gate the funnel page's existing
-    endpoints already use.
+   `ENG-013` before this ships, when the new stage set replaces the old
+   one, then it resolves to `Waitlisted` (criterion 2) — no listing
+   anywhere references or displays a stage that is not one of the nine.
 
 ## Non-goals
 
-- **Making the automatic classifier itself configurable.** Staff define
-  stage *names, order and existence*; they do not define the conditions
-  under which a stage is auto-assigned. There is no generic rule
-  mechanism in the system today and building one is a different, larger
-  ticket. Named in the readback as the assumption most worth correcting.
+**Superseded by the approver's `changed` answer:** a staff-facing config
+screen to add, rename, reorder or remove stages was this ticket's original
+subject, not its non-goal — the answer rejected that capability outright;
+wanted later, it is a new ticket, not a re-opening of this one. Keeping the
+six old stages or any automatic classification alive alongside the new
+nine is also now out of scope, per the dual-taxonomy note above, unless
+the approver says otherwise on the fresh G1.
+
+**Unchanged:**
+
+- **Making the automatic classifier itself configurable.** Moot — the
+  classifier is deleted, not made configurable.
 - **Changing how a listing's stage is set per card.** `ENG-013` built that
   and it is not reopened.
-- **Deciding what the right stages actually are.** This ticket ships the
-  capability; choosing the pipeline is the team's to do afterwards. No
-  stage names are proposed here.
-- **A pre-signup / cold-lead pipeline.** Adding a stage called "Lead" does
-  not create records for restaurants that haven't signed up — there is no
-  `profiles` row to hang one off. That remains `ENG-017`'s territory.
-- **Automations, notifications, or nurture sequences triggered by a
-  stage.** `ENG-017` again.
 - **Editing a listing's underlying details** (name, phone, email,
   restaurant info) — inherited unchanged from `ENG-013`.
 - **Per-user, per-role, or multiple parallel pipelines.** One shared stage
@@ -212,134 +344,118 @@ ever left assigned to a stage that isn't on the board.
 - **Any other board's stage concept**, including the Brands page's
   client-stage work. Different page, different object, no unification
   here.
-- **A history or audit trail of stage-set changes** — who renamed what,
-  when. Not asked for; a real feature if wanted later.
-- **Backfilling or reclassifying existing listings** beyond preserving
-  where they already sit.
+- **A history or audit trail of stage-set changes** — who set what, when.
+  Not asked for; a real feature if wanted later.
+- **Backfilling or reclassifying existing listings onto a plausible
+  equivalent old-to-new mapping.** No such mapping exists (see "Approver's
+  `changed` response" above); every existing listing resets to
+  `Waitlisted` instead.
+- **A pre-signup / cold-lead pipeline.** Still `ENG-017`'s territory —
+  unaffected by this rescope, a different table entirely (`leads`, not
+  `profiles`).
+- **Automations, notifications, or nurture sequences triggered by a
+  stage.** Filed as **`ENG-042`**, not `ENG-017` — `ENG-017` is scoped to
+  the presignup `leads` pipeline, a different set of stages on a different
+  table; the Foodswipe funnel's own stage-triggered automation is its own
+  ticket.
 
-## Risks and unknowns
+## Risks and unknowns (rescoped)
 
-- **A custom stage has nowhere to come from automatically, and that is a
-  real limitation, not a detail.** `classifyStage()` maps each of the six
-  stages to one specific, hardcoded real-world signal. There is no
-  table-driven engine to extend. Criterion 6 proposes that the originals
-  stay automatic and anything new is manual-only — which is a coherent
-  reading of "the stage updates per card can be manual or automatic," but
-  it is a reading. If the approver expects to define a stage *and* tell
-  the system when to put cards in it, this ticket is materially larger
-  and should be split rather than stretched. Cheapest possible moment to
-  find that out is this G1.
-- **The `foodswipe_stage_override` CHECK constraint cannot stay what it
-  is.** Its own migration comment already predicted this ticket: *"If a
-  future ticket changes that stage set, this constraint needs updating in
-  the same change or an override could reference a stage that no longer
-  classifies automatically."* A constraint hardcoding six literals is
-  incompatible with a stage set staff can edit. How integrity is
-  preserved instead is the architect's call at `designed`; that it must
-  change is not optional, and it is the single concrete reason this
-  ticket is bigger than "add a table."
-- **Deletion with live data is genuinely unspecified.** Refuse, reassign,
-  archive-but-keep-history — each has different consequences for
-  listings, for manual overrides, and for anything that later reads a
-  stage by name. Criterion 8 constrains the outcome (nothing is stranded)
-  without picking the mechanism, deliberately, because the decision that
-  spawned this ticket explicitly deferred it. Expect this to be the
-  substance of G2.
-- **`ENG-017` acquires a moving target.** It is `designed` and nurtures
-  leads "to next stages automatically." A stage taxonomy staff can edit
-  means the stage a nurture rule points at can be renamed or deleted
-  underneath it. Whichever of the two ships second inherits the coupling;
-  worth the EM sequencing them consciously rather than by whichever is
-  picked up first.
-- **`ENG-013`'s PRs are not merged yet.** This ticket builds directly on
-  the override column and the funnel write path they introduce. If it
-  starts before they land on `main`, it branches from an unmerged sibling
-  — and this loop's own review tooling diffs against `main`, not against
-  the sibling, so the staleness would not be caught automatically.
-- **The strongest argument against this ticket, stated rather than
-  buried: nobody has said which stages are wrong.** If the real need is
-  three specific extra stage names, adding three literals is hours of
-  work and this is days. A configuration capability is the more expensive
-  answer to a problem that has never been described in specifics. The
-  counter — and the reason the recommendation is still "build" — is that
-  the approver asked for the *capability* in those words, twice, and
-  building the cheap thing on an inference is precisely what produced
-  this ticket in the first place.
-- **`aiorders-admin-hub` had 64 uncommitted files in the human checkout as
-  of 2026-08-23** (`projects.md`). Merge friction on the frontend half is
-  expected, and this ticket rewrites a page `ENG-013` has just also
-  rewritten.
+**Resolved by the `changed` answer, kept for the record:** the
+config-screen risks below no longer apply — there is no config screen, no
+add/rename/reorder/remove capability, and therefore no deletion-semantics
+question and no expected G2. `ENG-013`'s two PRs have since merged and
+`ENG-013` reached `verified`, so the unmerged-sibling risk is also closed.
+`ENG-022` (`P0`) has since shipped and verified, so it no longer competes
+for the approver's attention against this ticket.
 
-## Cost
+**Current:**
 
-- **Build: `L`** — several days to a week or more. Two triggers from the
-  size table independently: a new data model, and cross-project
-  (`aiorders-api` for the taxonomy, the constraint, the classifier's
-  output type and the management endpoints; `aiorders-admin-hub` for
-  data-driven columns plus a management screen that does not exist in any
-  form today). Strictly larger than `ENG-013` (`M`), which extended an
-  existing screen with an additive column and one write endpoint. **What
-  pushes it to `XL` — i.e. back to the EM to be split:** requiring the
-  classifier itself to become rule-configurable; requiring a
-  data-migration path for existing override values on deletion; or
-  requiring the built-in six to be fully severable from their automatic
-  signals.
-- **What it displaces:** the single machine WIP slot, currently 1/1 with
-  `ENG-024`, for the whole of its run — and at `L` that is the longest
-  single occupancy any ticket on this board has asked for. Four tickets
-  already at `designed` (`ENG-014`, `ENG-017`, `ENG-023`, `ENG-025`) sit
-  behind it. Approver-facing WIP is uncapped since 2026-09-02, so nothing
-  is gated at the approver's desk. The honest competitor for attention is
-  `ENG-022` — `type: security`, `severity: P0`, cross-tenant PII and write
-  exposure on five live handlers, already `designed` and owing only a G2.
-- **Run: `$0`/month.** Same Supabase project, same Cloudflare Worker
-  deploy target, no new vendor and no new infrastructure — both repos are
-  existing L1 registrations with existing deploy paths. Nothing here
-  calls a metered API or a model.
+- **Automatic classification is retired, and that's a bigger change than
+  it reads.** The funnel page has never operated without `classifyStage()`
+  since `ENG-013` shipped it. Deleting it, and resetting every listing to
+  `Waitlisted`, is the proposal — not yet the confirmed answer. This is
+  the single thing on this rescope most worth the approver correcting if
+  wrong (see "Approver's `changed` response" above).
+- **The reset-to-`Waitlisted` migration is a visible change on ship day,**
+  not an invisible one — every listing's displayed stage moves. Framed
+  plainly rather than folded quietly into the acceptance criteria.
+- **`ENG-042` (the autopilot ask, split out) depends on this ticket's
+  final stage list.** A stage rename after `ENG-028` ships would require a
+  matching change in `ENG-042`'s own trigger vocabulary — the same shape
+  of coupling the original PRD flagged against `ENG-017`, now narrower and
+  one-directional instead of open-ended, since the list is fixed again
+  once this ships rather than perpetually editable.
+- **A future ticket that changes this nine-stage list again inherits the
+  same hardcode-in-four-places cost this rescope accepted** — the
+  `changed` answer traded the config screen's maintenance burden for the
+  original problem's engineering-and-deploy tax, on a possibly different
+  list next time. Named in "Approver's `changed` response" above as the
+  trade the approver is accepting, not hidden here.
+- **Nothing yet confirms whether `classifyStage()` has any other caller or
+  test depending on it** — a grep before deletion is build-time work
+  (step 6b of this loop), not a G1 concern, but named so whoever builds
+  this doesn't assume a clean delete without checking.
 
-## Recommendation
+## Cost (rescoped)
 
-**Build now, one ticket, `L`, and expect a G2.** The temptation is to
-build something smaller — and it should be resisted, because the smaller
-thing is exactly what `ENG-013` was, and the approver has now said in
-their own words that it wasn't what they meant. Repeating that pattern a
-second time on the same page would cost more than the difference in size.
-Two things flagged rather than buried: **first**, the assumption that
-staff-defined stages are manual-only is the single answer most worth
-correcting at this gate — if the approver expects to define auto-assignment
-conditions too, this becomes a rules engine and should come back to be
-split, not stretched. **Second**, this is not the most urgent item on the
-board; `ENG-022` (`P0`, live cross-tenant exposure) outranks it, and
-`ENG-013`'s two PRs should land on `main` before anyone starts building on
-top of them. If the approver's attention is scarce this week, approving
-the scope here and sequencing the build behind `ENG-022` costs nothing.
+- **Build: `M`** — half a day to a couple of days, down from `L`. What
+  earned the `L` — a net-new management screen, add/rename/reorder/remove
+  endpoints, and a deletion-semantics question large enough to expect its
+  own G2 — is exactly the scope the `changed` answer removed. What's left
+  is close in shape to `ENG-013` itself: rewrite the `CHECK` constraint's
+  literal list, delete `classifyStage()` instead of extending it, relabel
+  the display array, and backfill every existing row to `Waitlisted`.
+  **What would push it back up:** the dual-taxonomy reading (old six keep
+  auto-classifying alongside the new nine) — that keeps `classifyStage()`
+  alive and adds a real precedence question between two live systems.
+- **What it displaces:** the single machine WIP slot, for a fraction of
+  the run the original `L` would have asked for. `ENG-022` has since
+  shipped and verified, so it no longer competes for the approver's
+  attention — nothing currently on the board outranks this if the
+  approver wants it started next.
+- **Run: `$0`/month.** Unchanged — same Supabase project, same Cloudflare
+  Worker deploy target, no new vendor, no new infrastructure.
 
-## The 5-question filter, answered honestly
+## Recommendation (rescoped)
+
+**Build the approver's version now, one ticket, `M`, and expect no G2.**
+The scope that made this `L` and earned a G2 is gone; what remains is a
+same-shaped, smaller sibling of `ENG-013`. **One thing flagged rather than
+buried:** this rescope proposes retiring automatic classification outright
+and resetting every existing listing to `Waitlisted` — the single answer
+most worth the approver correcting on the fresh gate, since a "keep the
+six auto-classifying too" answer would send this back up to `L` for a
+materially different, dual-taxonomy ticket. The autopilot ask in the same
+reply is real and has been shaped as its own ticket, `ENG-042`, rather than
+folded in here or assumed to fit `ENG-017`.
+
+## The 5-question filter, answered honestly (rescoped)
 
 *(Board practice, per `ENG-027`'s PRD — same content as the standalone
 filter check.)*
 
-1. **Off the plate or onto it?** Both. Adds a decision someone owns
-   forever; removes an engineering tax where a pipeline change today
-   means four bindings across two repos and two deploys. Net direction is
-   the one that was asked for.
-2. **Freedom created or removed?** Creates real freedom and removes some
-   permanently — three things that are compile-time-safe today (the CHECK
-   constraint, the classifier's output type, hand-authored display
-   metadata) become runtime concerns, and `ENG-017` gets a moving target
-   underneath it.
-3. **Current or anticipated?** Current, and raised twice — obliquely in
-   `ENG-013`'s original request ("proper peipleine stages") and
-   explicitly in the merge reply.
-4. **What does it displace?** The single machine WIP slot for the longest
-   run any ticket has asked for, ahead of four `designed` tickets. Nothing
-   at the approver's desk (WIP uncapped). Real competitor: `ENG-022`.
-5. **Would not building it be fine?** No. Not building it makes Reading A
-   a bad decision retroactively and ships a capability the approver has
-   already rejected the shape of.
+1. **Off the plate or onto it?** Off, on net, from where the original
+   scope stood — no screen for anyone to own or maintain. Reintroduces the
+   engineering-and-deploy tax the original ticket was trying to remove,
+   for whichever list ships here; that trade is the approver's to accept,
+   named above rather than hidden.
+2. **Freedom created or removed?** Removed, compared to the config-screen
+   version: staff can no longer add or rename stages themselves. Compared
+   to *today* (six fixed stages), freedom is created once — a different,
+   more useful fixed list — and then fixed again.
+3. **Current or anticipated?** Current — a direct answer to a direct
+   question, not speculative.
+4. **What does it displace?** The single machine WIP slot, for roughly the
+   same band `ENG-013` itself asked for. Nothing at the approver's desk
+   competes for attention now that `ENG-022` has shipped.
+5. **Would not building it be fine?** No — the six stages in code today are
+   the ones the approver has twice said are wrong; this answer is how they
+   get fixed, just not the way originally scoped.
 
-**Filter verdict: build it, and say out loud that it's the biggest ticket
-on the board and not the most urgent one.**
+**Filter verdict: build it, `M`, no G2 expected — and confirm the
+automatic-classification call before starting, since it's the one thing
+that would change the size again.**
 
 ## Decision
 
