@@ -1,0 +1,64 @@
+# Instance overrides for aiorders. The template supplies every default;
+# this file only records what is true for this business.
+
+business: aiorders
+instantiated_from: 1.0.0
+
+# The single human with gate authority. Owns M1 strategy, M2 the piece, and
+# M3 channel autonomy. The five machine gates stay machine-owned and blocking.
+approver:
+  name: approver
+  notify: telegram
+
+# Humans who may file a topic but hold no gate authority. Their topics land in
+# inbox/requests/ with `source: filer` and are drained by the CMO at planning.
+filers: []
+
+# Pause switch for THIS business only. sabbath | retreat | quiet halt every
+# pass for this instance; empty means normal operation. Falls back to MODE in
+# business-os/.env when empty, so the global switch still stops everything at
+# once — this only adds the ability to stop one business without the rest.
+mode:
+
+# ---------------------------------------------------------------------------
+# Channels.
+#
+# A channel is a playbook plus a row here — never a new agent. Adding one means
+# writing config/channels/{name}.md and adding it below.
+#
+# Every channel starts at C1 (draft, no publishing path) and moves up only when
+# the approver says so — that is gate M3. C1 is not a resting place: a draft
+# with nowhere to go is a dead end, so a channel left here needs a live reason
+# and a date.
+#
+# NOTHING IS SHIPPED UNTIL YOU EDIT THIS. That is deliberate. An installer that
+# armed a publishing path would publish to an account nobody had confirmed.
+# ---------------------------------------------------------------------------
+channels: {}
+  # Worked example — delete the braces above and uncomment to use:
+  #
+  # linkedin:
+  #   enabled: true
+  #   autonomy: c2              # c0 observe | c1 draft | c2 approve-to-ship | c3 autoship
+  #   playbook: config/channels/linkedin.md
+  #   weekly_plan:
+  #     post_count: 3
+  #     # THIS is the cadence and it is the only place it lives. The ship skill
+  #     # reads this list every run and stops on any day not in it, so changing
+  #     # cadence is an edit here and nothing else — no scheduler to reconfigure.
+  #     publishing_days: [tuesday, thursday]
+  #     publishing_time: "08:00"
+  #   publishing:
+  #     method: api             # api | browser | manual — see conventions.yaml
+  #     credential_env: LINKEDIN_TOKEN   # the NAME of an env var. Never a value.
+  #     account_ref:            # the author/page this publishes as
+  #     require_approval: true  # M2. Do not set false without an M3 decision.
+  #   voice:
+  #     register: long-form-post
+  #     floor: 10
+  #     current_samples: 0      # honest count — update as samples are added
+
+# Delivery caps. Raising these is the approver's call.
+limits:
+  pieces_per_channel_per_day: 1   # a thread or carousel counts as ONE piece
+  awaiting_approval_cap: 5        # pieces queued for M2 at once
