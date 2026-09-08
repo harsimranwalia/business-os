@@ -92,4 +92,14 @@ once both are in.
 
 ## Decision
 
-Filled in by the approver.
+No written reply — both PRs merged directly on GitHub instead, together, 94
+seconds apart (`aiorders-api` PR #17 `672dfa77` at `2026-09-06T00:41:23Z`,
+`restaurant-portal` PR #4 `8eea8f15` at `00:42:57Z`), same standing pattern
+this approver has used for every prior L1 merge on this board. Found by this
+`scheduled` event pass's own step-5 re-check. All four gate receipts
+re-read fresh and confirmed `pass`; a full acceptance-check (all 5 owned
+criteria) run against the merged, now-live tree — see the ticket's own
+board-file log and
+`agents/devops/releases/2026-09-05-ENG-020-aiorders-api-and-restaurant-portal.md`.
+Carried `blocked → shipped → verified` this pass. `blocks: []` — nothing
+else unblocked.

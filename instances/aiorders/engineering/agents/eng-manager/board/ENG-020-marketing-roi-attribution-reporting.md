@@ -5,15 +5,17 @@ project: restaurant-portal
 type: feature
 size: M
 time_estimate: a day and a half to two days
-time_spent:
-time_remaining:
+time_spent: ~1 build hop (both repos), 3 review+quality rounds (round 1 fail
+  — no frontend tests; round 2 fail — AC4 partially tested; round 3 pass),
+  1 security round (pass), 1 release-readiness hop (both PRs opened)
+time_remaining: none — shipped and verified.
 severity: P2
 priority: now
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-08-29
 updated: 2026-09-05
@@ -28,7 +30,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-020.md
   test_plan: agents/qa/test-plans/ENG-020.md
   security_review: agents/security/reviews/ENG-020.md
-  release:
+  release: agents/devops/releases/2026-09-05-ENG-020-aiorders-api-and-restaurant-portal.md
   pr:
     aiorders-api: https://github.com/harsimranwalia/aiorders-api/pull/17
     restaurant-portal: https://github.com/harsimranwalia/restaurant-portal/pull/4
@@ -1322,6 +1324,118 @@ Post-pass `eng-gate-check.sh`, scoped (`ENG-020`) and whole-board: both exit
 of the documented no-chain conditions. Re-check via a `decision` (if the
 approver replies) or the next `scheduled`/`watch` pass's own step-5, same
 forward pointer this ticket's own prior entry already left.
+
+business-os itself left uncommitted through this edit — same standing
+default every pass has used; the commit-convention question remains open,
+not re-decided here.
+
+## 2026-09-05 — scheduled: step-5 merge detection + acceptance-check — `blocked → shipped → verified`
+
+`scheduled` event pass (four-times-daily safety net). Reading map:
+the whole document, never narrowed. Mode check clean (repo-root `.env` →
+`MODE=active`). Pre-pass `eng-gate-check.sh`, scoped (`ENG-020`) and
+whole-board: both exit 0, clean.
+
+**Step 5 — merge detection.** `git fetch origin` in both department
+worktrees: `aiorders-api` PR #17 and `restaurant-portal` PR #4, both
+**MERGED**, 94 seconds apart (`672dfa77` `2026-09-06T00:41:23Z`, `8eea8f15`
+`00:42:57Z`) — landing together, as both PR bodies required. Cross-checked
+with `gh pr view` on both directly (this board's own `ENG-008`
+branch-tip-contamination precedent for why ancestry alone can mislead):
+both `baseRefName: main`, no stacking. **Zero drift**: `git diff
+{reviewed-tip} origin/main --stat` empty on both repos, and each merge
+commit's own parents (`git log -1 --format='%H %P'`) show the reviewed
+branch tip merged in as-is (`672dfa77` ← `89c6fdb1` + `cd82579`; `8eea8f15`
+← `aeeb7b9a` + `5783a2d`) — no squash, nothing folded in beyond what every
+gate already reviewed.
+
+**"A merge is not a gate"** — all four receipts re-read fresh from the
+files, not from this ticket's own log: `agents/database/migrations/ENG-020-marketing-roi-attribution-reporting.md`
+(`Gate verdict: pass`), `agents/principal-engineer/reviews/ENG-020.md`
+(round 3, `pass`), `agents/qa/test-plans/ENG-020.md` (`last_result: pass`,
+all 5 ACs), `agents/security/reviews/ENG-020.md` (`verdict: pass`) — all
+current. `blocked → shipped`.
+
+**Acceptance-check run in full** (triggered by entering `shipped`; not the
+receipt-bookkeeping shortcut — this ticket owns real criteria, not a
+schema-only diff). Confirmed both sides actually live, not just merged:
+`supabase functions list` shows `brand-portal` redeployed
+`2026-09-06T00:45:28Z` (~4 min after merge, by hand, no tracked workflow,
+same pattern `ENG-037`/`ENG-038` established); `gh run list` on
+`restaurant-portal` shows "Deploy to Cloudflare Pages" completed `success`
+on the merge commit at `2026-09-06T00:43:01Z` (~90s after merge, this
+repo's own push-triggered CI). `supabase db query --linked` confirms
+`get_acquisition_breakdown(p_restaurant_id uuid, p_from timestamptz, p_to
+timestamptz)` live with the exact designed signature. Read
+`acquisition.ts`/`Index.tsx` directly off `origin/main` (not the test suite,
+not the PR description) to walk all 5 criteria: AC1 (own-restaurant scoping,
+`verifyRestaurantAccess`/`access.hasAccess` gates the RPC call), AC2
+(preset → `queryKey` change → refetch), AC3 (`direct_unknown` always seeded
+and always rendered even at zero), AC4 (all four honesty-framing mechanisms
+present verbatim — subtitle, coverage sentence, low-volume caveat,
+organic-search disclaimer), AC5 (access check rejects server-side before
+any data leaves, correct call shape). **All 5: pass.** Non-goals check: diff
+is additive-only (`App.tsx`/`Sidebar.tsx` +2 lines each, one route + one nav
+entry) — no Clarity, no ROI ratio, no AI-SEO isolation, no admin rollup, no
+existing page touched. Cost: `$0/month`, no new dependency, matches
+estimate. Full walk:
+`agents/product-manager/notebook/2026-09-05-eng020-acceptance.md`. `shipped
+→ verified`, owner `eng-manager`.
+
+**Step 6b:** does not apply — the PRD's non-goals name deferred ideas but
+none with the shape (named next item + explicit sequence sign-off on the
+G1) step 6b requires; this ticket's G1 was a bare `approved`. Nothing
+auto-filed.
+
+**2 transitions** (`blocked → shipped → verified`), well under the cap of
+4. **Consequence:** none for machine WIP — this ticket already left the
+counted `ready`..`ready-to-ship` range at its own prior `ready-to-ship →
+blocked` hop; the slot has been held by the `ENG-021` family throughout
+(`ENG-021` still `building`) and is unaffected by this ticket reaching
+`verified`. `blocks: []` — nothing else unblocked, nothing further to
+chain as a consequence of this release.
+
+Release record written:
+`agents/devops/releases/2026-09-05-ENG-020-aiorders-api-and-restaurant-portal.md`.
+Decision-journal row added (`decision-journal.md`) — no written reply, same
+standing pattern. Merge-request item's `## Decision` filled in and moved to
+`inbox/_handled/2026-09-05-eng020-merge-request.md`.
+
+**Dead-end sweep (whole board, per `scheduled`'s own reading map):** every
+other in-flight ticket's last `chained:` line checked — all `designed`/
+held-for-slot tickets (`ENG-014`, `ENG-017`, `ENG-023`, `ENG-025`,
+`ENG-026`, `ENG-027`, `ENG-029`, `ENG-030`, `ENG-035`, `ENG-036`) correctly
+read `chained: none`, held by the machine-WIP cap; `ENG-018` correctly
+`chained: none`, `priority: hold`; `ENG-028` correctly `chained: none`,
+waiting on its own unanswered G1; `ENG-041` correctly `chained: none`,
+waiting on this ticket's own `depends_on`; `ENG-021` (parent, `building`)
+last fired `chained: ENG-040`, still the correct active child. `ENG-040`
+(the only other `blocked` ticket) re-checked fresh: `aiorders-api` PR #18
+still `OPEN`, not merged — stays `blocked`, `blocked_on: approver`,
+unchanged. No `*-eng-events-dropped.md` file exists for today; no ticket
+found waiting on a chain that silently broke.
+
+**Notify sweep:** no new gate item this pass (a merge landing isn't a gate
+item). Remaining open `inbox/` items re-read fresh: `ENG-028`'s G1 and
+`ENG-016`'s Piece-2 question both already carry their one-ever `nudged:`;
+`ENG-040`'s merge request (`notified: 2026-09-05T16:51:18`) is under 24h.
+No action. **Observations/exceptions:** none new — no `exception-request:`
+anywhere on the board; the quality-gate shape this ticket surfaced twice
+(round 1 and round 2) is already in `observations.md`, not refiled.
+**Journal:** row added above.
+
+**Board update:** `_index.md` — In-flight table row removed (terminal);
+"Waiting on the approver" header count and list updated (four → three:
+`ENG-028` G1, `ENG-016` Piece-2 question, `ENG-040` merge request); new
+dated entry appended to the closing paragraphs; oldest of the four live
+dated entries rolled to `_index-archive.md` per the keep-three rule.
+
+Post-pass `eng-gate-check.sh`, scoped (`ENG-020`) and whole-board: both exit
+0, clean.
+
+`chained: none` — `verified` is terminal, one of the documented no-chain
+conditions. Nothing else touched this pass needs a chain either (`ENG-040`
+unchanged, still correctly waiting on the approver).
 
 business-os itself left uncommitted through this edit — same standing
 default every pass has used; the commit-convention question remains open,
