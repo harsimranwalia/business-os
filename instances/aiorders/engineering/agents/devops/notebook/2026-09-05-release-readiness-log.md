@@ -227,3 +227,95 @@ per the family's own `ADR-003`-class exemption, already used for `ENG-016`
 directly, without its own review/QA/security hops. Not this hop's to
 process; noted so the next hop that finds `ENG-039` merged isn't surprised
 by the parent also being ready to close out the same pass.
+
+## ENG-040 — `ready-to-ship → blocked`, PR opened
+
+`continue ENG-040` event pass. `skills/release-runner/SKILL.md` run step by
+step, same L1 reading established on this project's own file above (step 1
+is the clock check only; steps 2-3's readiness content still runs for L1,
+minus the window bullet).
+
+**Step 1 (window):** `aiorders-api` is L1 (`config/projects.md`,
+re-confirmed directly) — no window check applies.
+
+**Step 2 (upstream gates) — all three re-read fresh from the receipt files,
+not from the ticket log's own account, all passing:**
+
+- `agents/principal-engineer/reviews/ENG-040.md` — round 1, `verdict: pass`,
+  0/10 automatic failures. One non-blocking finding (the `??`-vs-`||`
+  rationale doesn't hold in JS; code correct regardless).
+- `agents/qa/test-plans/ENG-040.md` — round 1, `last_result: pass`, 6/6,
+  both owned criteria (AC4 in full, AC3's write half) covered; AC5 confirmed
+  structural.
+- `agents/security/reviews/ENG-040.md` — round 1, `verdict: pass`, 0
+  blocking findings; `ENG-022`'s ownership-check dependency independently
+  re-derived, not taken on trust.
+
+No migration owed — confirmed `agents/database/migrations/` has no
+`ENG-040-*.md`, correct for a diff with zero `*.sql` files (matches the
+ticket's own work-breakdown note: this design has no schema change).
+
+**Step 3 (readiness gate):**
+
+- *Rollback:* no migration, no stored-state change of any kind — reverting
+  the merge (once merged) fully and safely undoes this diff. Same shape
+  `ENG-022`'s own hop on this exact file already established, simpler still
+  since this diff doesn't even change existing behaviour (pure addition to
+  the `EDITABLE_PAGES` allow-list).
+- *Observability:* read `website.ts` directly rather than assuming — both
+  `getWebsiteContent` and `updateWebsiteContent` already wrap their full body
+  in a try/catch that logs via `console.error` before returning
+  `{success: false, error: ...}`, generic over every key in `EDITABLE_PAGES`
+  including the new `faqs` one. No new logging mechanism needed; confirmed
+  by reading the code, not inferred from the pattern `catering`/`careers`
+  established.
+- *Cost:* $0/month — diff is `website.ts` + its test file + one README line;
+  no manifest touched, no new dependency, no new infrastructure.
+- *Window:* n/a, L1.
+
+No blocking readiness failure.
+
+**Step 4 (route):** worktree (`~/Documents/projects/_eng/aiorders-api`)
+re-checked fresh, not assumed unchanged since the security hop: `git fetch
+origin` current, `HEAD` at `104b057` matching the ticket's own frontmatter
+and the security gate's own cited head, `git merge-base --is-ancestor
+feat/ENG-040-brand-portal-faq-write-path origin/main` → not merged, no
+drift. `git diff origin/main...HEAD --stat`: 3 files, 87 insertions, 5
+deletions — matches the security gate's own account exactly. `git status`
+clean but for the same long-standing untracked
+`supabase/functions/brand-portal/deno.lock` every `aiorders-api` release on
+this board has already characterised as benign. `gh pr list --head
+feat/ENG-040-brand-portal-faq-write-path --state all` confirmed no PR
+already existed for this branch. No `.github/workflows/` on this repo
+(re-confirmed) — opening this PR carries no auto-deploy risk.
+
+Opened `aiorders-api` PR #18
+(https://github.com/harsimranwalia/aiorders-api/pull/18). Body: what
+changed, the known dependency on `ENG-022` verified independently, all three
+gates passed with receipt paths, the `deno check`/`deno test` self-test
+numbers, the two non-blocking findings (review's rationale note, security's
+A04/A05), and what's out of scope (`ENG-041`'s UI, the bot's own read side,
+the `catering`/`careers` test-coverage proposal).
+
+Wrote `inbox/2026-09-05-eng040-merge-request.md`, plain `pr_url:` string
+(single repo). `time_estimate: under an hour` set on the item, mirroring the
+ticket's own field. `lib/eng-notify.sh raise` exited 0, no output; confirmed
+sent from the log (`traces/eng-notify-2026-09-05.log`: `sent: active
+2026-09-05-eng040-merge-request.md`, `16:51:18`); stamped `notified:
+2026-09-05T16:51:18` on the item by hand, copied verbatim from the log,
+same standing practice this file's own prior entries use.
+
+Ticket set `blocked`, `blocked_on: approver`, `blocked_from: ready-to-ship`,
+`owner: devops → approver`, `links.pr` set. No G3 — L1 has none; the PR
+merge is the human gate. No release record yet — L1's actual deploy (a
+manual `supabase functions deploy` after merge, same as every prior
+`aiorders-api` release on this board) and the release record both wait for
+merge detection on a future pass, per the skill's own step 4 L1 row / step 7
+split.
+
+**This is `ENG-021`'s first sub-ticket.** `ENG-041` (frontend, the FAQ
+editor UI) stays `ready`, still waiting on this ticket per its own
+`depends_on: [ENG-040]` — this hop doesn't clear that dependency, since
+`depends_on` resolves on `verified`, not on a merge request being raised.
+Not this hop's to process; noted so the next hop isn't surprised `ENG-041`
+is still sitting at `ready`.

@@ -76,3 +76,29 @@ one instance.
 sibling receipt. Quality gate FAILs on Gaps 1–3 (AC1/AC3 rendering, AC2, AC4)
 — ticket returns to `building`, review's own pass stands and isn't
 re-litigated next round.
+
+## ENG-040 (round 1, aiorders-api) — REVIEW pass
+
+XS, one file's worth of real change (`brand-portal/website.ts`): widen
+`EDITABLE_PAGES` to a third key. **0/10 automatic failures.** Checked #8
+(unowned dead code) closely because the new `WebsiteFaq` export is
+referenced nowhere in the repo — turned out to be the identical shape as its
+two neighbors (`CateringPageContent`/`CareersPageContent`, also
+exported-but-locally-unused documentation types), and the design names it by
+hand. Matches established file convention; not a finding.
+
+**One non-blocking finding, docs-accuracy not correctness:** the design and
+ticket both justify `faqs: data?.faqs ?? null` (vs. the sibling fields'
+`|| null`) as necessary to keep `content.faqs = []` from being nulled. It
+isn't — `[] || null` is `[]`, arrays are always truthy in JS, so `||` would
+have worked identically here. Code's fine either way; the stated reason
+isn't. Full text: `agents/principal-engineer/reviews/ENG-040.md`. Logging
+this here mainly as a reminder for myself: "empty collection therefore
+falsy" is a plausible-sounding but wrong intuition worth checking twice
+before taking a ticket's own stated rationale for a `??`/`||` choice at face
+value.
+
+**Verdict: PASS, round 1.** Continues to `in-qa` — quality gate's own
+findings (a real, pre-existing write-path coverage gap, closed for this
+ticket's owned ACs; see `agents/qa/test-plans/ENG-040.md`) are QA's to own,
+not a review fail.
