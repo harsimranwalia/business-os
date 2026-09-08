@@ -46,6 +46,26 @@
 # PID. Only fire when the lock is absent, or present but its owner is
 # actually gone (eng-trigger.sh's own acquire() would steal it as stale
 # anyway) — that is what "idle" means here.
+#
+# IDLE POLL, added 2026-09-07 at the approver's direction ("always busy, 24
+# hours"). The drain above only fires when something is QUEUED. It cannot see
+# the other way the department stops: a pass that ends with `chained: none`
+# for a reason that turns out to be wrong, leaving a ticket mid-build with
+# nothing queued and nothing due until the next calendar sweep — up to ~6h.
+# Confirmed live 2026-09-07: the ENG-044 pass parked its PR on the approver,
+# read its dependents as "wait for verified", did not chain, and the machine
+# sat from 04:02 until 09:30 with ENG-026 in `building` and three tickets
+# `ready`. The second loop below is the deterministic floor under that
+# judgement: no live pass, nothing queued, and the board still shows a
+# ticket in the machine's range → fire `continue` for it (mid-work first,
+# lowest id first); nothing in range but a startable To-do ticket → fire a
+# `scheduled` sweep so the eng-manager picks with judgement. At most one such
+# fire per 30 minutes per instance (traces/.idle-fired), so a pass that
+# keeps declining to chain costs at most two extra sessions an hour, and the
+# daily hop budget in eng-trigger.sh stays the hard cap. It reads only
+# frontmatter — no claude session, no hop — same "cheap by construction" as
+# the drain. Quiet mode is honoured where it always was: eng-trigger.sh
+# exits under MODE=sabbath|retreat|quiet before spending anything.
 set -u
 
 DEPT="$(CDPATH= cd -P -- "$(dirname -- "$0")/.." && pwd -P)"
@@ -81,5 +101,59 @@ for eng in "$BUSINESS_OS_ROOT"/instances/*/engineering; do
     ENG_INSTANCE="$eng" "$SHELL_BIN" "$DEPT/lib/eng-trigger.sh" scheduled auto-drain
     log "$business — trigger exited $?"
   ) &
+done
+wait
+
+# ── Idle poll — see IDLE POLL in the header ──────────────────────────────
+for eng in "$BUSINESS_OS_ROOT"/instances/*/engineering; do
+  [ -d "$eng" ] || continue
+  [ -f "$eng/config/instantiated-from" ] || continue
+  business="$(basename "$(dirname "$eng")")"
+  [ -s "$eng/traces/.pending" ] && continue          # the drain above owns a queued instance
+  lock="$eng/traces/.loop.lock"
+  if [ -d "$lock" ]; then
+    owner="$(cat "$lock/pid" 2>/dev/null || echo "")"
+    [ -n "$owner" ] && kill -0 "$owner" 2>/dev/null && continue   # a pass is running
+  fi
+  stamp="$eng/traces/.idle-fired"
+  [ -f "$stamp" ] && [ -n "$(find "$stamp" -mmin -30 2>/dev/null)" ] && continue
+  board="$eng/agents/eng-manager/board"
+  [ -d "$board" ] || continue
+
+  # One line per ticket: "<rank> <id>" for the machine's range, "todo <id>" for
+  # a startable To-do ticket. Frontmatter only (stops at the closing ---).
+  scan="$(awk '
+    FNR == 1 { id = ""; st = ""; pr = ""; fm = 0 }
+    /^---[[:space:]]*$/ { fm++; if (fm == 2) { emit(); nextfile } ; next }
+    fm == 1 && /^id:/       { id = $2 }
+    fm == 1 && /^state:/    { st = $2 }
+    fm == 1 && /^priority:/ { pr = $2 }
+    function emit() {
+      if (id == "" || pr == "hold") return
+      if      (st == "building")      print "0 " id
+      else if (st == "in-review")     print "1 " id
+      else if (st == "in-qa")         print "2 " id
+      else if (st == "in-security")   print "3 " id
+      else if (st == "ready-to-ship") print "4 " id
+      else if (st == "ready")         print "5 " id
+      else if (st == "intake" || st == "shaped" || st == "designed") print "todo " id
+    }' "$board"/[A-Z]*-[0-9]*.md 2>/dev/null | sort)"
+
+  pick="$(printf '%s\n' "$scan" | grep -E '^[0-9] ' | head -1 | cut -d' ' -f2)"
+  if [ -n "$pick" ]; then
+    touch "$stamp"
+    log "$business — idle with $pick in the machine's range and nothing queued, firing 'continue $pick'"
+    (
+      ENG_INSTANCE="$eng" "$SHELL_BIN" "$DEPT/lib/eng-trigger.sh" continue "$pick"
+      log "$business — trigger exited $?"
+    ) &
+  elif printf '%s\n' "$scan" | grep -q '^todo '; then
+    touch "$stamp"
+    log "$business — idle with nothing in the machine's range but To-do work on the board, firing 'scheduled auto-idle'"
+    (
+      ENG_INSTANCE="$eng" "$SHELL_BIN" "$DEPT/lib/eng-trigger.sh" scheduled auto-idle
+      log "$business — trigger exited $?"
+    ) &
+  fi
 done
 wait

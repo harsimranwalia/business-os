@@ -325,6 +325,19 @@ Each pass, in order:
    authorises the work stacked behind it, which is the opposite of what the
    approver asked.
 
+   **An open PR does satisfy `depends_on`** (2026-09-07). A dependency is met
+   the moment the upstream's PR is open — upstream `blocked` with
+   `blocked_on: approver` because its PR is open, `awaiting-release`, or any
+   later state — not when it reaches `verified`. The dependent starts in the
+   same pass, branched from the upstream PR's branch as a stacked PR (step 5),
+   and its merge request names which PR must merge first. Unmet means only:
+   the upstream has no PR yet (still being built), is `hold`, or is blocked on
+   something other than the approver. "Waits on X reaching `verified`" is the
+   misreading that left ENG-045/046 in `ready` and the machine idle after
+   ENG-044 parked on 2026-09-07; it is never a reason for `chained: none`.
+   Likewise a parent ticket split into sub-tickets (children carry
+   `parent: {ID}`) is a container and holds no machine slot — see Guards.
+
    **Code review and the quality gate are one combined hop** — they read the same
    diff and don't depend on each other, so a single pass does both before
    handing on. If review fails, QA's result from that hop is discarded, because
@@ -458,9 +471,22 @@ Each pass, in order:
 9. **Chain** — before this pass exits, if the ticket it touched is in a state
    owned by an agent, fire the next hop:
    `lib/eng-trigger.sh continue {TICKET-ID}`, and write `chained:` into the
-   ticket log. Do **not** chain when the ticket is waiting on the approver,
-   blocked, terminal, or held by a cap — record `chained: none` and the reason
-   instead.
+   ticket log. Do **not** chain *that ticket* when it is waiting on the
+   approver, blocked, terminal, or held by a cap — but a ticket parked on the
+   approver (PR open, or `awaiting-release`) has freed its machine slot, and
+   this step chains the next ticket into it (Guards, 2026-09-06).
+
+   **`chained: none — blocked_on: approver` is not a line this step can
+   write** (2026-09-07): `blocked_on: approver` is the condition that frees
+   the slot, never a reason for leaving it empty. `chained: none` carries
+   exactly one of four reasons — `idle: {reason}` (nothing is startable at
+   all, and the ONE "Nothing I can start" item is raised), terminal/dropped,
+   MODE halting, or the daily/per-ticket hop budget exhausted. "Waits on X
+   reaching `verified`" and "held by the {PARENT} family" are neither: a
+   dependent whose upstream PR is open starts as a stacked PR, and a parent
+   split into sub-tickets holds no slot (Guards). What to chain when the
+   slot frees: the next child of the same parent whose `depends_on` is
+   satisfied, else the top of To-do.
 
 10. **Board update** — `agents/eng-manager/board/_index.md`.
 
@@ -736,6 +762,27 @@ the time actually goes".)
   still undecided, resumes without waiting for the answer once something is
   startable, and logs `chained: none — idle: {reason}`. *"Give me a reason
   if something is really blocked on and you can not continue."*
+
+  **Amended 2026-09-07 — two readings closed.** Why: the pass that parked
+  ENG-044 (PR open, `blocked_on: approver`) logged "machine WIP 1/1, held by
+  the ENG-026 family" and "ENG-045/046 wait on ENG-044 reaching `verified`",
+  wrote `chained: none — blocked_on: approver`, and the department sat idle
+  from 04:02 until the next calendar sweep with three `ready` sub-tickets on
+  the board. (a) **`depends_on` is satisfied once the upstream's PR is
+  open** — upstream `blocked` with `blocked_on: approver` and a PR,
+  `awaiting-release`, or any later state; the dependent starts the same pass
+  as a stacked PR off that branch (previous bullet; step 5 for detection).
+  Unmet only while the upstream has no PR yet, is `hold`, or is blocked on
+  something other than the approver. (b) **A parent split into sub-tickets
+  (children carry `parent: {ID}`) is a container and holds no machine slot
+  in any state.** Only children in `ready`..`ready-to-ship` count here; a
+  child parked on the approver counts against the approver limit only. A
+  `building` parent with every child parked or `verified` has a free slot,
+  and the pass fills it — the next child with a satisfied dependency, else
+  the top of To-do — same pass, `continue {NEXT-ID}` before exit. And
+  `chained: none — blocked_on: approver` cannot be written: `chained: none`
+  carries exactly `idle: {reason}` (with the ONE question above raised),
+  terminal/dropped, MODE halting, or hop budget exhausted — nothing else.
 - **Release window** — **L2/L3 only.** No production release Friday after
   15:00, weekends, during `sabbath`/`retreat`, or while `ENG_RELEASE_FREEZE`
   is set. The Friday 15:30 pass therefore never releases an L2/L3 ticket; it

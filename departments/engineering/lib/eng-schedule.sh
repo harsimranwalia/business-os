@@ -30,7 +30,10 @@
 #                              eng-trigger.sh for one that actually has
 #                              something stuck. Added 2026-09-02 after an
 #                              OAuth failure left 2 events queued for ~4h with
-#                              nothing due to fire again until 02:00.
+#                              nothing due to fire again until 02:00. Since
+#                              2026-09-07 the same tick also runs the idle
+#                              poll (see that file's header): nothing running,
+#                              nothing queued, work still on the board → fire.
 #
 # Why the watch job is regenerated and the loop job is not: launchd's WatchPaths
 # is a STATIC array. It cannot glob, and it is not recursive — watching

@@ -125,6 +125,18 @@ report.
    "correct" it. `hold` is never started, and holding a ticket holds everything
    that `depends_on` it. Empty means order it as you always did.
 
+   **`depends_on` is satisfied the moment the upstream's PR is open**
+   (2026-09-07) — upstream `blocked` with `blocked_on: approver` because its
+   PR is open, `awaiting-release`, or any later state — not when it reaches
+   `verified`. The dependent starts in the same pass, branched from that
+   PR's branch as a stacked PR (section 6, "Branching while PRs sit
+   unmerged"), and its merge request says which PR must merge first. A
+   dependency is unmet only while the upstream has no PR yet (still being
+   built), is `hold`, or is blocked on something other than the approver.
+   "Waits on X reaching `verified`" is the misreading — it is how the pass
+   on ENG-044 left ENG-045/046 in `ready` and the machine idle on 2026-09-07
+   — and it is never a reason for `chained: none`.
+
    **Draw every new start from the To-do column, top first.** `intake`, `shaped`
    and `awaiting-scope` are one column on the approver's board, sorted `now` →
    `next` → unset → `hold`. When a slot frees, take the top of that list. The
@@ -168,6 +180,20 @@ report.
    happens once the merge is detected — that idling is what they retired.
    Everything else about the 2026-08-29 correction stands: one ticket on the
    machine at a time, worked end to end, not twelve each a little done.
+
+   **Amended again 2026-09-07 — the two readings that re-created the idle.**
+   Why: the pass that parked ENG-044 (PR open, `blocked_on: approver`) wrote
+   "held by the ENG-026 family" and "waits on ENG-044 reaching `verified`",
+   chained nothing, and the department sat idle from 04:02 until the next
+   calendar sweep with three `ready` sub-tickets on the board. Neither
+   reading is the rule. (a) A dependency is satisfied once the upstream's PR
+   is open — section 2b; the dependent starts as a stacked PR (section 6).
+   (b) A ticket whose work is split into sub-tickets is a container and
+   holds no machine slot, whatever its own state says — section 6. A parent
+   in `building` with every child parked on the approver or `verified` has a
+   **free** machine slot, and the pass fills it — the next child with a
+   satisfied dependency, else the top of To-do — same pass, `continue
+   {NEXT-ID}` before exiting.
 
    **The fast lane** runs alongside it: an XS bug or chore that touches no
    sensitive surface skips the PRD file, the design, the separate test plan, and
@@ -222,6 +248,17 @@ report.
    2026-07-27 escape — the parked ticket is still counted, notified, nudged
    and resurfaced; only the machine no longer waits for it.
 
+   **Nor does a parent hold one** (2026-09-07). When a ticket's work has
+   been broken into sub-tickets — children carrying `parent: {ID}` — the
+   parent is a container: it occupies no machine slot in any state. Only
+   children inside `ready`..`ready-to-ship` count toward `wip.machine_limit`,
+   and a child parked on the approver counts against `wip.approver_limit`
+   only. "Machine WIP 1/1, held by the {PARENT} family" while every child is
+   parked or `verified` is a free slot misdescribed — the ENG-044 pass said
+   exactly that and idled. Fill it: the next child whose `depends_on` is
+   satisfied (section 2b — an open upstream PR satisfies it), else the top
+   of To-do.
+
    **Chain into the freed slot.** When the ticket a pass touched parks on the
    approver — PR open, or `awaiting-release` — and that frees the machine
    slot, the same pass draws the top of To-do and fires
@@ -229,7 +266,15 @@ report.
    `chained: {NEXT-ID} — slot freed by {TICKET-ID}` in the parked ticket's
    log. The standing guard — never chain a ticket that is itself waiting on
    the approver — still applies to *that* ticket; it has never meant the
-   department stops.
+   department stops. So `chained: none — blocked_on: approver` is a line
+   that cannot be written (2026-09-07): `blocked_on: approver` is the very
+   condition that frees the slot, never a reason for leaving it empty.
+   `chained: none` carries exactly one of four reasons — `idle: {reason}`
+   (nothing is startable at all, and the ONE "Nothing I can start" item
+   below is raised), the ticket is terminal/dropped, MODE is halting, or the
+   daily/per-ticket hop budget is exhausted. A dependent whose upstream PR
+   is open, and a child of a `building` parent, are both startable and are
+   never "blocked on a dependency" for this purpose.
 
    **Branching while PRs sit unmerged.** The next ticket branches from the
    repo's default branch. If it needs code that exists only in an unmerged

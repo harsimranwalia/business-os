@@ -184,6 +184,31 @@ wip:
   # which PR must merge first — see gates.merge_request.detect_merged_by for
   # what that does to merge detection.
   #
+  # Two readings closed 2026-09-07, after the pass that parked ENG-044 (PR
+  # open, blocked_on: approver) logged "held by the ENG-026 family" and
+  # "waits on ENG-044 reaching verified", chained nothing, and the machine
+  # idled until the next calendar sweep with three `ready` sub-tickets:
+  # - depends_on is SATISFIED once the upstream's PR is open (upstream
+  #   `blocked` with blocked_on: approver because its PR is open,
+  #   `awaiting-release`, or any later state) — not once it is `verified`.
+  #   The dependent starts in the same pass as a stacked PR off that branch
+  #   (above). UNMET only while the upstream has no PR yet (still being
+  #   built), is `hold`, or is blocked on something other than the approver.
+  #   "Waits on X reaching verified" is the misreading, never a reason for
+  #   `chained: none`.
+  # - A parent ticket whose work is split into sub-tickets (children carry
+  #   parent: {ID}) is a CONTAINER and holds no machine slot in any state.
+  #   Only children in ready..ready-to-ship count against machine_limit; a
+  #   child parked on the approver counts against approver_limit only. A
+  #   `building` parent with every child parked or verified has a FREE slot,
+  #   and the pass fills it — the next child with a satisfied dependency,
+  #   else the top of To-do — same pass, `continue {NEXT-ID}` before exit.
+  # `chained: none — blocked_on: approver` is not a line a pass may write:
+  # blocked_on: approver is what frees the slot. `chained: none` carries
+  # exactly one of: idle: {reason} (nothing startable at all — raise the ONE
+  # question below), terminal/dropped, MODE halting, or the daily/per-ticket
+  # hop budget exhausted.
+  #
   # When nothing can start — To-do empty, or every candidate `hold`, blocked
   # on a dependency, on an unanswered scope/decision, or on something
   # outside the machine's control — the EM writes ONE inbox item
