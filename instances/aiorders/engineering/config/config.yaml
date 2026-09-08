@@ -59,6 +59,10 @@ wip:
                         # blocked on and you can not continue." — never a
                         # second while one is undecided, and logs
                         # `chained: none — idle: {reason}`.
+                        # 2026-09-07 (the ENG-044 idle): depends_on is met
+                        # once the upstream's PR is open, not at `verified`;
+                        # a parent split into sub-tickets (ENG-026) holds no
+                        # slot — see the template's wip.machine_limit comment.
   approver_limit: unlimited   # was 2. Raised to no-cap 2026-09-02 by the approver: the
   # anti-burnout intent (don't bury Harry in finished-but-unapproved work) is
   # explicitly waived by the one person it protects, because the department
