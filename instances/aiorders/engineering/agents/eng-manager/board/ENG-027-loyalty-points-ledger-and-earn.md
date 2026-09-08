@@ -9,14 +9,14 @@ time_spent:
 time_remaining:
 severity: P3
 priority: now
-state: designed
-owner: architect
+state: building
+owner: eng-manager
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-09-03
-updated: 2026-09-05
+updated: 2026-09-08
 branch:
 depends_on: [ENG-006, ENG-007]
 blocks: []
@@ -74,12 +74,22 @@ webhook registration already subscribes to `order_completed_updated`,
 handler discards them at line 238. See the log entry below and the PRD's
 "Approver's `changed` response" section.
 
-**Branch: shared, not per-ticket.** Per the approver's own instruction
+~~**Branch: shared, not per-ticket.** Per the approver's own instruction
 recorded on `ENG-006`'s ticket and restated on `ENG-007`'s (lines
 109–113), the whole loyalty sequence shares one branch, `loyalty-system`,
 in `aiorders-api`. Whoever picks this up at `building` branches from (and
 merges back into) `loyalty-system`, not a fresh `feat/ENG-027-...` off
-`main`.
+`main`.~~ **Superseded 2026-09-07** — true when written (2026-09-03), before
+`ENG-006`/`ENG-007` had merged. Checked fresh at this ticket's own
+work-breakdown pass: `origin/loyalty-system` is now an ancestor of
+`origin/main` with zero unique commits — both predecessor PRs (`#2`, `#4`)
+already merged individually — and `main` has moved 59 commits ahead of it
+since. The shared branch has fully served its purpose; resuming it now would
+mean rebasing 59 unrelated commits for no offsetting benefit. `ENG-048` and
+`ENG-049` (this ticket's own sub-tickets) each branch fresh off `origin/main`
+instead, same as every other work-breakdown sub-ticket on this board. Full
+reasoning: `agents/eng-manager/notebook/2026-09-07-eng027-work-breakdown.md`.
+Observation filed (`observations.md`, this date).
 
 **Full lane, checked against the exclusion list rather than assumed.**
 `type: feature` at `M` already fails the fast-lane size bar, and it also
@@ -455,3 +465,986 @@ already logged; not re-filed as a second proposal, the open one
   `building`), one of the documented no-chain conditions. Re-check via a
   `decision`/`watch`/`scheduled` pass once the slot frees, or via a
   dedicated `continue ENG-027`.
+
+- 2026-09-07 `designed → ready` (eng-manager, acting as `devops` for the
+  triggering ticket, `continue ENG-047` event pass — this ticket is the
+  slot-fill side effect of that pass's own chain obligation, not its own
+  `continue` event). Reading map used by the driving pass: steps 6 and 6b,
+  plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*;
+  *The four lanes*; *Guards*). Mode check clean (`MODE=active`).
+
+  **Why this ticket moved on someone else's pass.** `ENG-047`'s own
+  release-readiness hop parked it on the approver (`ready-to-ship →
+  blocked`), which freed the `ENG-026` family's machine slot. `ENG-047` was
+  that family's last undispatched child — `ENG-044` shipped, `ENG-045` and
+  `ENG-046` both already parked on the approver — so `eng_build_loop.md`
+  Guards' 2026-09-07(b) amendment's "else the top of To-do" applied rather
+  than a sibling fill. To-do (`ENG-018`/`ENG-028`/`ENG-042`/`ENG-043`) had
+  nothing startable (all genuinely on an unanswered approver
+  question/dependency, confirmed via `grep -n "^decision:" inbox/*.md`), so
+  the pick fell back to the held-for-slot pool — same precedent `ENG-019`,
+  `ENG-020`, `ENG-021` and `ENG-026` each already set for this exact
+  situation.
+
+  **This ticket won that pool outright, no tie-break needed.** Of the eight
+  other `designed` tickets in the pool (`ENG-014`, `ENG-017`, `ENG-023`,
+  `ENG-025`, `ENG-029`, `ENG-030`, `ENG-035`, `ENG-036`), none carries a
+  `priority`; this ticket alone carries `priority: now`. Its own
+  2026-09-05 entry had named `ENG-020`, `ENG-021` and `ENG-026` as the only
+  `now`-priority designed tickets ahead of it by id — all three have since
+  shipped/verified or (for `ENG-026`) dispatched their own last child this
+  same pass, so none contends any more.
+
+  **Both preconditions re-verified fresh, not carried forward from this
+  ticket's own 2026-09-05 entry:** `depends_on: [ENG-006, ENG-007]` — both
+  still `state: verified` (re-read directly, unchanged). One-way door — none;
+  already settled at this ticket's own tech-design pass (2026-09-05): the
+  four decisions that would otherwise have needed a G2 were already decided
+  at this ticket's own second G1, and `ADR-021`'s mechanism choice is
+  logged, reversible, and not escalated.
+
+  **Routing:** `designed → ready`, `owner: architect → eng-manager`, no G2
+  — reusing the determination already made and recorded at the 2026-09-05
+  entry above, not re-derived. Machine WIP `0/1 → 1/1`.
+
+  Stopped there — work-breakdown/building is new implementation work and
+  belongs to its own session with fresh context, per *The chain* ("one
+  Claude session that designs, builds, reviews, tests and security-reviews
+  runs out of context and does all of it badly"). Chained instead.
+
+  **6b:** not applicable — this transition reuses an already-recorded
+  routing decision; no new instruction, state name, config key, or artifact
+  path introduced.
+
+  Full reasoning for the dispatch decision itself (To-do sweep, pool
+  comparison, family-slot derivation) lives on `ENG-047`'s own board-file
+  log and this same date's entry on `agents/eng-manager/board/_index.md` —
+  not duplicated here beyond what this ticket's own record needs.
+
+  `chained: ENG-027` — fired
+  `/bin/zsh /Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh continue ENG-027`
+  before the driving pass exits. `ready` is owned by `eng-manager`: not
+  waiting on the approver, not blocked, not terminal, not capped (this
+  transition is what claims the one machine slot).
+
+  business-os itself left uncommitted through this edit — standing default
+  per the open commit-convention question, not re-decided here.
+
+- 2026-09-07 `ready → building` — work-breakdown, two sub-tickets
+  (eng-manager, `continue ENG-027` event pass, per the prior entry's own
+  `chained: ENG-027`). Reading map for `continue`: steps 6 and 6b, plus the
+  not-negotiable set (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four
+  lanes*; *Guards*). Mode check clean (`MODE=active`). Pre-pass
+  `lib/eng-gate-check.sh`, scoped (`ENG-027`) and whole-board: both exit 0,
+  clean.
+
+  Ran `work-breakdown/SKILL.md`. Autonomy check: `aiorders-api` is L1 —
+  proceeds. Machine WIP re-checked fresh from every ticket's own frontmatter:
+  `1/1`, held by `ENG-027` itself — `ENG-026` (`building`) is a settled
+  container, every child either `shipped` or `blocked_on: approver`, none in
+  `ready..ready-to-ship`, so it holds zero machine slots (Guards'
+  2026-09-07(b) amendment). A ticket's own family isn't a second occupant of
+  its own slot, same reading `ENG-016`/`ENG-019`/`ENG-021`/`ENG-026` already
+  established, so work-breakdown proceeds.
+
+  Split by the design's own `## Components` table into two owning-agent
+  sub-tickets, both `aiorders-api` — `ENG-048` (`database`: new table
+  `loyalty_ledger_entries`, `orders` +2 columns,
+  `credit_order_if_eligible()`, `loyalty-auto-complete-tick` cron) and
+  `ENG-049` (`backend`: webhook modifications, new `loyalty-auto-complete`
+  edge function, two new `brand-portal` actions). No `frontend` sub-ticket —
+  the design's own Rollout section states plainly that no frontend anywhere
+  calls any of this yet. Sequenced as a strict chain: `ENG-048` first (no
+  dependency), `ENG-049` `depends_on: [ENG-048]` (every one of its five
+  components touches something `ENG-048` creates). Full reasoning, the
+  18-criterion AC ownership mapping, and every field decided without an
+  explicit rule:
+  `agents/eng-manager/notebook/2026-09-07-eng027-work-breakdown.md`.
+
+  **This ticket's own Notes carried a stale instruction, caught and
+  corrected before either sub-ticket was written, not propagated.** The
+  2026-09-03 "shared branch, `loyalty-system`" note was true when written
+  but predates `ENG-006`/`ENG-007` merging it away — checked fresh in the
+  shared worktree (without switching its own checkout, currently on
+  `ENG-045`'s branch): `git merge-base --is-ancestor origin/loyalty-system
+  origin/main` is true (zero unique commits), and `main` is 59 commits
+  ahead of it since (`ENG-038`, `ENG-020`, `ENG-040`, `ENG-044`, `ENG-045`,
+  others). Both predecessor PRs already merged individually — the shared
+  branch fully served its purpose. Marked superseded in place, above,
+  rather than silently overridden; both sub-tickets branch fresh off
+  `origin/main` instead, matching every other work-breakdown sub-ticket on
+  this board. Observation filed (`observations.md`, this date) rather than
+  an exception-request — a technical fact from direct git investigation, not
+  a scope or business call.
+
+  **Routing:** `ready → building`, owner stays `eng-manager` — no engineer
+  builds a two-surface parent with no diff of its own (`ready`'s exit
+  condition, `definition-of-done.md`, is satisfied by the breakdown itself).
+  `ENG-048` dispatched straight to `building`, owner `database` (no
+  dependency). `ENG-049` stays `ready`, owner `eng-manager` (unmet
+  `depends_on: [ENG-048]`).
+
+  **1 transition** on this ticket (`ready → building`), well under the cap
+  of 4. Machine WIP: still `1/1`, same family (`ENG-027` + `ENG-048`/
+  `ENG-049`), not `2/1` — see notebook. No gate raised, no G1/G2/G3, no
+  one-way door.
+
+  **6b:** the branch correction above is exactly what this step exists to
+  catch — a rule about an artifact (which branch a ticket builds against)
+  fixed in the file someone thought of (this ticket's own Notes) rather than
+  left to contradict a file that outranks it. No other artifact-mention
+  sweep needed this hop: no new receipt path, state name, or config key
+  introduced.
+
+  **Dead-end sweep (scoped to this event):** no other ticket touched, per
+  this event's own narrower contract.
+
+  **Notify sweep:** nothing raised this pass — work-breakdown isn't a gate.
+  Checked every open `inbox/` item fresh against local wall-clock
+  `2026-09-07T13:37:31` PDT (not UTC — `observations.md`'s own 2026-09-06/07
+  rows on this exact skew): `ENG-018`'s, `ENG-028`'s, `ENG-042`'s G1s,
+  `ENG-043`'s clarification, and `ENG-016`'s continue-Piece-2 question all
+  already carry their one-ever `nudged:` — no action. `PROP-2026-W36`
+  already nudged — no action. `ENG-045`'s (~2h40m), `ENG-046`'s (~1h22m),
+  and `ENG-047`'s (~21m) merge requests are all well under 24h — no action.
+
+  **Observations/exceptions/journal:** one observation filed (branch
+  staleness, above and `observations.md`); no `exception-request:`; no
+  G1/G2/G3/merge-request answered this pass, so no decision-journal entry
+  owed.
+
+  **Board update:** In-flight table — this ticket's own row (`state:
+  building`, `updated`); new rows added for `ENG-048`, `ENG-049`; header's
+  `Next ID` advanced `ENG-048 → ENG-050` with a prose note, same convention
+  every prior work-breakdown allocation on this board has used. Live
+  `_index.md` held exactly three dated `## {date} —` entries — at, not
+  over, the keep-three threshold, so nothing rolled to `_index-archive.md`
+  this pass; this dispatch is recorded as a header-paragraph note, same
+  convention `ENG-016`'s/`ENG-019`'s/`ENG-021`'s/`ENG-026`'s own
+  work-breakdown dispatches already used, not a new dated entry.
+
+  Post-pass `lib/eng-gate-check.sh`, scoped (`ENG-027`, `ENG-048`,
+  `ENG-049`) and whole-board: see board index.
+
+  `chained: ENG-048` — the only child with a met dependency and something
+  agent-actionable now. Fired
+  `/bin/zsh /Users/hwalia/Documents/projects/personal/business-os/departments/engineering/lib/eng-trigger.sh continue ENG-048`
+  before this pass exits — confirmed queued, not dropped:
+  `traces/.pending` shows `1 continue ENG-048` appended behind five
+  already-outstanding events, behind this pass's own single-flight lock
+  (`traces/.loop.lock`, pid `75800`), to drain the moment this pass exits.
+  `chained: none` on `ENG-027` itself (parent, no action until a child
+  reports back) and on `ENG-049` (unmet dependency), recorded on each
+  ticket's own log.
+
+  business-os itself left uncommitted through this edit — same standing
+  default carried by every pass since the last reconciliation commit; the
+  commit-convention question remains open, not re-decided here.
+
+- `2026-09-07` **`continue` — re-verified idle, no action; `ENG-027` stays
+  `building`** (eng-manager, `continue ENG-027` event pass). Reading map for
+  `continue`: steps 6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10;
+  *Enforced vs instructed*; *The four lanes*; *Guards*). Mode check clean
+  (`MODE=active`). Pre-pass `lib/eng-gate-check.sh`, scoped and whole-board:
+  both exit 0.
+
+  Container ticket, both children already dispatched; neither
+  `shipped`/`verified`/`dropped` yet, so `ADR-003` keeps `ENG-027` at
+  `building`. Re-verified fresh, not trusted off either child's own log:
+  `ENG-048`/`ENG-049` both still `blocked`/`blocked_on: approver`, PRs
+  `#21`/`#22` both `OPEN`, unmerged (`gh pr view`, `git merge-base
+  --is-ancestor` against `origin/main`). Machine WIP re-swept whole-board:
+  `0/1`, genuinely free. To-do re-swept: same four tickets
+  `IDLE-2026-09-07` already named, none newly answered — that item stays
+  open, accurate, and not duplicated. Notify sweep: nothing due. One
+  observation filed (`observations.md`, this date). Full reasoning:
+  `agents/eng-manager/notebook/2026-09-07-eng027-continue-recheck.md`.
+
+  Post-pass `lib/eng-gate-check.sh`, scoped and whole-board: exit 0, clean.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 already open,
+  re-verified accurate, not duplicated`.
+
+  business-os left uncommitted — standing default, commit-convention
+  question still open.
+
+- `2026-09-07` **`continue` — idle re-confirmed, no transition** (eng-manager,
+  `continue ENG-027`; drained `20:27:14`, right behind `_index.md`'s
+  `2026-09-08 — scheduled (auto-drain)` entry). Gate check clean, pre/post,
+  scoped + whole-board.
+
+  No gate ran, no receipt written, no WIP/cap change: `ENG-048`/`ENG-049`
+  still `blocked`/`blocked_on: approver`, PRs `#21`/`#22` still `OPEN`
+  (`gh pr view`, fresh); Machine WIP still `0/1`; To-do's same four
+  tickets still unanswered; `IDLE-2026-09-07` still accurate, not
+  duplicated. Fourth consecutive pass reaching this conclusion since
+  `19:52`.
+
+  Process note (disclosed to the approver directly + `observations.md`):
+  this pass's own `gh`/`git` checks ran from the human's checkout, not
+  `_eng/`.
+
+  Full reasoning: `agents/eng-manager/notebook/2026-09-07-eng027-continue-fourth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (4th confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-07` **`continue` — eighth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; `traces/eng-loop-2026-09-07.log`:
+  prior `scheduled` pass ended `21:14:57` (exit 0, 373s, the seventh
+  confirmation, logged in `_index.md`), this event drained `21:14:59`,
+  launched `21:15:02` on `CLAUDE_CODE_OAUTH_TOKEN_2` — `day 53/200
+  charged, 6 refunded today, ENG-027 5/20`, nowhere near either budget).
+  Reading map for `continue`: steps 6 and 6b, plus the not-negotiable set
+  (1, 7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*).
+  Mode check clean (`MODE=active`). Pre-pass `lib/eng-gate-check.sh`,
+  scoped (`ENG-027`) and whole-board: both actually run this pass, exit 0.
+
+  **This ticket's own file was last touched at the fourth confirmation** —
+  the fifth through seventh ran as `scheduled` sweeps and logged centrally
+  in `_index.md` instead, since neither touched a single ticket file. This
+  pass's context is `continue ENG-027` specifically, so it resumes logging
+  here, same convention confirmations one through four used.
+
+  Re-verified fresh, nothing taken on any prior entry's word: `gh pr view
+  21`/`22 --json state,baseRefName,headRefName,mergedAt` from the
+  department's own `_eng/aiorders-api` worktree (not the human's checkout —
+  the fourth confirmation's own process note, corrected there and every
+  pass since) — both still `OPEN`, `mergedAt: null`, `#22` still stacked on
+  `#21`'s branch. `ENG-048`/`ENG-049` frontmatter both still `blocked`/
+  `blocked_on: approver`. Machine WIP read directly from every ticket's own
+  frontmatter via the In-flight table: `0/1`, genuinely free — `ENG-027` is
+  the sole `building` ticket and a container holding zero slots (Guards,
+  2026-09-07(b)), both children parked on the approver. To-do (`ENG-018`,
+  `ENG-028`, `ENG-042`, `ENG-043`) re-checked: `grep -n "^decision:"`
+  against each one's own gate file in `inbox/` — none present, all four
+  still genuinely unanswered, and all four already carry their one-ever
+  `nudged:` stamp (`2026-09-07T09:37:5x`), so no further notify action is
+  owed on them. No `priority: hold` ticket found sitting in a working
+  state. `IDLE-2026-09-07.md` re-read in full: still accurate against every
+  fact above; `notified: 2026-09-07T18:44:54`, under 24h old, no `nudged:`
+  yet — not due, not duplicated.
+
+  **Did not fall back to the `designed`-state pool (`ENG-050` included),
+  and did not relitigate that question.** It is already an open proposal
+  (`proposals.md`, 2026-09-07, devops row) awaiting the approver's batched
+  decision; deciding it now, on an eighth pass, would be the department
+  overriding its own open question rather than waiting on it. **Did not
+  file a third observation or a second proposal on the repeated-idle
+  pattern itself** — the eng-manager row already filed in `proposals.md`
+  (2026-09-07) covers exactly this recurrence; this pass is the same
+  mechanism continuing, not a new occurrence of either open question.
+
+  **6b:** not applicable — no new instruction, state name, config key, or
+  artifact path introduced this pass.
+
+  Post-pass `lib/eng-gate-check.sh`, scoped and whole-board: both actually
+  run, exit 0, clean.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged, not
+  duplicated (8th consecutive confirmation)`.
+
+  **Board update:** In-flight table row for `ENG-027` unchanged (`state:
+  building`, same date) — no edit needed. `_index.md` not touched: its own
+  three dated entries (fifth–seventh confirmations) are unaffected by this
+  ticket-scoped pass, same convention confirmations one through four
+  already used.
+
+  business-os left uncommitted — standing default, commit-convention
+  question still open.
+
+- `2026-09-07` **`continue` — ninth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; `traces/eng-loop-2026-09-07.log`: prior
+  pass ended `21:23:14` (exit 0, 492s, the eighth confirmation, logged
+  above), this event drained `21:48:17`, launched `21:48:19` on
+  `CLAUDE_CODE_OAUTH_TOKEN_2` — `day 54/200 charged, 6 refunded today,
+  ENG-027 6/20`, nowhere near either budget). Reading map for `continue`:
+  steps 6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced
+  vs instructed*; *The four lanes*; *Guards*). Mode check clean
+  (`MODE=active`). Pre-pass `lib/eng-gate-check.sh`, scoped (`ENG-027`) and
+  whole-board: both actually run this pass, exit 0.
+
+  Re-verified fresh, nothing taken on the eighth confirmation's word: `gh
+  pr view 21`/`22 --json state,baseRefName,headRefName,mergedAt` from the
+  department's own `_eng/aiorders-api` worktree (confirmed by `pwd`, not
+  assumed) — both still `OPEN`, `mergedAt: null`, `#22` still stacked on
+  `#21`'s branch. `ENG-048`/`ENG-049` frontmatter re-read directly: both
+  still `blocked`/`blocked_on: approver`, `parent: ENG-027`, no third
+  child — Machine WIP genuinely `0/1`, `ENG-027` a container holding zero
+  slots (Guards, 2026-09-07(b)). To-do (`ENG-018`, `ENG-028`, `ENG-042`,
+  `ENG-043`) re-checked directly against each one's own gate file in
+  `inbox/`: no `decision:` on any of the four, all still carrying their
+  one-ever `nudged:` stamp — nothing owed. Whole top-level `inbox/` listed
+  and mtime-checked against the eighth confirmation's own `21:23:14` end
+  time: newest file is `IDLE-2026-09-07.md` at `18:51`, nothing has landed
+  since, and `inbox/_handled/`'s newest entry is `13:40` today — no
+  concurrent pass raced this one. `IDLE-2026-09-07.md` re-read in full:
+  still accurate, `notified: 2026-09-07T18:44:54`, still under 24h
+  (current time `21:52`), no `nudged:` yet — not due, not duplicated. No
+  `priority: hold` ticket found sitting in a working state.
+
+  Also reconfirmed, not re-logged: the eighth confirmation's own
+  `observations.md` row on the three untracked `deno.lock` files in
+  `_eng/aiorders-api` (`brand-portal`, `loyalty-auto-complete`,
+  `restaurant-marketplace`) — still present, unchanged, still read-only
+  from this pass's own perspective (only `fetch`/`gh pr view` run there
+  again), still consistent with "harmless `ENG-049` verification
+  byproduct."
+
+  **Did not fall back to the `designed`-state pool (`ENG-050` included)
+  and did not relitigate that question** — still an open proposal
+  (`proposals.md`, 2026-09-07, devops row), unanswered. **Did not file a
+  third observation or a second proposal on the repeated-idle pattern
+  itself** — the eng-manager row already filed (`proposals.md`,
+  2026-09-07) covers exactly this recurrence; this pass is the same
+  mechanism continuing, not a new occurrence of either open question.
+
+  **6b:** not applicable — no new instruction, state name, config key, or
+  artifact path introduced this pass.
+
+  Post-pass `lib/eng-gate-check.sh`, scoped and whole-board: both actually
+  run, exit 0, clean.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged, not
+  duplicated (9th consecutive confirmation)`.
+
+  **Board update:** In-flight table row for `ENG-027` unchanged (`state:
+  building`, same date) — no edit needed. `_index.md` not touched: its own
+  three dated entries (fifth–seventh confirmations) are still at the
+  keep-three cap, not exceeded, and unaffected by this ticket-scoped pass.
+
+  business-os left uncommitted — standing default, commit-convention
+  question still open.
+
+- `2026-09-07` **`continue` — tenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; `traces/eng-loop-2026-09-07.log`: prior
+  pass ended `21:54:01` (exit 0, 341s, the ninth confirmation, logged
+  above), this event drained `22:19:04`, launched `22:19:07` on
+  `CLAUDE_CODE_OAUTH_TOKEN_2` — `day 55/200 charged, 6 refunded today,
+  ENG-027 7/20`, nowhere near either budget). Reading map for `continue`:
+  steps 6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10; *Enforced
+  vs instructed*; *The four lanes*; *Guards*) — read in full this pass, not
+  assumed from the prior entry. Mode check clean (`MODE=active`). Pre-pass
+  `lib/eng-gate-check.sh`, scoped (`ENG-027`) and whole-board: both actually
+  run this pass, exit 0.
+
+  Re-verified fresh, nothing taken on the ninth confirmation's word: `gh pr
+  view 21`/`22 --json state,baseRefName,headRefName,mergedAt` from the
+  department's own `_eng/aiorders-api` worktree (confirmed by `pwd`, not
+  assumed) — both still `OPEN`, `mergedAt: null`, `#22` still stacked on
+  `#21`'s branch. `ENG-048`/`ENG-049` frontmatter re-read directly: both
+  still `blocked`/`blocked_on: approver`, `parent: ENG-027`; a board-wide
+  `grep` for `parent: ENG-027` turned up only those two files — no third
+  child. Machine WIP genuinely `0/1`, `ENG-027` a container holding zero
+  slots (Guards, 2026-09-07(b)). To-do (`ENG-018`, `ENG-028`, `ENG-042`,
+  `ENG-043`) re-checked directly against each one's own gate file in
+  `inbox/`: no `decision:` on any of the four, all still carrying their
+  one-ever `nudged:` stamp (`09:37:5[6-8]` today) — nothing owed. Whole
+  top-level `inbox/` listed and mtime-checked against the ninth
+  confirmation's own `21:54:01` end time: newest file is still
+  `IDLE-2026-09-07.md` at `18:51`, nothing has landed since, and
+  `inbox/_handled/`'s newest entry is still `13:40` today — no concurrent
+  pass raced this one (the trace log also shows a clean ~25-minute gap
+  between the ninth confirmation's `pass end` and this event's own drain,
+  no overlap). `IDLE-2026-09-07.md` re-read in full: still accurate against
+  everything just re-verified, `notified: 2026-09-07T18:44:54`, still under
+  24h (current time `22:25`), no `nudged:` yet — not due, not duplicated.
+  Whole-board gate-check ran clean, which is what actually enforces "no
+  `priority: hold` ticket sitting in a working state" rather than a manual
+  re-derivation of it.
+
+  Also independently confirmed, since it surfaced as untracked state in
+  `git status` rather than in the prior entry's own text: `ENG-050` (the P0
+  already named inside `IDLE-2026-09-07.md` itself) is still `state:
+  designed`, `owner: architect`, no `parent` — still outside To-do's
+  defined set (`intake`/`shaped`/`awaiting-scope`) and therefore still
+  correctly not drawn from, exactly as the IDLE file already says.
+
+  **Did not fall back to the `designed`-state pool (`ENG-050` included) and
+  did not relitigate that question** — still an open proposal
+  (`proposals.md`, 2026-09-07, devops row), unanswered. **Did not file a
+  third observation or a second proposal on the repeated-idle pattern
+  itself** — the eng-manager row already filed (`proposals.md`, 2026-09-07,
+  now documenting seven launches in one hour) covers exactly this
+  recurrence; this pass is the same mechanism continuing, not a new
+  occurrence of either open question. Both proposals confirmed still
+  present under `## Open` and untouched by this pass.
+
+  **6b:** not applicable — no new instruction, state name, config key, or
+  artifact path introduced this pass.
+
+  Post-pass `lib/eng-gate-check.sh`, scoped and whole-board: both actually
+  run, exit 0, clean.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged, not
+  duplicated (10th consecutive confirmation)`.
+
+  **Board update:** In-flight table row for `ENG-027` unchanged (`state:
+  building`, same date) — no edit needed. `_index.md` not touched: its own
+  three dated entries (fifth–seventh confirmations) are still at the
+  keep-three cap, not exceeded, and unaffected by this ticket-scoped pass.
+
+  business-os left uncommitted — standing default, commit-convention
+  question still open.
+
+- `2026-09-07` **`continue` — eleventh consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `22:26:42` exit 0
+  455s, this event drained `22:51:45`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged, no
+  third child). Machine WIP `0/1` free; all four To-do candidates
+  (`ENG-018`/`028`/`042`/`043`) still unanswered past their one nudge;
+  `ENG-050` still correctly excluded at `designed`; `IDLE-2026-09-07`
+  still accurate, under 24h, not duplicated. Both open proposals
+  (designed-pool tension, idle-recurrence pattern) left untouched.
+
+  Full re-verification (fresh, not taken on the checkpoint's word):
+  `agents/eng-manager/notebook/2026-09-07-eng027-continue-eleventh-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (11th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-07` **`continue` — twelfth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `23:00:10` exit 0
+  503s, this event drained `23:25:13`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged, no
+  third child). Machine WIP `0/1` free; all four To-do candidates
+  (`ENG-018`/`028`/`042`/`043`) still unanswered past their one nudge;
+  `ENG-050` still correctly excluded at `designed`; `IDLE-2026-09-07`
+  still accurate, under 24h, not duplicated. Both open proposals
+  (designed-pool tension, idle-recurrence pattern) left untouched.
+
+  Full re-verification (fresh, not taken on the checkpoint's word):
+  `agents/eng-manager/notebook/2026-09-07-eng027-continue-twelfth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (12th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — thirteenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `23:29:35` exit 0
+  260s, this event drained `23:59:38`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged, no
+  third child). Machine WIP `0/1` free; all four To-do candidates
+  (`ENG-018`/`028`/`042`/`043`) still unanswered past their one nudge;
+  `ENG-050` still correctly excluded at `designed`; `IDLE-2026-09-07`
+  still accurate, under 24h, not duplicated. Both open proposals
+  (designed-pool tension, idle-recurrence pattern) left untouched.
+
+  Full re-verification (fresh, not taken on the checkpoint's word):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-thirteenth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (13th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — fourteenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `00:08:20` exit 0
+  519s, this event drained `00:33:23`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged, no
+  third child). Machine WIP `0/1` free; all four To-do candidates
+  (`ENG-018`/`028`/`042`/`043`) still unanswered past their one nudge;
+  `ENG-050` still correctly excluded at `designed`; `IDLE-2026-09-07`
+  still accurate, under 24h, not duplicated. Both open proposals
+  (designed-pool tension, idle-recurrence pattern) left untouched. Both
+  runaway-guard counters (day-wide and this ticket's) reset at the
+  calendar rollover to 09-08 — noted, not actioned.
+
+  Full re-verification (fresh, not taken on the checkpoint's word):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-fourteenth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (14th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — fifteenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `00:39:36` exit 0
+  371s, this event drained `01:04:39`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged
+  (re-checked live via `gh pr view`), no third child). Machine WIP `0/1`
+  free; all four To-do candidates (`ENG-018`/`028`/`042`/`043`) still
+  unanswered past their one nudge; `ENG-050` still correctly excluded at
+  `designed`; `IDLE-2026-09-07` still accurate, under 24h, not duplicated.
+  Both open proposals (designed-pool tension, idle-recurrence pattern) left
+  untouched — resolving either is the approver's call. Runaway-guard
+  counters `day 2/200, ENG-027 2/20` — nowhere near either ceiling.
+
+  Full re-verification (fresh, not taken on the checkpoint's word):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-fifteenth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (15th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — sixteenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `01:12:11` exit 0
+  450s, this event drained `01:37:14`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both times (first
+  attempt was invalid tooling — bare invocation from
+  `departments/engineering/` with no `ENG_ROOT` resolves `ROOT` to the
+  department template, which has no board at all, and its exit code was
+  masked by a `| tail` pipe; corrected to `env ENG_ROOT="$ENG_INSTANCE" sh
+  lib/eng-gate-check.sh` per `lib/eng-trigger.sh`'s own pattern, exit code
+  checked directly).
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged
+  (re-checked live via `gh pr view` from the dedicated worktree), no third
+  child). Machine WIP `0/1` free; all four To-do candidates
+  (`ENG-018`/`028`/`042`/`043`) still unanswered past their one nudge —
+  fresh `^decision:` grep across every open `inbox/` item, not just the
+  four, found nothing; `ENG-050` still correctly excluded at `designed`;
+  `IDLE-2026-09-07` still accurate, under 24h (~6h53m old, local
+  wall-clock), not duplicated. Both open proposals (designed-pool tension,
+  idle-recurrence pattern) left untouched — resolving either is the
+  approver's call. Fresh `exception-request:` sweep: none found.
+  Runaway-guard counters `day 3/200, ENG-027 3/20` — nowhere near either
+  ceiling.
+
+  Full re-verification (fresh, not taken on the checkpoint's word):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-sixteenth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (16th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — seventeenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `02:09:10` exit 0
+  544s — `scheduled (launchd)`, itself finding no divergence from the 16th
+  confirmation — this event drained `02:10:20`). Mode `active`.
+  Pre/post-pass `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both
+  times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged
+  (re-checked live via `gh pr view` from the dedicated worktree, after a
+  fresh `git fetch`), no third child). Machine WIP `0/1` free; all four
+  To-do candidates (`ENG-018`/`028`/`042`/`043`) still unanswered past
+  their one nudge — fresh `^decision:` grep across every open `inbox/`
+  item (all ten), not just the four, found nothing; `ENG-050` still
+  correctly excluded at `designed`; `IDLE-2026-09-07` still accurate,
+  under 24h (~7h27m old, local wall-clock), not duplicated. Both open
+  proposals (designed-pool tension, idle-recurrence pattern) left
+  untouched, same line numbers as the last check — resolving either is
+  the approver's call. Fresh, field-anchored `exception-request:` sweep:
+  none found (the bare substring matches ~19 files, every one a prior
+  pass's own prose negation, not a live request). Runaway-guard counters
+  `day 5/200, ENG-027 4/20` — nowhere near either ceiling.
+
+  Full re-verification (fresh, not taken on the checkpoint's word, and
+  cross-checked against the intervening `scheduled` sweep's own
+  independent whole-board census — matches exactly):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-seventeenth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (17th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — eighteenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `02:20:58` exit 0
+  635s — this event drained `02:41:01`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged,
+  re-checked live via `gh pr view`, no third child — fresh board-wide
+  `grep`). Machine WIP `0/1` free; all four To-do candidates
+  (`ENG-018`/`028`/`042`/`043`) still unanswered past their one nudge —
+  fresh `^decision:` grep across every open `inbox/` item (all ten) found
+  nothing. Held-for-slot pool (nine `designed` tickets, including
+  `ENG-050`) still correctly not drawn from — re-read `proposals.md` line
+  89 fresh, in full, to confirm the designed-pool tension is still
+  genuinely open rather than assumed from a prior pass's paraphrase; not
+  this pass's to resolve. `IDLE-2026-09-07` still accurate, ~8h00m old,
+  not duplicated. Both open proposals (designed-pool tension,
+  idle-recurrence cost) left untouched, same content — resolving either is
+  the approver's call, and the second explicitly proposes an infra change
+  this ticket-scoped pass has no standing to build unilaterally. Fresh,
+  field-anchored `exception-request:` sweep: none found. Runaway-guard
+  counters `day 6/200, ENG-027 5/20` — nowhere near either ceiling.
+
+  Full re-verification (fresh, not taken on the checkpoint's word or the
+  17th check's own summary):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-eighteenth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (18th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — nineteenth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `02:46:02` exit 0 299s
+  — this event drained/started `03:11:05`, launched `03:11:08`). Mode
+  `active`. Pre/post-pass `lib/eng-gate-check.sh`, scoped + whole-board:
+  exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged,
+  re-checked live via `gh pr view`, no third child — fresh board-wide
+  `grep -rl "parent: ENG-027"`). Machine WIP `0/1` free, confirmed by a
+  fresh whole-board `state:` scan (only `ENG-027` itself sits in
+  `ready`..`ready-to-ship`, and the container holds no slot while both
+  children are parked). All four To-do candidates (`ENG-018`/`028`/`042`/
+  `043`) re-read fresh (state, priority, severity, ticket-level
+  `blocked_on`) and cross-checked field-by-field against their own inbox
+  items — all four still genuinely blocked on an unanswered G1/question,
+  none `hold`. Held-for-slot pool (nine `designed` tickets, including
+  `ENG-050`) still correctly not drawn from — re-read `proposals.md` line
+  89 fresh, in full: still open, still disputing whether the pool is
+  sanctioned by the written procedure; step 6 itself, re-read in full,
+  names only the To-do column. Not this pass's to resolve. `IDLE-2026-09-07`
+  still accurate, ~8h32m old, not duplicated. Both open proposals
+  (designed-pool tension, idle-recurrence cost) left untouched, same
+  content — resolving either is the approver's call. Fresh, field-anchored
+  `exception-request:` sweep: none found. Runaway-guard counters read
+  directly from `traces/.hops-2026-09-08*`: `day 7/200, ENG-027 6/20` —
+  nowhere near either ceiling.
+
+  Full re-verification (fresh, not taken on the checkpoint's word or the
+  18th check's own summary):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-nineteenth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (19th consecutive confirmation)`.
+
+  business-os left uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twentieth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`; prior pass ended `03:18:20` exit 0 432s
+  — this event drained/started `03:43:23`, launched `03:43:25`). Mode
+  `active`. Pre/post-pass `lib/eng-gate-check.sh`, scoped + whole-board:
+  exit 0 both times.
+
+  No state transition — stays `building` (container, both children still
+  `blocked`/`blocked_on: approver`, PRs #21/#22 both `OPEN`/unmerged,
+  re-checked live via `gh pr view`, no third child — fresh board-wide
+  `grep -rl "parent: ENG-027"`, the three hits all accounted for: two real
+  children plus this ticket's own prior log prose). Machine WIP `0/1` free,
+  confirmed by a fresh whole-board `state:` scan (only `ENG-027` itself sits
+  in `ready`..`ready-to-ship`, and the container holds no slot while both
+  children are parked). All four To-do candidates (`ENG-018`/`028`/`042`/
+  `043`) re-read fresh (state, priority, severity, ticket-level
+  `blocked_on`) and cross-checked field-by-field against their own inbox
+  items, including each item's `## Decision` body (still the unfilled
+  template) — all four still genuinely blocked on an unanswered G1/question,
+  none `hold`. Held-for-slot pool (nine `designed` tickets, including
+  `ENG-050`) still correctly not drawn from — re-read `proposals.md` line
+  89 fresh, in full: still open, still disputing whether the pool is
+  sanctioned by the written procedure; step 6 itself, re-read in full,
+  names only the To-do column. `ENG-050`'s own P0 carve-out (step 3) speaks
+  to ticket creation, not dispatch — doesn't change this reading. Not this
+  pass's to resolve. `IDLE-2026-09-07` still accurate, 9h exactly, not
+  duplicated. Both open proposals (designed-pool tension, idle-recurrence
+  cost) left untouched, same content — resolving either is the approver's
+  call. Fresh, field-anchored `exception-request:` sweep: none found.
+  Runaway-guard counters read directly from `traces/.hops-2026-09-08*`:
+  `day 8/200, ENG-027 7/20` — nowhere near either ceiling.
+
+  Full re-verification (fresh, not taken on the checkpoint's word or the
+  19th check's own summary):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentieth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (20th consecutive confirmation)`.
+
+- `2026-09-08` **`continue` — twenty-first consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both.
+
+  No transition — stays `building` (container, children still parked, no
+  divergence from the 20th check found anywhere). Machine WIP `0/1` free;
+  nothing on To-do startable; `IDLE-2026-09-07` re-verified accurate, not
+  duplicated. Runaway-guard: `day 9/200, ENG-027 8/20` — flagged in the
+  notebook as a data point for the open idle-recurrence-cost proposal, not
+  actioned here. Full re-verification (evidence for every claim above):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentyfirst-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (21st consecutive confirmation)`. business-os left
+  uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twenty-second consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both.
+
+  No transition — stays `building` (container, children still parked, no
+  divergence from the 21st check found anywhere: both PRs still `OPEN`
+  live via `gh`, To-do's four occupants still blocked on the same
+  unanswered gates, no `decision:` field anywhere in `inbox/`). Machine WIP
+  `0/1` free; nothing on To-do startable; `IDLE-2026-09-07` re-verified
+  accurate at 17h8m old, not duplicated, still under the 24h nudge
+  threshold. Held-for-slot/`designed`-pool tension and the idle-recurrence-
+  cost proposal (`proposals.md`, both still `## Open`) left untouched —
+  resolving either is the approver's call. Runaway-guard: `day 10/200,
+  ENG-027 9/20` — flagged in the notebook as a data point for the open
+  idle-recurrence-cost proposal, not actioned here.
+
+  Full re-verification (evidence for every claim above):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentysecond-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (22nd consecutive confirmation)`. business-os left
+  uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twenty-third consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both.
+
+  No transition — stays `building` (container, children still parked, no
+  divergence from the 22nd check found anywhere: both PRs still `OPEN`
+  live via `gh` from the department's own `_eng/aiorders-api` worktree,
+  To-do's four occupants still blocked on the same unanswered gates, no
+  `decision:` field anywhere in `inbox/`). Machine WIP `0/1` free; nothing
+  on To-do startable; `IDLE-2026-09-07` re-verified accurate at 17h38m old,
+  not duplicated, still under the 24h nudge threshold. Held-for-slot/
+  `designed`-pool tension and the idle-recurrence-cost proposal
+  (`proposals.md`, both still `## Open`) left untouched — resolving either
+  is the approver's call. Runaway-guard: `day 11/200, ENG-027 10/20` —
+  nowhere near either ceiling, cross-checked against `plan.tier: max_5x`'s
+  own `hops_per_day`/`hops_per_ticket` values rather than assumed.
+
+  **One finding, filed as a proposal:** the 22nd check's own notebook
+  records its PR-state verification running from the human's interactive
+  `aiorders-api` checkout, not the department's `_eng` worktree — the
+  identical repo-isolation slip `observations.md` already logged twice on
+  2026-09-07, the second of those two entries explicitly asking to watch
+  for a third. Assessed harmless again (read-only `fetch`/API calls, no
+  board impact — this pass's own re-check from the correct worktree found
+  the same PR states), but a third recurrence of an already-flagged-twice
+  mistake is a proposal, not a fourth observation: filed to
+  `proposals.md`'s `## Open` table, 2026-09-08, eng-manager row.
+
+  Full re-verification (evidence for every claim above):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentythird-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (23rd consecutive confirmation)`. business-os left
+  uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twenty-fourth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both.
+
+  No transition — stays `building` (container, children still parked, no
+  divergence from the 23rd check found anywhere: both PRs still `OPEN`
+  live via `gh` from the department's own `_eng/aiorders-api` worktree,
+  To-do's four occupants still blocked on the same unanswered gates, no
+  `decision:` field anywhere in `inbox/`). Machine WIP `0/1` free; nothing
+  on To-do startable; `IDLE-2026-09-07` re-verified, not duplicated, still
+  under the 24h nudge threshold. Held-for-slot/`designed`-pool tension, the
+  idle-recurrence-cost proposal, and the 23rd check's repo-isolation
+  proposal (`proposals.md`, all three still `## Open`) left untouched —
+  resolving any is the approver's call. Runaway-guard: `day 12/200,
+  ENG-027 11/20` — nowhere near either ceiling.
+
+  **One arithmetic correction, not re-filed as a new proposal:** the 23rd
+  check's own notebook computed `IDLE-2026-09-07`'s age as "17h38m" by
+  diffing a UTC clock against `notified:` as if that field were UTC too.
+  Cross-checked against `traces/eng-notify-2026-09-07.log` (local-time
+  `date`, no `-u`) this pass: `notified:` is stamped in local PDT, not UTC —
+  the correct age was ~11h11m at this check. Both figures are under the 24h
+  threshold so the conclusion was unaffected, but this is the identical
+  UTC-vs-local pattern `proposals.md`'s already-open idle-recurrence-cost
+  row (2026-09-07, eng-manager) names — a further live occurrence of an
+  already-proposed bug, not a new finding, so left un-filed per the same
+  no-double-filing reasoning the 23rd check itself used for the
+  repo-isolation slip. Full detail:
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentyfourth-idle-check.md`.
+
+  The three untracked `deno.lock` files in the `_eng/aiorders-api` worktree
+  (`observations.md`, 2026-09-07) re-checked, unchanged since that row —
+  not re-logged.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (24th consecutive confirmation)`. business-os left
+  uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twenty-fifth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, scoped + whole-board: exit 0 both.
+
+  No transition — stays `building` (container, children still parked, no
+  divergence from the 24th check found anywhere: both PRs still `OPEN`
+  live via `gh` from the department's own `_eng/aiorders-api` worktree,
+  To-do's four occupants still blocked on the same unanswered gates, no
+  `decision:` field anywhere in `inbox/`). Machine WIP `0/1` free; nothing
+  on To-do startable; `IDLE-2026-09-07` re-verified (~11h42m old,
+  local-to-local), not duplicated, still under the 24h nudge threshold.
+  Held-for-slot/`designed`-pool tension, the idle-recurrence-cost proposal,
+  and the repo-isolation proposal (`proposals.md`, all three still
+  `## Open`) left untouched — resolving any is the approver's call.
+  Runaway-guard: `day 13/200, ENG-027 12/20` — nowhere near either ceiling.
+
+  The three untracked `deno.lock` files in the `_eng/aiorders-api` worktree
+  (`observations.md`, 2026-09-07) re-checked, unchanged since that row —
+  not re-logged. Full re-verification (evidence for every claim above):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentyfifth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (25th consecutive confirmation)`. business-os left
+  uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twenty-sixth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, whole-board: exit 0 both.
+
+  No transition — stays `building` (container, children still parked, no
+  divergence from the 25th check found anywhere: both PRs still `OPEN` live
+  via `gh` from the department's own `_eng/aiorders-api` worktree, To-do's
+  four occupants still blocked on the same unanswered gates, no `decision:`
+  field anywhere in `inbox/`). Machine WIP `0/1` free; nothing on To-do
+  startable; `IDLE-2026-09-07` re-verified in full (≈12h14m old,
+  local-to-local), still an exact match for today's state, not duplicated,
+  still under the 24h nudge threshold. Held-for-slot/`designed`-pool
+  tension, the idle-recurrence-cost proposal, and the repo-isolation
+  proposal (`proposals.md`, all three still `## Open`) left untouched —
+  resolving any is the approver's call.
+
+  **Runaway-guard, named plainly rather than repeated as boilerplate:**
+  `day 14/200` (not close), but `ENG-027 13/20` (65%) is now the tighter
+  ceiling — at today's poll rate it has realistic room to trip its own
+  20-hop daily cap later today if nothing on the board changes first. Not a
+  new proposal — exactly the cost the open idle-recurrence-cost row already
+  names; a trip fires `eng-trigger.sh`'s own halt_notice automatically, the
+  guard working as designed.
+
+  The three untracked `deno.lock` files in the `_eng/aiorders-api` worktree
+  (`observations.md`, 2026-09-07) re-checked, unchanged since that row —
+  not re-logged. Full re-verification (evidence for every claim above):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentysixth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (26th consecutive confirmation)`. business-os left
+  uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twenty-seventh consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, whole-board: exit 0 both.
+
+  No transition — stays `building` (container, children still parked, no
+  divergence from the 26th check found anywhere): both PRs still `OPEN`
+  (`mergedAt: null`) live via `gh` from the department's own
+  `_eng/aiorders-api` worktree, To-do's four occupants re-verified against
+  fresh frontmatter (not the board narrative alone) and still blocked on
+  the same unanswered gates, no `decision:` field anywhere across all ten
+  open `inbox/` items, no `priority: hold` ticket found anywhere on the
+  board. Machine WIP `0/1` free; nothing on To-do startable;
+  `IDLE-2026-09-07` re-verified in full (≈19h49m old, still under the 24h
+  nudge threshold), still an exact match for today's state, not
+  duplicated. Held-for-slot/`designed`-pool tension, the idle-recurrence-
+  cost proposal, and the repo-isolation proposal (`proposals.md`, all
+  three still `## Open`) left untouched — resolving any is the approver's
+  call.
+
+  **Self-caught process slip, disclosed rather than smoothed over:** this
+  pass located the department's worktree by first running
+  `git worktree list` from `~/Documents/projects/aiorders/aiorders-api` —
+  the human's interactive checkout, not the department's own — before
+  switching to `_eng/aiorders-api` for the actual `fetch`/`gh pr view`
+  read. Harmless in substance (`git worktree list` only reads
+  `.git/worktrees` metadata; no ref, index, or file in the human's
+  checkout was touched) but the same repo-isolation slip named three times
+  already (`observations.md`, both 2026-09-07; `proposals.md`, 2026-09-08,
+  "third occurrence") — this makes at least a fourth. Logged as a further
+  `observations.md` row (this date) rather than a fresh proposal, since
+  the open one already names the failure mode and a concrete fix.
+
+  **Runaway-guard, named plainly rather than repeated as boilerplate:**
+  department daily `15/200` (not close), `ENG-027` `14/20` (70%) — tighter
+  still than the 26th check's own 65%, no new proposal, the same cost the
+  open idle-recurrence-cost row already names; a trip fires
+  `eng-trigger.sh`'s own halt_notice automatically, the guard working as
+  designed.
+
+  The three untracked `deno.lock` files in the `_eng/aiorders-api` worktree
+  (`observations.md`, 2026-09-07) re-checked via `git status`, unchanged —
+  not re-logged.
+
+  **8b:** one new observation filed (the repo-isolation slip above,
+  `observations.md` this date); no `exception-request:` found. **8c:**
+  n/a — no G1/G2/G3/merge-request answered this pass.
+
+  **Board update:** no ticket file touched besides this one; `board/_index.md`
+  unchanged — In-flight table still accurate, no ticket changed state,
+  nothing to roll (already holds exactly three dated entries).
+
+  Full re-verification (evidence for every claim above):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentyseventh-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (27th consecutive confirmation)`. business-os left
+  uncommitted — standing default.
+
+- `2026-09-08` **`continue` — twenty-eighth consecutive idle re-confirmation**
+  (eng-manager, `continue ENG-027`). Mode `active`. Pre/post-pass
+  `lib/eng-gate-check.sh`, whole-board: exit 0 both.
+
+  No transition — stays `building` (container, both children still parked,
+  no divergence from the 27th check found anywhere): `ENG-048`/`ENG-049`
+  both `blocked`, `blocked_on: approver`, both PRs (`#21`, `#22`) still
+  `OPEN`/`mergedAt: null`, confirmed live via `gh` **from the department's
+  own `_eng/aiorders-api` worktree from the start this pass** — no
+  repo-isolation slip this time, unlike the 22nd and 27th checks. To-do's
+  four occupants (`ENG-018`, `ENG-028`, `ENG-042`, `ENG-043`) re-verified
+  against fresh frontmatter and still blocked on the same unanswered gates;
+  no `decision:` field anywhere across all ten open `inbox/` items; no
+  `priority: hold` ticket found anywhere on the board. Machine WIP `0/1`
+  free; nothing on To-do startable; `IDLE-2026-09-07` re-verified in full
+  (≈20h23m old, still under the 24h nudge threshold), still an exact match
+  for today's state, not duplicated. `ENG-048`-merge (≈22h50m) and
+  `ENG-050`-P0 (≈23h04m) also checked — both still under 24h, `ENG-050` now
+  closest to the threshold. Held-for-slot/`designed`-pool tension, the
+  idle-recurrence-cost proposal, and the repo-isolation proposal
+  (`proposals.md`, all three still `## Open`) left untouched — resolving any
+  is the approver's call.
+
+  **Runaway-guard, named plainly rather than repeated as boilerplate:**
+  department daily `16/200` (not close), `ENG-027` `15/20` (75%) — tighter
+  still than the 27th check's own 70%, no new proposal, the same cost the
+  open idle-recurrence-cost row already names; a trip fires
+  `eng-trigger.sh`'s own halt_notice automatically, the guard working as
+  designed.
+
+  The three untracked `deno.lock` files in the `_eng/aiorders-api` worktree
+  (`observations.md`, 2026-09-07) re-checked via `git status`, unchanged —
+  not re-logged.
+
+  **8b:** nothing new to file — this pass's own worktree use was clean (no
+  repo-isolation slip to disclose, unlike the 22nd/27th checks), and an
+  absence of a problem isn't itself a finding; no `exception-request:`
+  found. **8c:** n/a — no G1/G2/G3/merge-request answered this pass.
+
+  **Board update:** no ticket file touched besides this one; `board/_index.md`
+  unchanged — In-flight table still accurate, no ticket changed state,
+  nothing to roll (already holds exactly three dated entries).
+
+  Full re-verification (evidence for every claim above):
+  `agents/eng-manager/notebook/2026-09-08-eng027-continue-twentyeighth-idle-check.md`.
+
+  `chained: none — idle: nothing startable; IDLE-2026-09-07 unchanged,
+  not duplicated (28th consecutive confirmation)`. business-os left
+  uncommitted — standing default.
