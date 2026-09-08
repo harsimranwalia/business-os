@@ -8,15 +8,15 @@ time_estimate: several days to a week
 time_spent:
 time_remaining:
 severity: P2
-priority: hold
-state: shaped
-owner: product-manager
+priority: now
+state: awaiting-scope
+owner: approver
 lane: full
 blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-03
+updated: 2026-09-06
 branch:
 depends_on: []
 blocks: []
@@ -227,3 +227,100 @@ third occurrence warranting a proposal per step 8b's own threshold.
 nothing for a machine to do here regardless of the WIP cap's own current
 (unlimited) state. Post-pass `departments/engineering/lib/eng-gate-check.sh`,
 scoped (`ENG-018`) and whole-board: both exit 0, clean.
+
+## 2026-09-06 — scheduled: `priority: hold → now` found hand-edited, uncommitted, no log trace — G1 raised
+
+`scheduled` event pass (whole-board safety-net sweep). While cross-checking
+every in-flight ticket's own fresh frontmatter against `board/_index.md`'s
+In-flight table (same step-10 groundwork the 2026-09-03 sweep ran), this
+ticket's own file read `priority: now` and `updated: 2026-09-06` — disagreeing
+with the table (still `hold`, last synced 2026-09-03) and with this file's own
+Log, whose newest entry (immediately above) is the 2026-09-03 restore-to-`hold`
+and says nothing past that date.
+
+**Checked before acting, not assumed.** `git diff` on this file shows an
+uncommitted, two-line working-tree change — `priority: hold → now` and
+`updated: 2026-09-03 → 2026-09-06` — touching nothing else. `git log --since
+2026-09-03` on this file shows only the already-known `2d66236` (blank-out)
+and `220b8f0` (2026-09-04 restore-to-`hold`) commits; nothing commits this
+change, and no pass's own dated entry (this file's or `_index.md`'s three
+live entries, all 2026-09-06) claims it. `decision-journal.md` and
+`exceptions.md` carry no row for this ticket either.
+
+**Read as the approver's own direct hand-edit, not a fresh clobber to
+revert.** Distinct from the 2026-09-03 incident in the way that matters: that
+one had a specific bundled commit whose own message described unrelated work,
+which is what made "accidental" the honest read. Here there is no commit at
+all to attribute to anything else — `priority` has no gate mechanism of its
+own (no G1/G2/G3-style item type for it) and `eng_build_loop.md` step 6 is
+explicit that only the approver may set it, so a clean, isolated,
+two-field, complete-looking edit landing in the working tree, in exactly the
+shape this same field's original `priority: hold` arrived in on 2026-08-29
+(`ad4c6c4`, also outside any pass's own narrated log), is this department's
+established channel for the approver to pull this lever — not an artifact to
+second-guess. Labelled as interpretation, per this department's own standard
+for anything not corroborated by a `decision:`/journal entry: no channel
+currently lets the approver set `priority` any other way, so there is no
+competing explanation to weigh it against, but it is still inference from the
+edit itself, not a verbatim instruction.
+
+**Acted on it rather than only flagging it, because acting is reversible and
+cheap, and waiting has a real cost.** `priority: now` is the field that
+"starts before anything not already in flight" — and this ticket's own G1 has
+sat fully drafted since 2026-08-29, held back only by `priority: hold` itself
+(the approver-facing WIP cap that also applied at intake time was independently
+resolved 2026-09-02, per every sibling ticket's own G1-raise that week; this
+file's own 2026-09-03 entry already names `priority: hold` as the sole
+remaining reason it stayed unraised). With that reason now lifted, holding the
+G1 back further on top of an uncorroborated read would just be a second,
+opposite-direction version of the same mistake `eng_build_loop.md` warns
+against — not raising it costs the same class of silent delay restoring
+`hold` on 2026-09-03 was written to prevent.
+
+**Re-verified the PRD's own central claim fresh before raising, not
+carried forward from a week-old check:** grepped all five worktrees
+(`~/Documents/projects/_eng/*`) for `is_demo`/`demo_restaurant`/`demo_flag` —
+zero hits anywhere, confirming "no demo mechanism exists today" still holds.
+`ENG-016` (the catering pipeline AC2 was written against as a future
+dependency) has since shipped and reached `verified`, strengthening rather
+than weakening that criterion. Nothing else material has changed.
+
+**G1 raised**: `inbox/2026-09-06-eng018-g1-scope.md`. `lib/eng-notify.sh raise`
+run — `traces/eng-notify-2026-09-06.log` confirms `03:13:31 sent`; `notified:`
+stamped by hand in the item's frontmatter (the script does not stamp it
+itself). PRD `status: draft → awaiting-scope`;
+`agents/product-manager/specs/ENG-018-sales-demonstration-account.md`'s own
+`## Decision` section reset to the unfilled placeholder. **No dissent
+section** — `agents/critic/agent.md` still doesn't exist at the department or
+instance level (confirmed absent again this pass, same open proposal,
+`proposals.md` 2026-08-25 row); not refiled.
+
+**1 transition** (`shaped → awaiting-scope`), well under the cap of 4.
+`owner: product-manager → approver`. No machine-WIP consequence
+(`awaiting-scope` sits outside the counted `ready`..`ready-to-ship` range).
+Approver-facing WIP: joins the uncapped list (`wip.approver_limit: unlimited`
+since 2026-09-02) — visibility only, not a gate on anything.
+
+**Left the frontmatter edit's own history as-is** — did not touch
+`priority`/`updated` beyond the `state`/`owner` transition this pass already
+owns; the approver's own values stay exactly as found. business-os itself
+left uncommitted through this edit — same standing default every pass has
+used; the commit-convention question remains open, not re-decided here.
+
+**Journal:** n/a — nothing answered this pass, only raised; the answer gets
+its own `decision-journal.md` row when it comes back. **Observations filed**
+(`observations.md`, this date): the hand-edit-with-no-log-trace pattern,
+cross-referenced against the 2026-09-03 blank-out incident as the second,
+opposite-direction occurrence of "an approver-owned field changes with
+nothing in this ticket's own log to explain it" — not yet a third occurrence
+of the *identical* shape (that one was a bundled-commit accident; this one is
+a bare hand-edit), so logged for pattern-tracking rather than filed as a fresh
+proposal.
+
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped (`ENG-018`)
+and whole-board: both exit 0, clean.
+
+`chained: none — awaiting-scope, owner: approver`. Per `eng_build_loop.md`
+step 9 and the Guards section, a ticket waiting on the approver is never
+chained; the G1 answer is the next event, and a `decision`/`watch`/`scheduled`
+pass picks it up without a fired hop.
