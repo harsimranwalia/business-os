@@ -1,7 +1,7 @@
 ---
 ticket: ENG-018
 project: aiorders-admin-hub
-status: draft
+status: awaiting-scope
 size: L
 author: product-manager
 created: 2026-08-29
@@ -210,13 +210,4 @@ prospect-facing shareable demo link — see Non-goals.
 
 ## Decision
 
-Not yet raised. **Held at `shaped`, not advanced to `awaiting-scope` this
-pass** — the approver-facing WIP cap (2) is currently full (`ENG-014`,
-`ENG-015`, both still open) per `eng_build_loop.md`'s Guards. Will raise G1
-once a slot frees; see the ticket's own log for the fresh cap check made
-before this decision. Filed alongside `ENG-017` (the autopilot-nurture half
-of the same raw request) — see that PRD for the sibling scope.
-
-- **The approver's answer:** —
-- **Date:** —
-- **Notes:** —
+Filled in by the approver.
