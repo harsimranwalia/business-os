@@ -287,8 +287,8 @@ function paintBadges() {
   });
 }
 
-let agentInfo = null;   // last-seen engineering activity, for the rail pill
-export function setAgent(a) { agentInfo = a; paintAgent(); }
+let agentInfo = null, agentHead = null;   // last-seen engineering activity (+ the in-flight ticket), for the rail pill
+export function setAgent(a, head) { agentInfo = a; agentHead = head || null; paintAgent(); }
 function agentSummary(a) {
   if (!a) return { cls: '', title: 'Agent', sub: 'no signal yet' };
   if (a.mode_halting) return { cls: 'warn', title: 'Paused', sub: `MODE=${a.mode}` };
@@ -297,7 +297,9 @@ function agentSummary(a) {
     const verb = eventVerb(a);
     return { cls: 'on', title: a.current_ticket ? `${verb} ${a.current_ticket}` : verb, sub: `${fmtDur(a.running_seconds)} · ${a.hops_today}/${a.hops_budget || '∞'} hops today` };
   }
-  return { cls: '', title: 'Agent idle', sub: `${a.hops_today}/${a.hops_budget || '∞'} hops · ${a.pending_count} queued` };
+  const hops = `${a.hops_today}/${a.hops_budget || '∞'} hops`;
+  if (agentHead) return { cls: agentHead.stale ? 'warn' : '', title: `${agentHead.id} ${agentHead.word}`, sub: agentHead.stale ? 'no pass queued' : `between passes · ${hops}` };
+  return { cls: '', title: 'Agent idle', sub: `${hops} · ${a.pending_count} queued` };
 }
 const EVENT_VERBS = { continue: 'Building', decision: 'Applying decision', intake: 'Shaping request', scheduled: 'Running sweep', watch: 'Checking inbox', finding: 'Handling finding' };
 export function eventVerb(a) { const head = String(a.current_event || '').split(/\s/)[0]; return EVENT_VERBS[head] || 'Working'; }

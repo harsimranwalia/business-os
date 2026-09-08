@@ -3,7 +3,7 @@
 // now" stays current — but only re-draws the page when something other than
 // the live activity changed, so an open card or a half-written note survives.
 import { api, setTop, seg, selectHtml, refreshBtn, esc, attr, icon, empty, skeleton, prefs, navigate, toast, fail, relTime, setViewKeys, makePoller, errorBox, plural, setAgent, setPaletteCommands, eventVerb } from '../core.js';
-import { engGateCard, engBlockedCard, engDecidingCard, activityCard, bindActions, afterRender, captureInputs, restoreInputs, tag, GATE_LABEL } from './cards.js';
+import { engGateCard, engBlockedCard, engDecidingCard, activityCard, inFlight, passStale, bindActions, afterRender, captureInputs, restoreInputs, tag, GATE_LABEL } from './cards.js';
 
 const WORKING = ['ready', 'building', 'in-review', 'in-qa', 'in-security', 'ready-to-ship'];
 const GROUPS = [
@@ -36,12 +36,14 @@ function top() {
 }
 
 function statsHtml(s) {
+  const byProject = Object.entries(s.shipped_by_project || {}).sort((a, b) => b[1] - a[1]);
+  const shippedTitle = byProject.length ? byProject.map(([p, n]) => `${p || 'unassigned'}: ${n}`).join('\n') : 'No shipped tickets yet';
   return `<div class="stats">
     <div class="stat ${s.waiting_on_harry ? 'hot' : ''}"><b>${s.waiting_on_harry}</b><span>waiting on you</span></div>
     <div class="stat"><b>${s.in_flight}<small>/${s.machine_limit}</small></b><span>in flight</span></div>
     <div class="stat"><b>${s.pending_apply}</b><span>pending apply</span></div>
     <div class="stat ${s.open_bugs ? 'bad' : ''}"><b>${s.open_bugs}</b><span>open bugs</span></div>
-    <div class="stat"><b>${s.shipped_recent}</b><span>verified</span></div>
+    <div class="stat" title="${attr(shippedTitle)}"><b>${s.shipped_recent}</b><span>shipped</span></div>
   </div>`;
 }
 
@@ -135,6 +137,16 @@ function bindComposer(el) {
   renderAttach();
 }
 
+// ── Right now ─────────────────────────────────────────────────────────────
+// One card: the live readout, naming the ticket in flight even between
+// passes; the rest of what is in motion folds under it.
+const STATE_WORD = { building: 'building', 'in-review': 'in review', 'in-qa': 'in QA', 'in-security': 'in security review', 'ready-to-ship': 'ready to ship', ready: 'ready to start' };
+function agentHead(d) {
+  const h = !d.activity.running && inFlight(d)[0];
+  return h ? { id: h[1].id, word: STATE_WORD[h[0]] || h[0], stale: passStale(d.activity) } : null;
+}
+const rightNowHtml = d => activityCard(d.activity, d);
+
 // ── Board ─────────────────────────────────────────────────────────────────
 // A blocked ticket whose PR is up is not stuck — it is built and waiting on
 // your merge. That belongs under Ready to ship; Blocked keeps only the tickets
@@ -150,9 +162,12 @@ function boardHtml(d) {
     byLane.get(lane).push([st, t]);
   })));
   byLane.get('To-do').sort((a, b) => (PRIO_RANK[a[1].priority || ''] ?? 2) - (PRIO_RANK[b[1].priority || ''] ?? 2));
-  const cols = GROUPS.map(([name]) => [name, byLane.get(name)]).filter(([name, items]) => name !== 'Dropped' || (showDropped && items.length));
+  // Blocked and Dropped stay out of the way: Dropped shows on request, Blocked
+  // only when a ticket is actually stuck — then it sits right after Done.
+  const cols = GROUPS.map(([name]) => [name, byLane.get(name)]).filter(([name, items]) =>
+    name === 'Dropped' ? (showDropped && items.length) : name === 'Blocked' ? items.length : true);
   if (!cols.some(([, items]) => items.length)) return h + empty('Nothing on the board yet', '', 'columns');
-  h += '<div class="lanes">';
+  h += `<div class="lanes" style="--lanes:${cols.length}">`;
   cols.forEach(([name, items]) => {
     h += `<div class="lane"><div class="lane-h">${esc(name)}<span class="n">${items.length}</span></div>`;
     if (name === 'Ready to ship') h += `<div class="lane-note">Built, PR up, waiting on your merge</div>`;
@@ -204,12 +219,12 @@ function render() {
   if (!data.instance) { el.innerHTML = empty(data.empty || 'No engineering instance yet', '', 'branch'); return; }
   const kept = captureInputs(el);
   let h = statsHtml(data.stats);
-  if (sub !== 'board') h += `<section class="section"><div class="section-h"><h2>Right now</h2></div><div data-activity>${activityCard(data.activity)}</div></section>`;
+  if (sub !== 'board') h += `<section class="section"><div class="section-h"><h2>Right now</h2></div><div data-activity>${rightNowHtml(data)}</div></section>`;
   if (sub === 'decide') h += decideHtml(data);
   if (sub === 'board') h += boardHtml(data);
   if (sub === 'bugs') h += bugsHtml(data);
   el.innerHTML = h;
-  el.parentElement.classList.toggle('wide', sub === 'board');
+  el.classList.toggle('wide', sub === 'board');
   restoreInputs(el, kept);
   afterRender(el);
   el.querySelectorAll('[data-wf]').forEach(b => b.onclick = () => { waitingFilter = b.dataset.wf; prefs.set('eng-waiting', waitingFilter); render(); });
@@ -221,7 +236,7 @@ function render() {
 // notes): swap those in place and leave the rest of the page alone.
 function patchLive() {
   const el = root.querySelector('#eng'); if (!el) return;
-  const a = el.querySelector('[data-activity]'); if (a) a.innerHTML = activityCard(data.activity);
+  const a = el.querySelector('[data-activity]'); if (a) a.innerHTML = rightNowHtml(data);
   const dq = el.querySelector('[data-deciding]'); if (dq) dq.innerHTML = decidingHtml(data);
 }
 
@@ -253,7 +268,7 @@ async function load(quiet = false) {
     const same = quiet && !!data && sig === lastSig && sub !== 'board';
     data = next; lastSig = sig;
     instance = data.instance || ''; prefs.set('eng-instance', instance);
-    setAgent(data.activity);
+    setAgent(data.activity, data.instance ? agentHead(data) : null);
     top();
     if (same) patchLive(); else render();
   } catch (e) { if (el) el.innerHTML = errorBox(e, 'engineering'); }

@@ -74,10 +74,39 @@ export function engDecidingCard(w, activity) {
     ${w.body ? `<details class="disclosure" style="margin-top:10px"><summary>${icon('chevronRight')}Show what you approved</summary><div class="body prose">${renderDecisionBody(w.body)}</div></details>` : ''}
   </article>`;
 }
-export function activityCard(a) {
+// The machine's range, in the order that matters when nothing is running:
+// what is mid-build first, then what is queued to start.
+export const IN_FLIGHT = ['building', 'in-review', 'in-qa', 'in-security', 'ready-to-ship', 'ready'];
+const STATE_WORD = { building: 'building', 'in-review': 'in review', 'in-qa': 'in QA', 'in-security': 'in security review', 'ready-to-ship': 'ready to ship', ready: 'ready to start' };
+// Every in-flight ticket as [state, ticket], the one a running pass is on first.
+export function inFlight(eng) {
+  if (!eng || !eng.by_state) return [];
+  const live = eng.activity && eng.activity.running ? eng.activity.current_ticket : null;
+  const rows = IN_FLIGHT.flatMap(st => (eng.by_state[st] || []).map(t => [st, t]));
+  return rows.sort((x, y) => (x[1].id === live ? -1 : y[1].id === live ? 1 : 0) || IN_FLIGHT.indexOf(x[0]) - IN_FLIGHT.indexOf(y[0]));
+}
+// The loop is not a daemon: a pass fires, runs, exits. "Between passes" with
+// nothing queued is normal for a few minutes; hours of it while a ticket is
+// in flight means the trigger never fired. The only clock we have is the
+// timestamp on the last line of today's loop log.
+export function passStale(a) {
+  if (!a || a.running || a.pending_count) return false;
+  const last = (a.recent_log || []).slice(-1)[0] || '';
+  const m = last.match(/^\[(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)/);
+  if (!m) return true;
+  const t = new Date(`${m[1]}T${m[2]}`).getTime();
+  return !isFinite(t) || Date.now() - t > 2 * 3600 * 1000;
+}
+export function activityCard(a, eng) {
   if (!a) return '';
-  const dot = a.mode_halting || a.backoff_active ? 'warn' : (a.running ? 'on' : '');
-  const status = a.mode_halting ? `Paused — MODE=${esc(a.mode)}` : a.running ? esc(eventVerb(a)) : 'Idle';
+  const flight = inFlight(eng);
+  const head = !a.running && flight[0];
+  const stale = !!head && passStale(a);
+  const dot = a.mode_halting || a.backoff_active || stale ? 'warn' : (a.running ? 'on' : '');
+  const liveT = a.running && a.current_ticket && flight.find(([, t]) => t.id === a.current_ticket);
+  const status = a.mode_halting ? `Paused — MODE=${esc(a.mode)}`
+    : a.running ? `${esc(eventVerb(a))}${a.current_ticket ? `<span class="id">${esc(a.current_ticket)}</span>` : ''}${liveT ? `<span class="now-name">${esc(liveT[1].title)}</span>` : ''}`
+    : head ? `<span class="id">${esc(head[1].id)}</span><span>${esc(STATE_WORD[head[0]] || head[0])}<span class="dim">, between passes</span></span><span class="now-name">${esc(head[1].title)}</span>` : 'Idle';
   const bits = [];
   if (a.running && a.running_seconds != null) bits.push(`<span>session <span class="num">${fmtDur(a.running_seconds)}</span></span>`);
   bits.push(`<span><span class="num">${a.pending_count}</span> queued</span>`);
@@ -88,13 +117,17 @@ export function activityCard(a) {
     const label = a.pending_count > a.pending_preview.length ? `Up next (${a.pending_preview.length} of ${a.pending_count})` : `Up next (${a.pending_count})`;
     disc.push(`<details class="disclosure"><summary>${icon('chevronRight')}${esc(label)}</summary><div class="body queue">${a.pending_preview.map(p => `<div class="queue-row">${tag(p.event)}<span>${esc(shortCtx(p.context))}</span></div>`).join('')}</div></details>`);
   }
+  const motion = flight.map(([st, t]) => { const live = a.running && a.current_ticket === t.id; return `<div class="queue-row">${tag(live ? eventVerb(a) : (st === 'ready' ? 'next up' : STATE_WORD[st] || st), live ? 'tag-live' : '')}<span class="num dim">${esc(t.id)}</span><span>${esc(t.title)}</span></div>`; })
+    .concat((eng && eng.submitted || []).map(s => `<div class="queue-row">${tag('intake')}<span>${esc(s.title)}</span><span class="dim">the PM shapes this next pass</span></div>`));
+  if (motion.length) disc.push(`<details class="disclosure"><summary>${icon('chevronRight')}In motion (${motion.length})</summary><div class="body queue">${motion.join('')}</div></details>`);
   if (a.recent_log && a.recent_log.length) disc.push(`<details class="disclosure"><summary>${icon('chevronRight')}Recent activity</summary><div class="body"><pre class="logtail">${esc(a.recent_log.join('\n'))}</pre></div></details>`);
   return `<div class="now">
     <span class="agent-dot ${dot}"></span>
     <div style="min-width:0">
-      <div class="now-title">${status}${a.running && a.current_ticket ? `<span class="id">${esc(a.current_ticket)}</span>` : ''}</div>
+      <div class="now-title">${status}</div>
       <div class="now-meta">${bits.join('')}</div>
       ${a.running && a.current_activity ? `<div class="now-line">${esc(a.current_activity)}</div>` : ''}
+      ${stale ? `<div class="now-warn">No pass is running or queued for it — the trigger may not have fired.</div>` : ''}
       ${a.mode_halting ? `<div class="now-warn">This instance goes silent under MODE=${esc(a.mode)} — nothing notifies or posts until it is cleared.</div>` : ''}
       ${a.backoff_active ? `<div class="now-warn">Backed off after repeated failed starts — next attempt in ~${fmtDur(a.backoff_seconds)}.</div>` : ''}
     </div>

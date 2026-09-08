@@ -4,6 +4,7 @@
 // reads each department through the same endpoint the department's own view
 // uses, so the two can never disagree.
 import { api, canSee, prefs, setCount, setAgent, daysAgo, dueLabel } from '../core.js';
+import { inFlight, passStale } from './cards.js';
 
 export const KIND = {
   'eng-gate':   { dept: 'eng', label: 'Engineering', rank: 3 },
@@ -37,7 +38,8 @@ export async function gather() {
     out.motion.deciding = eng.deciding || [];
     out.motion.submitted = eng.submitted || [];
     out.motion.building = (eng.by_state && eng.by_state.building) || [];
-    setAgent(eng.activity);
+    const h = !eng.activity.running && inFlight(eng)[0];
+    setAgent(eng.activity, h ? { id: h[1].id, word: h[0] === 'ready' ? 'ready to start' : h[0].replace(/-/g, ' '), stale: passStale(eng.activity) } : null);
   }
   const mkt = out.mkt;
   if (mkt && !mkt.empty) {

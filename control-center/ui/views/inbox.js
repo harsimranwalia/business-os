@@ -53,7 +53,7 @@ function render() {
   if (n && !shown.length) h += empty('Nothing here for this filter', '', 'inbox', true);
   if (!n) h += `<div class="empty">${icon('check')}<div><b>All clear</b><p>Anything written and dated further out waits under its department until it comes due.</p></div></div>`;
   h += motionHtml(data.motion, data.eng);
-  if (data.eng && data.eng.activity) h += `<section class="section"><div class="section-h"><h2>Right now</h2><span class="right"><button class="btn btn-ghost btn-sm" data-act="go" data-to="eng">Engineering ${icon('chevronRight', 'ic-sm')}</button></span></div><div data-activity>${activityCard(data.eng.activity)}</div></section>`;
+  if (data.eng && data.eng.activity) h += `<section class="section"><div class="section-h"><h2>Right now</h2><span class="right"><button class="btn btn-ghost btn-sm" data-act="go" data-to="eng">Engineering ${icon('chevronRight', 'ic-sm')}</button></span></div><div data-activity>${activityCard(data.eng.activity, data.eng)}</div></section>`;
   if (n) h += `<div class="hint-bar"><span><span class="kbd">J</span><span class="kbd">K</span> move</span><span><span class="kbd">A</span> approve</span><span><span class="kbd">C</span> changes</span><span><span class="kbd">X</span> reject</span><span><span class="kbd">Enter</span> expand</span><span><span class="kbd">N</span> note</span><span><span class="kbd">?</span> all shortcuts</span></div>`;
   const kept = captureInputs(el);
   el.innerHTML = h;
@@ -87,7 +87,7 @@ async function load(quiet = false) {
     const sig = JSON.stringify({ items: next.items, motion: next.motion, errors: (next.errors || []).map(([w, e]) => [w, String(e && e.message || e)]) });
     const same = quiet && !!data && sig === lastSig;
     data = next; lastSig = sig;
-    if (same) { const a = el.querySelector('[data-activity]'); if (a && data.eng && data.eng.activity) a.innerHTML = activityCard(data.eng.activity); }
+    if (same) { const a = el.querySelector('[data-activity]'); if (a && data.eng && data.eng.activity) a.innerHTML = activityCard(data.eng.activity, data.eng); }
     else render();
   }
   catch (e) { data = { items: [], errors: [['the inbox', e]], motion: {} }; lastSig = ''; render(); }

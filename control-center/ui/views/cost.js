@@ -51,7 +51,7 @@ async function load(quiet = false) {
 }
 
 export default {
-  id: 'cost', title: 'Cost', short: 'Cost', dept: 'cost', icon: 'coins', section: 'main',
+  id: 'cost', title: 'Cost', short: 'Cost', dept: 'cost', icon: 'coins', section: 'system',
   async mount(r) {
     root = r; data = null;
     root.innerHTML = `<div class="content-inner" id="cost"></div>`;

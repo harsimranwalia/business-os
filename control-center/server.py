@@ -441,7 +441,8 @@ def list_engineering(instance_id=None):
                 "states": ENG_STATES, "bugs": [], "waiting": [], "blocked_on_harry": [],
                 "deciding": [], "submitted": [],
                 "stats": {"waiting_on_harry": 0, "in_flight": 0, "pending_apply": 0,
-                          "machine_limit": 0, "open_bugs": 0, "shipped_recent": 0},
+                          "machine_limit": 0, "open_bugs": 0, "shipped_recent": 0,
+                          "shipped_by_project": {}},
                 "empty": "No engineering instance yet — run departments/engineering/install.sh "
                          "to onboard a business."}
 
@@ -584,6 +585,11 @@ def list_engineering(instance_id=None):
                         and t["id"] not in inbox_item_tickets]
 
     limits = eng_limits(inst)
+    shipped_states = ("shipped", "verified", "advised")
+    shipped_tickets = [t for s in shipped_states for t in by_state.get(s, [])]
+    shipped_by_project = {}
+    for t in shipped_tickets:
+        shipped_by_project[t["project"]] = shipped_by_project.get(t["project"], 0) + 1
     return {
         "instance": inst["id"],
         "instances": [{"id": i["id"], "label": i["label"]} for i in eng_instances()],
@@ -606,7 +612,8 @@ def list_engineering(instance_id=None):
             "pending_apply": len(deciding),
             "machine_limit": limits["machine_limit"],
             "open_bugs": len(bugs),
-            "shipped_recent": len(by_state.get("verified", [])),
+            "shipped_recent": len(shipped_tickets),
+            "shipped_by_project": shipped_by_project,
         },
     }
 

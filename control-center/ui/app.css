@@ -379,6 +379,9 @@ details.disclosure > .body { margin-top: 10px; }
 .now .agent-dot { margin-top: 7px; width: 9px; height: 9px; }
 .now-title { font-size: 14.5px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .now-title .id { font-family: var(--mono); font-weight: 500; color: var(--text-2); font-size: 13px; }
+.now-title .dim { font-weight: 400; }
+.now-title .now-name { flex-basis: 100%; font-weight: 400; color: var(--text-2); font-size: 13.5px; margin-top: 1px; }
+.now .queue-row .num { white-space: nowrap; }
 .now-meta { font-size: 12.5px; color: var(--text-3); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .now-meta .num { color: var(--text-2); }
 .now-line { font-size: 13px; color: var(--text-2); margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--line-2); line-height: 1.5;
@@ -395,7 +398,7 @@ details.disclosure > .body { margin-top: 10px; }
 
 /* ── Engineering board ──────────────────────────────────────────────────── */
 .boardbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 10px; }
-.lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; align-items: start; }
+.lanes { display: grid; grid-template-columns: repeat(var(--lanes, 4), minmax(220px, 1fr)); gap: 12px; align-items: start; overflow-x: auto; padding-bottom: 4px; }
 .lane { background: var(--rail); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 10px; min-width: 0; }
 .lane-h { display: flex; align-items: baseline; gap: 8px; padding: 4px 6px 10px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
 .lane-h .n { font-family: var(--mono); color: var(--text-4); font-weight: 500; letter-spacing: 0; }
