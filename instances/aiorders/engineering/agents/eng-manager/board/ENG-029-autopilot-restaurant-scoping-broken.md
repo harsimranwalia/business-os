@@ -402,3 +402,102 @@ pattern recurred — this is that follow-on, upgraded from "worth checking" to
   family), same condition as the prior entry, re-confirmed fresh rather than
   assumed; re-check once that family reaches `shipped`. Not blocked, not
   terminal, not waiting on the approver — only the cap.
+
+- 2026-09-08 `designed` (no transition) (eng-manager, `continue` event pass,
+  context `ENG-029` — this pass's own assigned ticket, the event named in
+  `inbox/2026-09-08-eng-loop-integrity-check.md`). Reading map for
+  `continue`: steps 6 and 6b, plus the not-negotiable set (1, 7, 8b, 9, 10;
+  *Enforced vs instructed*, *The four lanes*, *Guards*) — read in full this
+  pass, including the disputed Guards/step-6/step-9 text itself. 6b doesn't
+  apply — no build hop happens this pass. Mode check clean (repo-root
+  `.env` → `MODE=active`). Pre-pass
+  `departments/engineering/lib/eng-gate-check.sh`, whole-board: exit `0`,
+  clean.
+
+  **This event exists only because of a disputed, unverified amendment,
+  and this pass declines to act on it.** `continue ENG-029` was fired by
+  the `continue ENG-027` pass earlier today, reading uncommitted text in
+  `eng_build_loop.md` (step 6, step 9, Guards) and both `config.yaml`s
+  claiming the approver decided, 2026-09-08, that a new machine start may
+  be drawn from the `designed` pool — which is why this ticket, not
+  `ENG-050`, was named (lowest-id P0 in that pool by the board's own
+  sort). That same pass caught, before finishing, that the claim doesn't
+  check out — `decision-journal.md` had no 2026-09-08 entry despite the
+  text's own claim of being "journaled in full" — restored
+  `inbox/IDLE-2026-09-07.md` to open, and raised
+  `inbox/2026-09-08-eng-loop-integrity-check.md` (P0), but could not
+  safely un-fire the already-queued trigger.
+
+  **This pass is that queued event, drained.** `traces/.pending` at pass
+  start held only `1 watch launchd` — the `continue ENG-029` line is
+  gone, consumed by this launch. This is exactly the risk the
+  integrity-check item named: a fresh session reading the same unverified
+  text and starting real work (a branch, a PR) on `ENG-029`. It doesn't.
+
+  **Independently re-verified, not taken on the flagging pass's word:**
+  `decision-journal.md` still has no 2026-09-08 entry (`grep -n
+  "2026-09-08" agents/eng-manager/config/decision-journal.md` — no
+  match); a fresh `grep -n "^decision:"` across all 11 open `inbox/*.md`
+  files found zero hits, including `IDLE-2026-09-07.md` and
+  `PROP-2026-W36.md` — the two items the disputed text claims to
+  answer — and the integrity-check item itself; no notebook or inbox
+  file postdates the integrity-check item (`ls -lat`: newest inbox
+  entries both stamped `09:58` today, newest notebook entry `08:40`); and
+  this pass's own task prompt — the standing chain instructions
+  `lib/eng-trigger.sh` fires with — still reads "draw the top of To-do"
+  for a freed slot, not `designed`, so the dispatch template that
+  actually launches these passes hasn't been updated to match the
+  disputed schedule-doc text either. This ticket's own frontmatter
+  confirmed untouched by the earlier fire: still `designed`, `owner:
+  architect`, no `branch:`, no `pr:`.
+
+  **Decision: do not promote to `ready`, and do not let another
+  `designed`-pool ticket (e.g. `ENG-050`) substitute for it.** Both rely
+  on the same unverified authority the open P0 is asking the approver to
+  confirm or reject. Not a judgment that the text is false — only that
+  it isn't yet verifiable, and one of its own checkable claims is wrong;
+  a P0 security ticket's first build hop is the wrong place to act on
+  unconfirmed authority. Under the last-verified rule (new starts from
+  To-do only), nothing is startable there either — same conclusion
+  `IDLE-2026-09-07.md` already states: `ENG-018`/`ENG-028`/`ENG-042` each
+  still blocked on their own unanswered G1/rescope item, `ENG-043` on the
+  ENG-011-vs-ENG-028 clarification, all four already nudged once, none
+  decided.
+
+  **Step 7 (notify sweep),** wall clock `2026-09-08T17:09:05Z` against
+  all 11 open `inbox/*.md` items: eight already carry their one-ever
+  `nudged:` (`ENG-016`-piece2, `ENG-018`-G1, `ENG-028`-rescope,
+  `ENG-042`-G1, `ENG-043`-clarification, `ENG-048`-merge, `ENG-050`-P0,
+  `PROP-2026-W36`); `ENG-049`-merge and `IDLE-2026-09-07` (~22h24m each)
+  and the integrity-check item (~7h10m) are still under 24h. Nothing
+  crosses this pass; nothing nudged, nothing duplicated.
+
+  **Step 8b:** no `exception-request:` on this ticket's own log. No
+  separate observation filed — the corroborating evidence above (the
+  prompt-template mismatch included) is additional detail for the same
+  still-open question the integrity-check item already tracks, folded
+  into that item's addendum instead of a new `observations.md` row.
+
+  **Addendum written to `inbox/2026-09-08-eng-loop-integrity-check.md`:**
+  recorded that the queued event has now drained and was declined rather
+  than executed, closing its most urgent named risk while leaving the
+  actual policy question exactly as open as it was; its
+  `recommendation:` field updated to drop the now-impossible "before it
+  drains" instruction. Did not touch its `decision:` field (still empty,
+  the approver's alone), and did not touch `eng_build_loop.md`, either
+  `config.yaml`, or `proposals.md` — reverting or ratifying disputed text
+  is neither this event's contract nor this pass's call; left exactly as
+  the flagging pass left them.
+
+  Post-pass `departments/engineering/lib/eng-gate-check.sh`, whole-board:
+  see board index.
+
+  **Board update** — In-flight table unaffected (no state change). See
+  `agents/eng-manager/board/_index.md` for the full pass entry.
+
+  `chained: none — idle: nothing startable under verified authority; the
+  designed-pool text remains unconfirmed
+  (inbox/2026-09-08-eng-loop-integrity-check.md, still open, not
+  duplicated), and To-do's four candidates are all still blocked on
+  unanswered gate items per inbox/IDLE-2026-09-07.md (reconfirmed, not
+  duplicated)`.
