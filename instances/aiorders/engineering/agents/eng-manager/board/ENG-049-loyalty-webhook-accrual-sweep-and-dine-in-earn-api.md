@@ -9,14 +9,14 @@ time_spent:
 time_remaining:
 severity: P3
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-08
 branch: feat/ENG-049-loyalty-webhook-accrual-sweep-and-dine-in-earn-api
 depends_on: [ENG-048]
 blocks: []
@@ -28,7 +28,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-049.md
   test_plan: agents/qa/test-plans/ENG-049.md
   security_review: agents/security/reviews/ENG-049.md
-  release:
+  release: agents/devops/releases/2026-09-08-aiorders-api-ENG-049.md
   pr: https://github.com/harsimranwalia/aiorders-api/pull/22
 ---
 
@@ -1106,3 +1106,82 @@ together.
   question remains open, not re-decided here. `aiorders-api`'s own commit
   history is unchanged this hop — release-readiness and PR-opening only,
   no application code touched.
+
+- `2026-09-08` **`blocked → shipped → verified`** (eng-manager, mid-`continue
+  ENG-027` event pass — merge detected incidentally while re-checking both
+  children's PR state to evaluate the parent container's dispatch options,
+  same pass that settled `ENG-048`). `skills/release-runner/SKILL.md` and
+  `skills/acceptance-check/SKILL.md` read in full for this hop.
+
+  **Merge detection — a stacked PR, checked properly, not assumed from PR
+  state alone.** The checkpoint this pass started from read PR #22 as
+  `OPEN`. Re-verified fresh: `MERGED`, but into its own base
+  (`feat/ENG-048-...`), **not** `main` directly — `mergedAt:
+  2026-09-08T18:14:19Z`. By the time this merged, `ENG-048`'s own PR #21 had
+  already merged into `main` separately, so the base branch's tip (now
+  including this ticket's commits) was briefly ahead of what #21 had
+  brought over. Per `eng_build_loop.md` step 5's stacked-PR provision, did
+  not assume shipped from PR state alone: `git merge-base --is-ancestor
+  origin/feat/ENG-048-... origin/main` — **true**. A third PR (#23, base
+  `main`, head the same stacked branch) had merged the whole stack at
+  `18:16:55Z`. Confirmed by ancestry, the mechanical ground truth the
+  procedure asks for, not inferred from any PR's own `state` field. Full
+  detail: `agents/devops/releases/2026-09-08-aiorders-api-ENG-049.md`.
+
+  **Gates re-verified before advancing:**
+  `agents/principal-engineer/reviews/ENG-049.md` (pass, round 2),
+  `agents/qa/test-plans/ENG-049.md` (pass, round 2, 45/45),
+  `agents/security/reviews/ENG-049.md` (pass, round 2, A01/A08/A09 closed).
+  No gate owed → advances to `shipped`.
+
+  **The one thing this hop actually had to get right before calling the
+  deploy safe:** the release-readiness hop's own flagged hard requirement,
+  `CLOUDWAITRESS_WEBHOOK_SECRET` provisioned before deploy (missing it would
+  401 **all** CloudWaitress traffic, not just loyalty). Checked live, not
+  assumed: `supabase secrets list --project-ref bmnmnejwdxbcqinqkwko` shows
+  it present, `updated_at: 2026-09-08T18:12:56Z` — set *between* PR #21's
+  merge and the actual functions deploy (`18:17:3xZ`), i.e. in the correct
+  order. The incident the release-readiness hop warned about did not
+  happen.
+
+  **Deploy confirmed live, not just merged:** `supabase functions list` —
+  `external-integrations` v109, `brand-portal` v86, `loyalty-auto-complete`
+  v1 (brand new), all updated within a 7-second window
+  (`18:17:30Z`–`18:17:37Z`), ~40s after PR #23. A GitHub Actions workflow for
+  automated Supabase deploys is newly present on `main` (not part of either
+  ticket's own diff) — first CI/CD this department has observed on this
+  repo; every prior `aiorders-api` release here was manual. Logged to
+  `observations.md`, not chased further (out of scope for this ticket).
+
+  **Release record written:**
+  `agents/devops/releases/2026-09-08-aiorders-api-ENG-049.md`.
+
+  **Acceptance-check run in full:**
+  `agents/product-manager/notebook/2026-09-08-eng049-acceptance.md`. All 6
+  fully-owned criteria (AC6, AC10, AC13, AC14, AC17, AC18) verified directly
+  against the live-matching merged source — **pass**. Combined with
+  `ENG-048`'s own pass on the guard/crediting half (same pass), none of the
+  seven shared criteria (AC1, AC2, AC3, AC7, AC11, AC15, AC16) is left with
+  an unproven half. State → `verified`, owner → `eng-manager`.
+
+  **Two transitions this hop** (`blocked → shipped → verified`), within the
+  4-per-pass cap — a separate budget from `ENG-048`'s own two transitions
+  the same pass.
+
+  **8b:** same two observations as `ENG-048`'s log (auto-deploy workflow
+  undocumented in `config/projects.md`; the migration's stale rollback
+  comment) — not re-filed a second time, cross-referenced. No
+  `exception-request:` found. **8c:** n/a — the PR merge is the L1 human
+  gate, already the `released_by` field on the release record.
+
+  Post-pass `sh departments/engineering/lib/eng-gate-check.sh ENG-049` and
+  whole-board: both exit 0, clean.
+
+  This settles the second of `ENG-027`'s two children — both now `verified`.
+  See `ENG-027`'s own log, same pass, for the container-level closeout.
+
+  `chained:` n/a — terminal state (`verified`) this hop. See `ENG-027`'s own
+  log for this pass's overall chain decision.
+
+  business-os itself left uncommitted — standing default per the open
+  commit-convention question, not re-decided here.

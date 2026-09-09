@@ -9,7 +9,7 @@ time_estimate: half a day
 pr_url: https://github.com/harsimranwalia/aiorders-api/pull/21
 raised: 2026-09-07
 notified: 2026-09-07T16:18:23
-nudged:
+nudged: 2026-09-08T09:52:23
 ---
 
 # Merge request — Loyalty ledger schema, credit function, and auto-complete cron (ENG-048)

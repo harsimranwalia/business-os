@@ -5,18 +5,18 @@ project: aiorders-api
 type: feature
 size: S
 time_estimate: half a day
-time_spent: ~1h build hop (recovering and verifying an uncommitted prior attempt, live-schema + vault verification, disposable-replica verification including two full rollback runs and one CONCURRENTLY fix) + ~1h round-1 review/quality hop (failed — see Log) + ~45m round-2 build hop (both fixes, disposable-replica re-verification, one rollback re-run) + ~30m round-2 review/quality hop (pass — independent disposable-replica re-test of both fixes) + ~30m security gate (fourth independent re-verification of B1, disposable replica built from scratch) + ~20m release-readiness hop (gate re-verification, observability/cost analysis, PR + merge request, slot-freed chain to ENG-049)
+time_spent: ~1h build hop (recovering and verifying an uncommitted prior attempt, live-schema + vault verification, disposable-replica verification including two full rollback runs and one CONCURRENTLY fix) + ~1h round-1 review/quality hop (failed — see Log) + ~45m round-2 build hop (both fixes, disposable-replica re-verification, one rollback re-run) + ~30m round-2 review/quality hop (pass — independent disposable-replica re-test of both fixes) + ~30m security gate (fourth independent re-verification of B1, disposable replica built from scratch) + ~20m release-readiness hop (gate re-verification, observability/cost analysis, PR + merge request, slot-freed chain to ENG-049) + ~25m merge-detection/release/acceptance hop (found merged mid-pass, migration-live verification, release record, full acceptance walk)
 time_remaining:
 severity: P3
 priority:
-state: blocked
-owner: approver
+state: verified
+owner: eng-manager
 lane: full
-blocked_on: approver
-blocked_from: ready-to-ship
+blocked_on:
+blocked_from:
 source: approver
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-08
 branch: feat/ENG-048-loyalty-ledger-schema-credit-function-and-cron
 depends_on: []
 blocks: [ENG-049]
@@ -28,7 +28,7 @@ links:
   review: agents/principal-engineer/reviews/ENG-048.md
   test_plan: agents/qa/test-plans/ENG-048.md
   security_review: agents/security/reviews/ENG-048.md
-  release:
+  release: agents/devops/releases/2026-09-08-aiorders-api-ENG-048.md
   pr: https://github.com/harsimranwalia/aiorders-api/pull/21
 ---
 
@@ -750,6 +750,78 @@ AC15, or AC16 alone — check both together.
 
   Post-pass `sh departments/engineering/lib/eng-gate-check.sh ENG-048` and
   whole-board: both exit 0, clean.
+
+  business-os itself left uncommitted — standing default per the open
+  commit-convention question, not re-decided here.
+
+- `2026-09-08` **`blocked → shipped → verified`** (eng-manager, mid-`continue
+  ENG-027` event pass — merge detected incidentally while re-checking this
+  ticket's own PR state to evaluate the parent container's dispatch options,
+  not from a dedicated `continue ENG-048` event). Reading map used: step 6
+  (dispatch — this is exactly the "consecutive machine-owned states" case),
+  plus `skills/release-runner/SKILL.md` and `skills/acceptance-check/SKILL.md`
+  in full, since advancing through them is what this hop actually did.
+
+  **Merge detection.** The checkpoint this pass started from (copied from the
+  prior hop's own log) read PR #21 as `OPEN`. Re-verified fresh via `gh pr
+  view 21 --json state,mergedAt,baseRefName` from the isolated
+  `_eng/aiorders-api` worktree: `MERGED`, `mergedAt: 2026-09-08T18:05:03Z`,
+  base `main` — merged directly on GitHub with no written reply to the
+  merge-request item. Single-repo ticket, so step 5's ancestry question is
+  moot beyond the `gh` state itself.
+
+  **Gates re-verified before advancing, not assumed from the frontmatter's
+  populated `links`:** `agents/principal-engineer/reviews/ENG-048.md`
+  (`verdict: pass`), `agents/qa/test-plans/ENG-048.md` (`Verdict: pass`),
+  `agents/security/reviews/ENG-048.md` (`verdict: pass`) — all read directly
+  this pass. No gate owed → advances to `shipped` per step 5 ("a merge is not
+  a gate... if the ticket's receipts are not on disk, it goes to the state of
+  the first gate it still owes" — they were on disk).
+
+  **Deploy verification (release-runner step 6), not skipped as "L1 doesn't
+  release":** `supabase migration list --linked` shows `20260907130000`
+  matched on both `local` and `remote` — the migration actually executed
+  against the live production database, not just merged to `main`. Full
+  detail, including the closed observability gap and the one still-open
+  follow-up (first live cron tick not yet observed): release record below.
+
+  **Release record written:**
+  `agents/devops/releases/2026-09-08-aiorders-api-ENG-048.md`. No release
+  record, no `shipped` state (release-runner step 7) — written before the
+  state field below changed.
+
+  **Acceptance-check run in full** (not receipt bookkeeping — this ticket has
+  real, checkable behaviour): `agents/product-manager/notebook/2026-09-08-eng048-acceptance.md`.
+  All 5 fully-owned criteria (AC4, AC5, AC8, AC9, AC12) verified directly
+  against the live-matching migration file, cross-checked against
+  independently re-tested QA evidence rather than accepted on the receipt's
+  own account — **pass**. The guard/crediting half of the seven shared
+  criteria (AC1, AC2, AC3, AC7, AC11, AC15, AC16) is real but not provable by
+  this ticket alone; `ENG-049`'s own half completes each (processed the same
+  pass — see that ticket's own log and acceptance notebook entry). State →
+  `verified`, owner → `eng-manager`, per acceptance-check step 6.
+
+  **Two transitions this hop** (`blocked → shipped → verified`), within the
+  4-per-pass cap.
+
+  **8b:** two observations filed — the newly-present GitHub Actions
+  auto-deploy workflow on `aiorders-api` (undocumented in
+  `config/projects.md`, which still reads "no `.github/workflows/`"), and the
+  migration file's own rollback comment ("safe any time before `ENG-049`
+  ships") now being stale now that both tickets are live. No
+  `exception-request:` found. **8c:** n/a — no G1/G2/G3 answered this hop; the
+  PR merge itself is the L1 human gate, already the `released_by` field on
+  the release record, not a separate inbox item to journal.
+
+  Post-pass `sh departments/engineering/lib/eng-gate-check.sh ENG-048` and
+  whole-board: both exit 0, clean.
+
+  This settles one of `ENG-027`'s two children. See `ENG-027`'s own log,
+  same pass, for the container-level consequence.
+
+  `chained:` n/a — this ticket reached a terminal state (`verified`) this
+  hop; nothing to chain for it specifically. See `ENG-027`'s own log for
+  this pass's overall chain decision.
 
   business-os itself left uncommitted — standing default per the open
   commit-convention question, not re-decided here.
