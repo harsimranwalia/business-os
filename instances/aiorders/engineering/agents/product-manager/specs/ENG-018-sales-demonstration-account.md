@@ -87,6 +87,84 @@ account with real portal/order/loyalty behavior. No `is_demo` flag, no demo
 role, no seed script, and no sandboxing of outbound sends or analytics
 exists anywhere today. This is a genuine, confirmed-net-new gap.
 
+## Approver's `changed` response (2026-09-09T02:03:59Z) — fast-simulated timeline, one session-scoped run
+
+**The answer** (`decision: changed`): *"It has to be fast simulated like
+show the autopilot 90 day process in 15 minutes. And 1 complete experience
+per session."*
+
+Two clauses. The first redirects the demo's core mechanic away from this
+PRD's original "believable, not transactional" static seed (Assumed,
+above) and toward a scripted, time-compressed playback: what a
+restaurant's real customer-lifecycle automation does over roughly 90 real
+days, compressed into about a 15-minute session. The second scopes how
+that plays out when more than one person is looking at the demo at once:
+each session gets its own single, complete, start-to-finish run — not a
+shared clock every rep and prospect watches the same slice of.
+
+**Checked against live code before rescoping, not assumed.**
+`restaurant-portal`'s `Autopilot` section (`src/pages/autopilot/
+Automations.tsx`, `src/pages/autopilot/Broadcasts.tsx`) is real, live, and
+backed by `aiorders-api`'s `autopilot` function — this is the actual thing
+AIOrders sells restaurants: automated customer-lifecycle messaging. Its
+`TriggerType` enum (`supabase/functions/autopilot/utils/triggers.ts`) is
+ten hardcoded events — `new_customer_welcome`, `first_order`,
+`welcome_offer`, `every_order`, `order_completed`, `abandoned_cart`,
+`order_feedback`, `feedback_received`, `birthday`, `new_catering_lead` —
+each with its own `email_delay_minutes`/`sms_delay_minutes` on the
+template row. There is no single documented "90-day sequence" anywhere in
+the code; "90 day" is read as the approver's own approximate framing of
+what a realistic run through this trigger set looks like across a new
+customer's first few months (welcome, first order, repeat/abandoned-cart
+nudges, eventually a birthday or win-back message) — not a literal spec to
+reproduce move-for-move. Named as interpretation, correctable here, same
+convention this department already applies to a supplied mechanism that
+isn't literally in the code (`ENG-027`'s "autocompleted after x hours").
+
+**Mechanism proposed, and the one explicitly rejected.** There are two
+ways to make ~90 real days visible in ~15 real minutes: (a) give the live
+`autopilot` function a virtual clock it reads instead of `now()`, so the
+real trigger/delay pipeline actually fires early on the demo restaurant;
+or (b) a demo-only scripted timeline — a fixed, ordered set of pre-written
+rows (communications "sent," orders placed, loyalty points earned, a
+catering enquiry) tagged to the demo restaurant with backdated timestamps
+spanning ~90 days, revealed to the viewer on a compressed schedule during
+the session.
+
+**(b) is proposed.** It's cheaper, and (a) is the one mechanism this PRD's
+own isolation criteria (3, 4, both already in the original acceptance
+criteria) exist to rule out — the real trigger/delay pipeline is the thing
+real restaurants' real customers receive real messages from. Isolation was
+already this PRD's load-bearing requirement, not a detail; this rescope
+makes the same call again rather than loosening it for the
+more-impressive-looking option.
+
+**"One complete experience per session," read together with the above:**
+the compressed playback is a single guided run — one demo restaurant
+identity (still shared, still neutrally branded, per the original Assumed
+section), but the *playback state* is scoped to the session watching it,
+not a global clock the whole account shares. Two reps demoing at the same
+time, or one rep restarting mid-pitch, never see or affect each other's
+progress. This resolves, in a specific direction, the open question the
+original PRD's Risks section left open ("whether 'one flagged restaurant'
+is enough isolation") — the answer is yes for the restaurant *identity*, no
+for the *playback state*, which needs its own session-scoped mechanism.
+Read literally alongside the first clause, not as two unrelated
+instructions: "1 complete experience" is the same single scripted run
+"fast simulated... in 15 minutes" describes, seen from the concurrency side
+rather than the content side.
+
+**Sizing verdict: stays `L`.** What would have pushed this to `XL` —
+virtualizing time inside the real send/trigger engine (mechanism (a)) — is
+exactly what's rejected. What's added instead is a bounded, demo-only
+asset: a scripted set of backdated seed rows plus a playback/reveal UI,
+still inside the four repos already named, still no new vendor, still
+$0/month. Flagged as a risk below: if the architect finds session-scoped
+playback state needs a real cross-repo session-identity mechanism (not
+just a client-side timer over static seed data), that is a bigger,
+structural decision and may earn its own G2 — same fork this PRD already
+named once for isolation generally.
+
 ## Problem
 
 There is no working example of the AIOrders platform that a sales rep or
@@ -110,103 +188,154 @@ who pitch prospective restaurant owners. The prospect themselves is a
 secondary, indirect user — they see the demo's public ordering site during
 the pitch but never log into anything.
 
-## Proposed change
+## Proposed change (rescoped)
 
 After this ships:
-- A seeded, realistic demo restaurant exists with a populated menu, order
-  history, an active loyalty configuration (per `ENG-007`'s per-restaurant
-  loyalty setup), and a public ordering website
-  (`config-site-builder`) that looks and functions like a real
-  restaurant's.
+- A seeded, realistic demo restaurant exists (unchanged from the original
+  scope) with a populated menu, order history, an active loyalty
+  configuration (per `ENG-007`'s per-restaurant loyalty setup), and, once
+  `ENG-016`'s catering pipeline is available, a catering pipeline — all
+  backdated to support one full scripted run.
+- Starting a demo session plays a single, complete, guided run of the demo
+  restaurant's Autopilot customer-lifecycle sequence — welcome, first
+  order, a repeat/abandoned-cart nudge, eventually a birthday or win-back
+  message — on a compressed timeline that reads as roughly 90 days of real
+  activity, completing in around 15 minutes. This is a demo-only scripted
+  reveal of pre-seeded, backdated activity; it never invokes the real
+  `autopilot` trigger/delay pipeline (see Non-goals).
 - Sales staff and resellers can reach this demo restaurant's owner-facing
-  portal (`restaurant-portal`) and its public site from a single, obvious
-  entry point in the admin panel, without needing separate remembered
-  credentials.
-- Activity inside the demo (orders placed, loyalty points earned, catering
-  requests submitted) behaves believably on-screen but never sends a real
-  email/SMS to a real inbox/phone and never affects platform-wide
-  analytics or revenue reporting.
-- The demo can be reset to a known-good state on demand, so one rep's
-  pitch doesn't leave it broken for the next.
+  portal (`restaurant-portal`) and its public site
+  (`config-site-builder`) from a single, obvious entry point in the admin
+  panel, without needing separate remembered credentials.
+- Each session's playback is its own: starting a new session (or
+  restarting mid-pitch) always begins one fresh, complete run, and two
+  sessions running at the same time never see or affect each other's
+  progress.
+- Nothing in the playback sends a real email/SMS to a real inbox/phone,
+  and none of it affects platform-wide analytics or revenue reporting
+  (unchanged from the original scope, now explicitly covering the
+  playback mechanism too — see Acceptance criteria 3, 4).
 
-This ticket does not build reseller-branded demo clones or a
+This ticket still does not build reseller-branded demo clones or a
 prospect-facing shareable demo link — see Non-goals.
 
-## Acceptance criteria
+## Acceptance criteria (rescoped)
 
-1. `[stated]` Given a sales staff member or reseller in the admin panel,
-   when they look for a way to demonstrate the platform, then they can
-   reach a working demo restaurant's portal and public ordering site from
-   one clear entry point.
-2. `[inferred]` Given the demo restaurant, then it has a populated menu,
-   order history, an active loyalty configuration, and (once `ENG-016`
-   ships) a catering pipeline with example entries — enough to show "how
-   all aiorders work" rather than an empty shell.
-3. `[proposed]` Given activity performed inside the demo (placing an
-   order, triggering a loyalty event, submitting a catering enquiry),
-   then no real email or SMS is sent to any real recipient.
-4. `[proposed]` Given the demo restaurant's order/revenue activity, then
-   it is excluded from platform-wide analytics and revenue aggregation
-   (the existing `platform_analytics_cron` pipeline), so it never inflates
-   real reporting.
-5. `[proposed]` Given a demo that's been clicked through and left in a
-   messy state, when staff want to reset it, then a reset path returns it
-   to a known-good seeded state without a manual data cleanup.
-6. `[inferred]` Given a caller who isn't `admin`/`sub-admin`/`partner-admin`
-   /`partner-user`, then they cannot reach the demo's reset/management
-   controls (viewing the public site itself stays open, same as any real
-   restaurant's site today).
+1. `[stated]` Unchanged. Given a sales staff member or reseller in the
+   admin panel, when they look for a way to demonstrate the platform,
+   then they can reach a working demo restaurant's portal and public
+   ordering site from one clear entry point.
+2. `[stated]` Rewritten — was `[inferred]`, now the approver's own explicit
+   instruction. Given a rep starts a demo session, then it plays one
+   complete, scripted run of the demo restaurant's Autopilot
+   customer-lifecycle sequence (drawn from the live `TriggerType` set:
+   welcome, first order, a repeat or abandoned-cart nudge, a birthday/
+   win-back message) on a compressed timeline reading as roughly 90 days
+   of activity, finishing in roughly 15 minutes — backed by seeded menu,
+   order, loyalty and (once `ENG-016` ships) catering data, not an empty
+   shell.
+3. `[proposed]` Unchanged, now explicitly covering the new mechanism too.
+   Given activity shown inside the demo (placing an order, an Autopilot
+   message in the playback, a loyalty event, a catering enquiry), then no
+   real email or SMS is ever sent to a real recipient, at any point,
+   including during the compressed playback.
+4. `[proposed]` Unchanged. Given the demo restaurant's order/revenue
+   activity (seeded or played back), then it is excluded from
+   platform-wide analytics and revenue aggregation (the existing
+   `platform_analytics_cron` pipeline), so it never inflates real
+   reporting.
+5. `[proposed]` Rewritten. Given a rep opens the demo, then a fresh,
+   complete run starts on its own — no separate manual "reset" step is
+   needed between pitches — and given two sessions open at the same time
+   (two reps, or one rep restarting), then neither sees or affects the
+   other's progress.
+6. `[inferred]` Unchanged. Given a caller who isn't `admin`/`sub-admin`/
+   `partner-admin`/`partner-user`, then they cannot reach the demo's
+   session/management controls (viewing the public site itself stays
+   open, same as any real restaurant's site today).
 
-## Non-goals
+**The one most worth correcting if wrong:** criterion 5 now treats "start
+a new session" as replacing the original manual reset action entirely,
+rather than sitting alongside it. If staff still want a manual
+"reset everything" control independent of starting a new session (e.g. to
+clear a botched multi-rep state), say so — it's a small addition, not a
+rescope.
 
-- **Reseller-branded demo clones** — showing the demo under a specific
-  reseller's own brand rather than AIOrders' neutral one. Real, named in
-  the raw text, and proposed as later work once the single shared demo
-  above is real. See Assumed.
-- **A prospect-facing shareable link** usable without staff present (e.g.
-  a self-serve demo a prospect clicks through alone) — not asked for in
-  the raw text; this ticket's demo is something staff drive during a
-  pitch, not a marketing asset distributed unsupervised.
-- **A second, fully isolated database/environment.** Proposed as one
-  flagged demo restaurant inside the existing platform (cheaper, matches
-  every other restaurant's real code paths exactly) rather than a
-  parallel deployment — the architect may revisit this if isolating sends
-  and analytics turns out to need more separation than a flag allows.
-- **Automatically keeping the demo's "order history" current or trending**
-  — a static, periodically-reset seed is proposed; a live-simulated demo
-  that generates fresh fake activity on its own is out of scope.
+## Non-goals (rescoped)
 
-## Risks and unknowns
+- **Superseded by this answer:** "automatically keeping the demo's order
+  history current or trending... a live-simulated demo that generates
+  fresh fake activity on its own" is no longer entirely out of scope — the
+  compressed playback *is* a form of that, scoped to an active session
+  (the original wording read too broadly against this instruction). What's
+  still out: a live, ever-running simulation with no session behind it —
+  there is no 24/7 background clock advancing a shared demo state between
+  pitches; the playback exists only while a session is open.
+- **New, naming the rejected mechanism plainly:** virtualizing time inside
+  the real `autopilot` function so its actual trigger/delay pipeline fires
+  early. The playback is a demo-only scripted reveal of pre-seeded,
+  backdated rows; it does not touch the real send pipeline real
+  restaurants depend on.
+- **Reseller-branded demo clones** — unchanged. Showing the demo under a
+  specific reseller's own brand rather than AIOrders' neutral one. Real,
+  named in the raw text, and proposed as later work once the single
+  shared demo above is real. See Assumed.
+- **A prospect-facing shareable link** — unchanged. Usable without staff
+  present (e.g. a self-serve demo a prospect clicks through alone) — not
+  asked for in the raw text; this ticket's demo is something staff drive
+  during a pitch, not a marketing asset distributed unsupervised.
+- **A second, fully isolated database/environment** — unchanged, and
+  reinforced rather than reopened by the mechanism chosen above: one
+  flagged demo restaurant inside the existing platform, no new deploy
+  target needed.
 
-- **Isolation is the load-bearing requirement, not a detail.** A demo
-  restaurant that accidentally sends a real SMS, or whose fake orders
-  land in real revenue analytics, is worse than no demo at all. This PRD
-  treats isolation as acceptance criteria (3, 4) rather than an
-  implementation nicety so it can't be quietly dropped at build time.
-- **Whether "one flagged restaurant" is enough isolation or whether the
-  send/analytics pipelines need a structural change to safely exclude
-  it** is a real open design question — flagged for the architect,
-  possibly its own G2 if excluding demo activity turns out to require
-  touching shared aggregation logic non-trivially.
-- **Reseller-branded demo scope (Non-goals) may turn out to matter more
-  than assumed** if resellers are a primary sales channel rather than a
-  secondary one — worth the approver confirming the phased approach
-  rather than this PRD asserting it's fine.
-- No specific lost deal named as evidence; the gap is structural.
+## Risks and unknowns (rescoped)
 
-## Cost
+- **Isolation is still the load-bearing requirement, not a detail.**
+  Unchanged from the original PRD, now re-affirmed against a more
+  tempting alternative: mechanism (a), a virtual clock inside the real
+  automation, was available and is explicitly rejected in favour of (b),
+  a scripted, pre-seeded reveal, for exactly this reason.
+- **Resolved by this answer:** whether "one flagged restaurant" is enough
+  isolation. Yes for the restaurant's identity/seed data; the *playback
+  state* additionally needs to be session-scoped, which is new, specific
+  scope this rescope adds (see Cost).
+- **Open for the architect, possibly its own G2:** how cheaply
+  "session-scoped" can be built. If a client-side timer replaying static,
+  pre-ordered seed data is enough, this stays a UI-layer addition. If it
+  needs a real session-identity mechanism threaded through the admin
+  panel, portal, and public site (e.g. so a reset/restart on one screen
+  doesn't leave another screen mid-playback), that's a bigger, structural
+  call and may need its own gate before building.
+- **"90 day" and the specific trigger sequence shown are the approver's
+  approximate framing, not a literal spec** (see the rescope section
+  above) — the exact events, order, and apparent day-spacing in the
+  playback are a content/scripting decision for design or a follow-up
+  pass, not fixed by this PRD.
+- Carried forward, unchanged: reseller-branded demo scope (Non-goals) may
+  turn out to matter more than assumed if resellers are a primary sales
+  channel rather than a secondary one. No specific lost deal named as
+  evidence; the gap is structural.
 
-- Build: `L` — seed data across multiple tables/repos (menu, orders,
-  loyalty, catering) and a flag/mechanism to exclude that data from real
-  sends and analytics (`aiorders-api`), an access/reset entry point
-  (`aiorders-admin-hub`), and confirming the public site
-  (`config-site-builder`) and portal (`restaurant-portal`) render
-  correctly for a flagged demo restaurant. Four repos touched, no new
-  data model beyond a demo flag and a reset mechanism. Rough band: several
-  days to a week.
-- Run: `$0/month` expected — reuses existing infrastructure; flag to
-  devops/CFO only if a genuinely separate environment turns out to be
-  needed.
+## Cost (rescoped)
+
+- Build: still `L` — several days to a week. On top of the original scope
+  (seed data across menu/orders/loyalty/catering, the send/analytics
+  exclusion flag (`aiorders-api`), the admin-hub entry point
+  (`aiorders-admin-hub`), and portal/public-site rendering
+  (`restaurant-portal`, `config-site-builder`)), this rescope adds a
+  backdated, ordered set of scripted "communication sent" rows spanning
+  the demo's ~90-day narrative, and a compressed playback/reveal UI
+  scoped to one session at a time. Still four repos, no new vendor, no
+  new deploy target. **Fork named explicitly, not absorbed silently:** if
+  the architect finds a client-side/static-seed approach to
+  session-scoping insufficient and a real cross-repo session mechanism is
+  needed, this ticket's size and shape both change — flagged above as a
+  possible G2, same as the original PRD's own isolation question was
+  flagged.
+- Run: `$0/month` expected, unchanged — reuses existing infrastructure;
+  flag to devops/CFO only if a genuinely separate environment turns out to
+  be needed.
 
 ## Decision
 

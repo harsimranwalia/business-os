@@ -16,7 +16,7 @@ blocked_on:
 blocked_from:
 source: approver
 created: 2026-08-29
-updated: 2026-09-06
+updated: 2026-09-08
 branch:
 depends_on: []
 blocks: []
@@ -324,3 +324,103 @@ and whole-board: both exit 0, clean.
 step 9 and the Guards section, a ticket waiting on the approver is never
 chained; the G1 answer is the next event, and a `decision`/`watch`/`scheduled`
 pass picks it up without a fired hop.
+
+## 2026-09-08 — decision: G1 answered `changed`, PRD rescoped in place, fresh G1 raised
+
+`decision` event pass, context `inbox/2026-09-06-eng018-g1-scope.md`.
+Reading map for `decision`: steps 4 and 8c, plus the not-negotiable set (1,
+7, 8b, 9, 10; *Enforced vs instructed*; *The four lanes*; *Guards*). Same
+shape as `ENG-016`'s, `ENG-027`'s and `ENG-028`'s own rescopes: the ticket
+goes back to the approver, it does not advance. Mode check clean (`.env` →
+`MODE=active`). Pre-pass `departments/engineering/lib/eng-gate-check.sh`,
+scoped (`ENG-018`) and whole-board: both exit 0, clean.
+
+**The answer** (`decision: changed`, decided
+2026-09-09T02:03:59.669606+00:00): *"It has to be fast simulated like show
+the autopilot 90 day process in 15 minutes. And 1 complete experience per
+session."* Two clauses: fast-forward a real ~90-day customer-lifecycle
+sequence into a ~15-minute session, and scope each session to one
+complete, self-contained run.
+
+**Checked against live code before writing anything**, not taken on the
+approver's phrasing alone. `restaurant-portal`'s `Autopilot` section
+(`src/pages/autopilot/*`) and `aiorders-api`'s `autopilot` function are
+real and live — the thing AIOrders actually sells restaurants. Its
+`TriggerType` enum (`supabase/functions/autopilot/utils/triggers.ts`) is
+ten hardcoded lifecycle events, each with its own `email_delay_minutes`/
+`sms_delay_minutes`; there is no single documented "90-day sequence"
+anywhere in the code. Read "90 day" as the approver's own approximate
+framing of a realistic run through this trigger set, not a literal spec —
+named as interpretation, same convention this journal already applies to
+a supplied mechanism that isn't literally in the code (`ENG-027`'s
+"autocompleted after x hours").
+
+**Mechanism proposed, and one named plainly as rejected.** Making ~90 real
+days visible in ~15 real minutes could mean (a) a virtual clock inside the
+live `autopilot` function so its real trigger/delay pipeline actually
+fires early, or (b) a demo-only scripted timeline of pre-written,
+backdated rows revealed on a compressed schedule, never touching the real
+pipeline. **(b) proposed** — cheaper, and (a) is exactly what this
+ticket's own isolation criteria (3, 4) already exist to rule out; no
+reason to loosen that call for a more impressive-looking option.
+"1 complete experience per session" read together with this: one shared
+demo restaurant identity, but session-scoped *playback state* — resolves,
+in a specific direction, the original PRD's own open Risk ("whether 'one
+flagged restaurant' is enough isolation").
+
+**Sizing verdict: stays `L`.** What would have forced `XL` — virtualizing
+time inside the real send engine — is exactly what's rejected; what's
+added is a bounded, demo-only scripted seed set plus a session-scoped
+playback UI, still four repos, no new vendor, $0/month. Flagged as a
+named fork, not absorbed silently: if the architect finds session-scoping
+needs a real cross-repo session-identity mechanism rather than a
+client-side timer over static seed data, that's bigger and may earn its
+own G2.
+
+**PRD rescoped in place, original content marked superseded rather than
+deleted**, per `ENG-016`'s/`ENG-027`'s/`ENG-028`'s precedent: a new
+"Approver's `changed` response" section inserted after Readback; Proposed
+change, Acceptance criteria, Non-goals, Risks, and Cost all updated in
+`agents/product-manager/specs/ENG-018-sales-demonstration-account.md`.
+Problem/Why now/Users left untouched — none of them stopped holding.
+
+**Fresh G1 raised**: `inbox/2026-09-08-eng018-g1-rescope.md`. Ran
+`departments/engineering/lib/eng-notify.sh raise` —
+`traces/eng-notify-2026-09-08.log` confirms `19:26:07 sent`; `notified:`
+stamped by hand in the item's frontmatter. Old G1 moved to
+`inbox/_handled/2026-09-06-eng018-g1-scope.md` as-is, no appended note
+(same precedent — the narrative lives in the PRD section, the fresh G1,
+and the journal row). Decision-journal row appended
+(`config/decision-journal.md`).
+
+**No dissent section** — `agents/critic/agent.md` still doesn't exist at
+department or instance level, confirmed absent again this pass; not
+refiled, the open proposal (`proposals.md`, 2026-08-25 row) covers it.
+
+**0 transitions** — `awaiting-scope → awaiting-scope`, `owner: approver`
+throughout. This pass answered the gate return; it did not move the
+ticket. `machine_wip` unaffected (this ticket was never in the counted
+`ready`..`ready-to-ship` range). Approver-facing WIP: same item goes back
+to the same desk, no change to the uncapped list.
+
+**Dead-end sweep (scoped to this event):** no other ticket touched, per
+`decision`'s own narrower contract — act on the answered gate item,
+advance only the ticket it belongs to. This ticket was never in the
+machine-WIP range, so it frees no slot and the "slot freed, chain the
+next ticket" rule (Guards, 2026-09-06/09-08 amendments) does not apply
+here — nothing to chain into. Did not touch the open, unrelated
+designed-pool integrity question (`inbox/2026-09-08-eng-loop-integrity-
+check.md`, `IDLE-2026-09-07.md`) — out of this event's own scope, and
+already being tracked by passes dedicated to it.
+
+8b: no new observation — the shape (a `changed` answer overriding a
+previously-stated Non-goal) is already on file (`ENG-016`, 2026-09-03),
+not a fresh pattern. No `exception-request:` anywhere.
+
+Post-pass `departments/engineering/lib/eng-gate-check.sh`, scoped
+(`ENG-018`) and whole-board: both exit 0, clean.
+
+`chained: none — awaiting-scope, owner: approver`. Per `eng_build_loop.md`
+step 9 and the Guards section, a ticket waiting on the approver is never
+chained; the fresh G1 just raised is a new item waiting on the approver,
+not an agent-owned state.
