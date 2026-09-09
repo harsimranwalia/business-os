@@ -1,6 +1,6 @@
 # ADR index
 
-**Next ID: ADR-022.** Numbered sequentially, never reused — same discipline as
+**Next ID: ADR-023.** Numbered sequentially, never reused — same discipline as
 `agents/eng-manager/board/_index.md`'s ticket counter.
 
 | ID | Title | Ticket | Status | Date |
@@ -26,3 +26,4 @@
 | ADR-019 | Coupon-code ROI matches `orders.promos` against the campaign's code; no redemption-tracking table exists to reuse | ENG-019 | accepted | 2026-09-03 |
 | ADR-020 | Broadcast opt-out reuses `customers.consent_email`/`consent_sms` via a new public unsubscribe function, not a new column or an `outgoing-communications` action | ENG-019 | accepted | 2026-09-03 |
 | ADR-021 | Loyalty auto-complete uses a pg_cron batch poller, not a per-order Cloudflare Queue delay | ENG-027 | accepted | 2026-09-05 |
+| ADR-022 | Redemption's diner code is `platform_customers.id` itself, not a new opaque or rotatable token | ENG-051 | accepted | 2026-09-08 |
