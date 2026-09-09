@@ -373,7 +373,8 @@ ENG_TRIGGER_SCRIPT = ENG_DEPT_DIR / "lib" / "eng-trigger.sh"
 
 TICKET_KEYS = ["id", "title", "project", "type", "size", "severity", "state",
                "owner", "lane", "blocked_on", "source", "created", "updated",
-               "branch", "priority", "time_estimate", "time_spent", "time_remaining"]
+               "branch", "priority", "parent", "time_estimate", "time_spent",
+               "time_remaining"]
 
 # Harry's ordering lever, and deliberately not `severity`. Severity is the
 # agent's read of how bad a problem is; priority is his instruction about
@@ -477,6 +478,7 @@ def list_engineering(instance_id=None):
                 "owner": fm.get("owner", ""),
                 "lane": fm.get("lane", "full"),
                 "blocked_on": fm.get("blocked_on", ""),
+                "parent": fm.get("parent", ""),
                 "updated": fm.get("updated", ""),
                 "branch": fm.get("branch", ""),
                 "time_estimate": fm.get("time_estimate", ""),
@@ -486,6 +488,16 @@ def list_engineering(instance_id=None):
                 "pr_url": pr_m.group(1) if pr_m else "",
                 "path": str(f.relative_to(inst_root)),
             })
+
+    # A parent whose work was split into sub-tickets (children carry
+    # `parent: {ID}`) is a CONTAINER: it holds no machine slot in any state.
+    # Only its children in ready..ready-to-ship count against machine_limit,
+    # and a child parked on the approver counts against approver_limit
+    # instead. See departments/engineering/agents/eng-manager/config.yaml
+    # -> wip.machine_limit and eng_build_loop.md's Guards section.
+    container_ids = {t["parent"] for t in tickets if t["parent"]}
+    for t in tickets:
+        t["is_container"] = t["id"] in container_ids
 
     bugs = []
     if bugs_index.exists():
@@ -569,9 +581,14 @@ def list_engineering(instance_id=None):
     for t in tickets:
         by_state.setdefault(t["state"], []).append(t)
 
+    # Containers are excluded (above): a `building` parent with every child
+    # parked or verified occupies no slot, and counting it read `1/1` on a
+    # dashboard whose machine was in fact free — the 2026-09-08 report of a
+    # department idle for 29 consecutive passes behind a full-looking cap.
     in_flight = [t for t in tickets
                  if t["state"] in {"ready", "building", "in-review", "in-qa",
-                                   "in-security", "ready-to-ship"}]
+                                   "in-security", "ready-to-ship"}
+                 and not t["is_container"]]
     # A ticket blocked on the approver (e.g. an L1 merge request) already has
     # its own inbox item — in `waiting` while undecided, in `deciding` once
     # answered but not yet cleared (merge not detected/marked yet). Either way

@@ -79,10 +79,14 @@ export function engDecidingCard(w, activity) {
 export const IN_FLIGHT = ['building', 'in-review', 'in-qa', 'in-security', 'ready-to-ship', 'ready'];
 const STATE_WORD = { building: 'building', 'in-review': 'in review', 'in-qa': 'in QA', 'in-security': 'in security review', 'ready-to-ship': 'ready to ship', ready: 'ready to start' };
 // Every in-flight ticket as [state, ticket], the one a running pass is on first.
+// Containers are skipped (server sets is_container): a parent split into
+// sub-tickets holds no machine slot, so it is not "in motion" on its own —
+// showing one here read "building, between passes" for a family whose every
+// child was already parked on an open PR.
 export function inFlight(eng) {
   if (!eng || !eng.by_state) return [];
   const live = eng.activity && eng.activity.running ? eng.activity.current_ticket : null;
-  const rows = IN_FLIGHT.flatMap(st => (eng.by_state[st] || []).map(t => [st, t]));
+  const rows = IN_FLIGHT.flatMap(st => (eng.by_state[st] || []).filter(t => !t.is_container).map(t => [st, t]));
   return rows.sort((x, y) => (x[1].id === live ? -1 : y[1].id === live ? 1 : 0) || IN_FLIGHT.indexOf(x[0]) - IN_FLIGHT.indexOf(y[0]));
 }
 // The loop is not a daemon: a pass fires, runs, exits. "Between passes" with
